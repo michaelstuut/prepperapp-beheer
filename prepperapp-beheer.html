@@ -160,6 +160,38 @@ label.f>span.hint{font-weight:400;font-size:.74rem;color:#6B7486}
 
 .scrollx{overflow-x:auto}
 
+/* selectie */
+.row .kies-vak{display:none;flex:none;margin-top:.15rem}
+.kies .row .kies-vak{display:block}
+.kies-vak input{width:1.15rem;height:1.15rem;accent-color:var(--amber)}
+.row.gekozen{background:var(--amber-soft)}
+#balk{
+  position:fixed;left:0;right:0;bottom:0;z-index:70;
+  background:var(--raised);border-top:1px solid var(--amber-dim);
+  padding:.7rem .9rem calc(.7rem + env(safe-area-inset-bottom));
+  display:none;gap:.5rem;flex-wrap:wrap;align-items:center;
+  box-shadow:0 -8px 30px rgba(0,0,0,.45);
+}
+#balk.on{display:flex}
+#balk .n{font-family:"JetBrains Mono",monospace;font-weight:700;color:var(--amber);margin-right:.3rem}
+
+/* verdacht */
+.pill.let{color:#fff;background:var(--critical);border-color:var(--critical)}
+
+/* kaart */
+#kaart-doos{position:relative;height:min(70vh,34rem);overflow:hidden;border-radius:0 0 10px 10px;background:#10141c;touch-action:none;cursor:grab}
+#kaart-doos.sleept{cursor:grabbing}
+#kaart-tegels{position:absolute;inset:0}
+#kaart-tegels img{position:absolute;width:256px;height:256px;user-select:none;-webkit-user-drag:none}
+#kaart-punten{position:absolute;inset:0;pointer-events:none}
+.punt{position:absolute;width:14px;height:14px;margin:-7px 0 0 -7px;border-radius:50%;border:2px solid #0B0E13;pointer-events:auto;cursor:pointer;box-shadow:0 1px 4px rgba(0,0,0,.6)}
+.punt:hover{transform:scale(1.35)}
+.kaart-knoppen{position:absolute;right:.6rem;top:.6rem;display:flex;flex-direction:column;gap:.35rem;z-index:5}
+.kaart-knoppen button{width:2.2rem;height:2.2rem;border-radius:8px;background:rgba(19,24,34,.92);border:1px solid var(--edge);color:var(--ink);font-size:1.1rem;cursor:pointer}
+.kaart-legenda{display:flex;flex-wrap:wrap;gap:.5rem .9rem;padding:.7rem .9rem;font-size:.78rem;color:var(--muted);border-top:1px solid var(--edge-soft)}
+.kaart-legenda span{display:inline-flex;align-items:center;gap:.35rem}
+.kaart-legenda i{width:.7rem;height:.7rem;border-radius:50%;display:inline-block}
+
 /* ---------- sheet / dialog ---------- */
 .sheet{position:fixed;inset:0;z-index:60;display:none;align-items:flex-end;justify-content:center;background:rgba(3,5,8,.66);backdrop-filter:blur(3px)}
 .sheet.on{display:flex}
@@ -210,8 +242,15 @@ label.f>span.hint{font-weight:400;font-size:.74rem;color:#6B7486}
         <span class="hint">Wordt alleen in deze browser bewaard. Een API-token is aan dit adres gebonden en geeft op zichzelf geen schrijfrechten.</span>
       </label>
       <div style="display:flex;gap:.5rem;flex-wrap:wrap">
+        <button class="btn" id="token-plak">Plakken</button>
         <button class="btn primary" id="token-save">Bewaren en laden</button>
         <button class="btn" id="token-clear">Wissen</button>
+      </div>
+      <div id="gate-standalone" class="hide" style="font-size:.86rem;color:var(--ink-dim);border-left:2px solid var(--amber-dim);padding-left:.8rem">
+        Je opent dit vanaf je beginscherm. Die app heeft een <b>eigen opslag</b>, los van Safari — daarom vraagt hij
+        hier opnieuw om het token. Twee manieren: druk op <b>Plakken</b> als je het token gekopieerd hebt, of
+        scan op je Mac de QR bij <b>Telefoon</b>, open die link in Safari en zet hem <i>daarna</i> op je beginscherm.
+        Dan staat het token in de snelkoppeling en is dit eenmalig.
       </div>
     </div>
   </div>
@@ -325,8 +364,9 @@ label.f>span.hint{font-weight:400;font-size:.74rem;color:#6B7486}
           </label>
           <button class="btn narrow" id="forum-load">Laden</button>
         </div>
+        <label class="switch" style="margin-top:.6rem"><input type="checkbox" id="forum-verdacht"> alleen berichten waar het woordfilter op aanslaat</label>
       </div>
-      <div class="card-b tight" id="forum-list"><div class="empty">Kies een soort en druk op laden.</div></div>
+      <div class="card-b tight kies" id="forum-list"><div class="empty">Kies een soort en druk op laden.</div></div>
       <div class="card-b" id="forum-more" style="display:none"><button class="btn" id="forum-more-btn" style="width:100%">Meer laden</button></div>
     </div>
   </section>
@@ -362,6 +402,66 @@ label.f>span.hint{font-weight:400;font-size:.74rem;color:#6B7486}
         een account aangemaakt, zodat de blokkade meteen geldt zodra ze naar 2.2 updaten.
       </div>
       <div class="card-b tight" id="surv-list"><div class="empty">Laden…</div></div>
+    </div>
+  </section>
+
+  <!-- ---------- Kaart ---------- -->
+  <section class="view" id="v-kaart" role="tabpanel">
+    <div class="card">
+      <div class="card-h"><h2>Kaart</h2><span style="flex:1"></span>
+        <span class="sub" id="kaart-status"></span>
+        <button class="btn sm" id="kaart-laad">Punten laden</button>
+      </div>
+      <div id="kaart-doos">
+        <div id="kaart-tegels"></div>
+        <div id="kaart-punten"></div>
+        <div class="kaart-knoppen">
+          <button id="kaart-in" title="Inzoomen">+</button>
+          <button id="kaart-uit" title="Uitzoomen">−</button>
+          <button id="kaart-fit" title="Alles in beeld" style="font-size:.8rem">⤢</button>
+        </div>
+      </div>
+      <div class="kaart-legenda" id="kaart-legenda"></div>
+    </div>
+  </section>
+
+  <!-- ---------- Toegang ---------- -->
+  <section class="view" id="v-toegang" role="tabpanel">
+    <div class="card">
+      <div class="card-h"><h2>Wie ben je hier</h2></div>
+      <div class="card-b" style="display:flex;flex-direction:column;gap:.8rem">
+        <dl class="kv" id="tg-kv"></dl>
+        <div style="display:flex;gap:.5rem;flex-wrap:wrap">
+          <button class="btn" id="tg-kopieer">Mijn CloudKit-ID kopiëren</button>
+          <button class="btn" id="tg-test">Schrijfrechten testen</button>
+        </div>
+        <div id="tg-uitslag" style="font-size:.88rem"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-h"><h2>Iemand anders laten meehelpen</h2></div>
+      <div class="card-b" style="display:flex;flex-direction:column;gap:.8rem;font-size:.9rem;color:var(--ink-dim)">
+        <p style="margin:0">Twee dingen zijn nodig, en dat is met opzet: het token opent de pagina,
+          maar geeft <b>geen</b> rechten. Wijzigen mag alleen wie in de rol <code>beheerder</code> staat.</p>
+        <div class="step-lijst" style="display:flex;flex-direction:column;gap:.7rem">
+          <div><b style="color:var(--ink)">1 · Geef ze toegang tot de pagina.</b> Druk hieronder op
+            <b>Uitnodiging tonen</b> en laat ze de QR scannen. Ze hebben een eigen Apple ID nodig.</div>
+          <div><b style="color:var(--ink)">2 · Ze loggen in en sturen jou hun CloudKit-ID.</b> Dat staat hierboven op
+            hun scherm, met een kopieerknop.</div>
+          <div><b style="color:var(--ink)">3 · Jij zet ze in de rol.</b> CloudKit Console → je container →
+            <b>Security Roles</b> → <code>beheerder</code>. Voeg daar hun gebruikersrecord toe. Vanaf dat moment
+            kunnen ze alles wat jij kunt.</div>
+        </div>
+        <div style="display:flex;gap:.5rem;flex-wrap:wrap">
+          <button class="btn primary" id="tg-nodig">Uitnodiging tonen</button>
+          <a class="btn" id="tg-console" href="#" target="_blank" rel="noopener" style="text-decoration:none;display:inline-block">Security Roles openen</a>
+        </div>
+        <p style="margin:0;font-size:.84rem;color:var(--muted)">
+          Wat iedereen wijzigt komt in de reden-velden te staan met hun naam erbij, zodat je later kunt zien
+          wie wat deed. Wil je een echt logboek, dan moet daar een recordtype voor bij in CloudKit — zeg het maar.
+        </p>
+      </div>
     </div>
   </section>
 
@@ -437,6 +537,22 @@ label.f>span.hint{font-weight:400;font-size:.74rem;color:#6B7486}
           <div id="cfg-vlaggen" style="display:flex;flex-direction:column;gap:.4rem"></div>
         </div>
         <div><button class="btn primary" id="cfg-save">Opslaan</button></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-h"><h2>Woordfilter</h2><span style="flex:1"></span><span class="sub">alleen in deze browser</span></div>
+      <div class="card-b" style="display:flex;flex-direction:column;gap:.7rem">
+        <p style="margin:0;font-size:.86rem;color:var(--muted)">
+          Berichten waarin een van deze woorden voorkomt krijgen een rode markering, en je kunt in het forum
+          filteren op alleen die berichten. Het verbergt niets vanzelf — jij beslist. Eén woord per regel of
+          gescheiden door komma's. Dit staat niet in CloudKit, dus het geldt alleen op dit apparaat.
+        </p>
+        <textarea id="wf-lijst" style="min-height:9rem" spellcheck="false"></textarea>
+        <div style="display:flex;gap:.5rem;flex-wrap:wrap">
+          <button class="btn primary" id="wf-save">Opslaan</button>
+          <button class="btn" id="wf-reset">Terug naar de standaardlijst</button>
+        </div>
       </div>
     </div>
   </section>
@@ -542,7 +658,7 @@ label.f>span.hint{font-weight:400;font-size:.74rem;color:#6B7486}
           <span id="rec-count" style="color:var(--muted);font-size:.8rem;align-self:center"></span>
         </div>
       </div>
-      <div class="card-b tight" id="rec-list"><div class="empty">Kies een recordtype.</div></div>
+      <div class="card-b tight kies" id="rec-list"><div class="empty">Kies een recordtype.</div></div>
       <div class="card-b" id="rec-more" style="display:none"><button class="btn" id="rec-more-btn" style="width:100%">Meer laden</button></div>
     </div>
   </section>
@@ -585,6 +701,16 @@ label.f>span.hint{font-weight:400;font-size:.74rem;color:#6B7486}
   </section>
 
 </main>
+</div>
+
+<div id="balk">
+  <span class="n" id="balk-n">0</span>
+  <span style="color:var(--ink-dim);font-size:.85rem">geselecteerd</span>
+  <span style="flex:1"></span>
+  <button class="btn sm" id="balk-verberg">Verbergen</button>
+  <button class="btn sm danger" id="balk-blokkeer">Auteurs blokkeren</button>
+  <button class="btn sm danger" id="balk-verwijder">Verwijderen</button>
+  <button class="btn sm" id="balk-wis">Wissen</button>
 </div>
 
 <div class="sheet" id="sheet"><div class="sheet-in">
@@ -1081,7 +1207,7 @@ const Acties = {
     await saveRecord({ recordType:"AdminVerborgen", fields:{
       doelRecordName:{ value: recordName },
       doelType:{ value: doelType || "onbekend" },
-      reden:{ value: reden || "" },
+      reden:{ value: stempel(reden) },
       datum:{ value: Date.now() },
     }});
     toast("Verborgen. Zichtbaar effect zodra de app opnieuw laadt.", "ok");
@@ -1099,7 +1225,7 @@ const Acties = {
       filters: [{ fieldName:"gebruikerCode", comparator:"EQUALS", fieldValue:{ value: gebruikerCode } }], limit: 1, sort: null });
     const rec = (r.records||[])[0];
     if (rec) {
-      await patch(rec.recordName, { isBanned: 1, banReden: reden || "" });
+      await patch(rec.recordName, { isBanned: 1, banReden: stempel(reden) });
       toast("Geblokkeerd.", "ok");
     } else {
       /* Nog geen account: die bestaat pas vanaf versie 2.0. We maken hem alvast
@@ -1110,7 +1236,7 @@ const Acties = {
         displayNaam:{ value: "" },
         profielBeschrijving:{ value: "" },
         isBanned:{ value: 1 },
-        banReden:{ value: reden || "" },
+        banReden:{ value: stempel(reden) },
         isPro:{ value: 0 },
         aangemeldOp:{ value: Date.now() },
         forumPostTelling:{ value: 0 },
@@ -1169,6 +1295,13 @@ function bezig(node){ node.innerHTML = '<div class="empty"><span class="spin"></
 function rij(rec, type, extraActs){
   const def = SCHEMA[type] || { f:{} };
   const r = el("div", "row");
+
+  const vak = el("div", "kies-vak");
+  const cb = el("input"); cb.type = "checkbox";
+  cb.onclick = () => Selectie.wissel(rec, type, r);
+  vak.appendChild(cb);
+  r.appendChild(vak);
+
   const body = el("div", "body");
 
   const titel = def.titel ? v(rec, def.titel) : null;
@@ -1187,6 +1320,8 @@ function rij(rec, type, extraActs){
   const likes = v(rec, "likesCount");
   if (typeof likes === "number" && likes > 0) meta.innerHTML += "<span>" + likes + " likes</span>";
   meta.innerHTML += '<span class="mono" style="opacity:.55">' + esc(knip(rec.recordName, 12)) + "</span>";
+  const gevonden = verdachteWoorden(rec);
+  if (gevonden.length) meta.innerHTML += '<span class="pill let">let op: ' + esc(gevonden.slice(0,3).join(", ")) + "</span>";
   body.appendChild(meta);
 
   if (titel && tekst) body.appendChild(el("div", "text", esc(knip(tekst, 260))));
@@ -1350,12 +1485,14 @@ const TABS = [
   { id:"forum",     label:"Forum",     laad: laadForumTab },
   { id:"gebruikers",label:"Gebruikers",laad: () => { laadGebruikers(); laadSurvival(); } },
   { id:"dossier",   label:"Dossier",   laad: laadDossierTab },
+  { id:"kaart",     label:"Kaart",     laad: laadKaartTab },
   { id:"verborgen", label:"Verborgen", laad: laadVerborgen },
   { id:"berichten", label:"Aankondigingen", laad: laadAankondigingen },
   { id:"config",    label:"Instellingen", laad: laadConfig },
   { id:"feedback",  label:"Feedback",  laad: laadFeedback },
   { id:"stats",     label:"Statistieken", laad: laadStats },
   { id:"records",   label:"Alle records", laad: laadRecordsTab },
+  { id:"toegang",   label:"Toegang",   laad: laadToegang },
   { id:"info",      label:"Uitleg",    laad: laadInfo },
 ];
 let huidigeTab = "dashboard";
@@ -1433,8 +1570,26 @@ async function laadDashboard(){
     ]);
     const alles = (mis.records||[]).concat(forumM.records||[]);
     att.innerHTML = "";
-    if (!alles.length) { att.innerHTML = leeg("Niets open. Rustige nacht.", "Alles afgehandeld"); }
-    else alles.slice(0,10).forEach(r => att.appendChild(meldingRij(r, r.recordType)));
+    if (alles.length) alles.slice(0,10).forEach(r => att.appendChild(meldingRij(r, r.recordType)));
+
+    /* woordfilter over de nieuwste berichten */
+    const soorten = ["OutdoorPost","ErvaringPost","BuurtPost","ForumReactie"];
+    const gevlagd = [];
+    for (const t of soorten){
+      try {
+        const r2 = await query(t, { limit: 50 });
+        (r2.records||[]).forEach(rec => { if (verdachteWoorden(rec).length) gevlagd.push([rec, t]); });
+      } catch(e){}
+    }
+    if (gevlagd.length){
+      const kop = el("div","row");
+      kop.innerHTML = '<div class="body"><div class="title" style="color:var(--red)">Woordfilter sloeg aan op ' +
+        gevlagd.length + " bericht" + (gevlagd.length===1?"":"en") + '</div><div class="meta">uit de 50 nieuwste per soort — beoordeel zelf</div></div>';
+      att.appendChild(kop);
+      gevlagd.slice(0,10).forEach(([rec,t]) => att.appendChild(rij(rec, t)));
+    }
+    zetBadge("forum", gevlagd.length);
+    if (!alles.length && !gevlagd.length) att.innerHTML = leeg("Niets open, woordfilter stil. Rustige nacht.", "Alles afgehandeld");
   } catch(e){ att.innerHTML = leeg(String(e.message||e), "Kon meldingen niet laden"); }
 
   /* laatste posts + nieuwe gebruikers */
@@ -1573,6 +1728,7 @@ async function laadForumTab(eerste){
       const naald = q.toLowerCase();
       recs = recs.filter(rec => JSON.stringify(rec.fields).toLowerCase().includes(naald));
     }
+    if ($("#forum-verdacht").checked) recs = recs.filter(rec => verdachteWoorden(rec).length);
     const nieuw = recs.filter(rec => !forumGezien.has(rec.recordName));
     nieuw.forEach(rec => forumGezien.add(rec.recordName));
     if (!nieuw.length && !forumGezien.size) n.innerHTML = leeg(q ? "Niets gevonden. CloudKit kan niet midden in een tekst zoeken — dit filtert alleen wat al geladen is." : "Nog niets geplaatst.", "Leeg");
@@ -1586,6 +1742,7 @@ $("#forum-load").onclick = () => { forumReset(); laadForumTab(); };
 $("#forum-type").onchange = () => { forumReset(); laadForumTab(); };
 $("#forum-more-btn").onclick = () => laadForumTab();
 $("#forum-q").addEventListener("keydown", e => { if (e.key === "Enter") { forumReset(); laadForumTab(); } });
+$("#forum-verdacht").onchange = () => { forumReset(); laadForumTab(); };
 
 /* =====================================================================
    Gebruikers
@@ -1933,7 +2090,7 @@ function tekenDossier(){
     const h = el("div","card-h");
     h.innerHTML = "<h2>" + esc(sec.kop) + '</h2><span style="flex:1"></span><span class="sub">' + sec.recs.length + "</span>";
     c.appendChild(h);
-    const b = el("div","card-b tight");
+    const b = el("div","card-b tight kies");
     sec.recs.forEach(rec => b.appendChild(rij(rec, sec.type)));
     c.appendChild(b); wrap.appendChild(c);
   });
@@ -2001,6 +2158,7 @@ $("#ank-save").onclick = async (e) => {
    ===================================================================== */
 let cfgRecord = null;
 async function laadConfig(){
+  vulWoordfilter();
   $("#cfg-state").textContent = "laden…";
   const box = $("#cfg-vlaggen");
   if (!box.dataset.built) {
@@ -2027,6 +2185,13 @@ async function laadConfig(){
     $("#cfg-state").textContent = cfgRecord ? "opgehaald" : "nog geen record — opslaan maakt er een";
   } catch(e){ $("#cfg-state").textContent = "fout: " + (e.message||e); }
 }
+function vulWoordfilter(){
+  const bron = localStorage.getItem("pa.woorden");
+  $("#wf-lijst").value = (bron === null ? STANDAARD_WOORDEN.join("\n") : bron);
+}
+$("#wf-save").onclick = () => { localStorage.setItem("pa.woorden", $("#wf-lijst").value); toast("Woordfilter opgeslagen.","ok"); };
+$("#wf-reset").onclick = () => { localStorage.removeItem("pa.woorden"); vulWoordfilter(); toast("Standaardlijst hersteld.","ok"); };
+
 $("#cfg-save").onclick = async (e) => {
   const b = e.target; b.disabled = true; b.innerHTML = '<span class="spin"></span> opslaan';
   try {
@@ -2379,6 +2544,318 @@ $("#st-pro-export").onclick = () => {
 };
 
 /* =====================================================================
+   Wie voert de handeling uit — komt mee in de reden-velden
+   ===================================================================== */
+function moderatorNaam(){
+  const u = State.user;
+  const n = u && u.nameComponents ? [u.nameComponents.givenName, u.nameComponents.familyName].filter(Boolean).join(" ") : "";
+  return n || (u && u.userRecordName ? String(u.userRecordName).replace(/^_/,"").slice(0,8) : "onbekend");
+}
+function stempel(reden){
+  const d = new Date().toLocaleDateString("nl-NL", { day:"numeric", month:"short" });
+  return (reden ? reden.trim() + " " : "") + "— " + moderatorNaam() + ", " + d;
+}
+
+/* =====================================================================
+   Woordfilter — puur lokaal, staat in deze browser
+   ===================================================================== */
+const STANDAARD_WOORDEN = [
+  "kanker","tering","tyfus","kut","hoer","klootzak","mongool","nsb",
+  "oprotten","opzouten","vuile","idioot","debiel",
+  "bitcoin","crypto","investering","gegarandeerd","gratis geld",
+  "whatsapp +","wa.me/","t.me/","bit.ly","tinyurl",
+];
+let _woordenCache = null, _woordenBron = null;
+function filterWoorden(){
+  const bron = localStorage.getItem("pa.woorden");
+  if (bron !== _woordenBron){ _woordenBron = bron;
+    _woordenCache = (bron === null ? STANDAARD_WOORDEN.join("\n") : bron)
+      .split(/[\n,;]/).map(w => w.trim().toLowerCase()).filter(Boolean);
+  }
+  return _woordenCache;
+}
+function tekstVan(rec){
+  let t = "";
+  Object.keys(rec.fields || {}).forEach(k => {
+    const w = rec.fields[k].value;
+    if (typeof w === "string" && w.length < 4000) t += " " + w;
+  });
+  return t.toLowerCase();
+}
+function verdachteWoorden(rec){
+  const t = tekstVan(rec);
+  return filterWoorden().filter(w => t.includes(w));
+}
+
+/* =====================================================================
+   Selectie en handelingen op meerdere tegelijk
+   ===================================================================== */
+const Selectie = {
+  items: new Map(),
+  wissel(rec, type, rij){
+    if (this.items.has(rec.recordName)) { this.items.delete(rec.recordName); rij.classList.remove("gekozen"); }
+    else { this.items.set(rec.recordName, { rec, type }); rij.classList.add("gekozen"); }
+    this.teken();
+  },
+  wis(){
+    this.items.clear();
+    $$(".row.gekozen").forEach(r => r.classList.remove("gekozen"));
+    $$(".kies-vak input").forEach(i => { i.checked = false; });
+    this.teken();
+  },
+  teken(){
+    const n = this.items.size;
+    $("#balk-n").textContent = n;
+    $("#balk").classList.toggle("on", n > 0);
+    const verbergbaar = Array.from(this.items.values()).filter(x => VERBERGBAAR.includes(x.type)).length;
+    $("#balk-verberg").disabled = verbergbaar === 0;
+    $("#balk-verberg").textContent = "Verbergen" + (verbergbaar && verbergbaar !== n ? " (" + verbergbaar + ")" : "");
+  },
+};
+$("#balk-wis").onclick = () => Selectie.wis();
+
+async function bulk(label, uitleg, fn, gevaarlijk){
+  const lijst = Array.from(Selectie.items.values());
+  if (!lijst.length) return;
+  bevestig(label, uitleg.replace("{n}", lijst.length), label, async () => {
+    let goed = 0, mis = 0;
+    for (const item of lijst){ try { await fn(item); goed++; } catch(e){ mis++; } }
+    toast(goed + " gelukt" + (mis ? ", " + mis + " mislukt" : "."), mis ? "err" : "ok");
+    Selectie.wis(); Cache.wis(); herlaadHuidigeTab();
+  }, gevaarlijk);
+}
+$("#balk-verberg").onclick = () => bulk("Verbergen",
+  "{n} items worden verborgen. Ze blijven bestaan en zijn per stuk terug te zetten bij Verborgen.",
+  async ({rec, type}) => { if (VERBERGBAAR.includes(type)) await Acties.verberg(rec.recordName, type, "meerdere tegelijk"); });
+$("#balk-verwijder").onclick = () => bulk("Verwijderen",
+  "{n} records worden definitief uit CloudKit gegooid. Dit kan niet terug.",
+  async ({rec}) => { await deleteRecord(rec.recordName); }, true);
+$("#balk-blokkeer").onclick = () => bulk("Auteurs blokkeren",
+  "De auteurs van {n} geselecteerde items worden geblokkeerd. Dezelfde persoon wordt maar één keer geblokkeerd.",
+  async ({rec, type}) => {
+    const def = SCHEMA[type] || {};
+    const code = def.auteur ? v(rec, def.auteur) : null;
+    if (code) await Acties.blokkeer(code, "meerdere tegelijk");
+  }, true);
+
+/* =====================================================================
+   Toegang — jezelf en anderen
+   ===================================================================== */
+function laadToegang(){
+  const dl = $("#tg-kv"); dl.innerHTML = "";
+  const add = (k, w) => { dl.appendChild(el("dt","",esc(k))); dl.appendChild(el("dd","",w)); };
+  const u = State.user || {};
+  add("naam", esc(moderatorNaam()));
+  add("CloudKit-ID", '<span class="mono">' + esc(u.userRecordName || "—") + "</span>");
+  add("omgeving", esc(State.env));
+  add("container", '<span class="mono">' + esc(CONTAINER) + "</span>");
+  add("deze pagina", '<span class="mono">' + esc(location.origin + location.pathname) + "</span>");
+  $("#tg-console").href = "https://icloud.developer.apple.com/dashboard/database/teams/8626D25RD6/containers/" +
+    encodeURIComponent(CONTAINER) + "/environments/" + (State.env === "production" ? "PRODUCTION" : "DEVELOPMENT") + "/security-roles";
+}
+$("#tg-kopieer").onclick = async () => {
+  const id = (State.user && State.user.userRecordName) || "";
+  if (!id) { toast("Nog geen ID — ben je wel ingelogd?", "err"); return; }
+  try { await navigator.clipboard.writeText(id); toast("Gekopieerd. Stuur dit naar Michael.", "ok"); }
+  catch(e){ toast("Kopiëren lukte niet, selecteer het handmatig.", "err"); }
+};
+$("#tg-test").onclick = async (e) => {
+  const b = e.target, uit = $("#tg-uitslag");
+  b.disabled = true; uit.innerHTML = '<span class="spin"></span> proberen…';
+  let gemaakt = null;
+  try {
+    gemaakt = await saveRecord({ recordType:"AdminVerborgen", fields:{
+      doelRecordName:{ value: "__rechtencontrole__" }, doelType:{ value:"controle" },
+      reden:{ value: stempel("rechtencontrole, wordt meteen weer weggegooid") }, datum:{ value: Date.now() } }});
+    uit.innerHTML = '<span style="color:var(--green)">Je hebt schrijfrechten. Alles werkt.</span>';
+  } catch(err){
+    uit.innerHTML = '<span style="color:var(--red)">Geen schrijfrechten: ' + esc(String(err.message||err)) +
+      '</span><br><span style="color:var(--muted)">Lezen mag wel. Vraag of je in de rol <code>beheerder</code> gezet wordt — je ID staat hierboven.</span>';
+  }
+  if (gemaakt && gemaakt.recordName){
+    try { await deleteRecord(gemaakt.recordName); }
+    catch(err2){ uit.innerHTML += '<br><span style="color:var(--red)">Let op: het testrecord kon niet opgeruimd worden. Gooi het weg bij Verborgen.</span>'; }
+  }
+  b.disabled = false;
+};
+$("#tg-nodig").onclick = () => toonKoppelQR(true);
+
+/* =====================================================================
+   Kaart — eigen slippy map, geen externe bibliotheek
+   ===================================================================== */
+const KAART_LAGEN = [
+  ["PlaatsAlert",       "Plaatsmeldingen",  "#E4574C"],
+  ["PublicSafeSpot",    "Veilige plekken",  "#4FB37A"],
+  ["WaterBron",         "Waterbronnen",     "#5B9DD9"],
+  ["TrailConditie",     "Trailmeldingen",   "#F0B429"],
+  ["BuddyCheckIn",      "Buddy-checkins",   "#9B7BD4"],
+  ["TrailBuddyLocatie", "Buddy-locaties",   "#C69A5C"],
+];
+const Kaart = {
+  z: 3, cx: 0, cy: 0, punten: [], tegels: new Map(), mislukt: 0, klaar: false,
+
+  lonX(lon, z){ return (lon + 180) / 360 * 256 * Math.pow(2, z); },
+  latY(lat, z){
+    const r = Math.max(-85.05, Math.min(85.05, lat)) * Math.PI / 180;
+    return (1 - Math.log(Math.tan(r) + 1 / Math.cos(r)) / Math.PI) / 2 * 256 * Math.pow(2, z);
+  },
+
+  init(){
+    if (this.klaar) return;
+    this.klaar = true;
+    const doos = $("#kaart-doos");
+    let sleep = null;
+    doos.addEventListener("pointerdown", e => {
+      if (e.target.classList.contains("punt")) return;
+      sleep = { x: e.clientX, y: e.clientY, cx: this.cx, cy: this.cy };
+      doos.classList.add("sleept"); doos.setPointerCapture(e.pointerId);
+    });
+    doos.addEventListener("pointermove", e => {
+      if (!sleep) return;
+      this.cx = sleep.cx - (e.clientX - sleep.x);
+      this.cy = sleep.cy - (e.clientY - sleep.y);
+      this.teken();
+    });
+    const stop = () => { sleep = null; doos.classList.remove("sleept"); };
+    doos.addEventListener("pointerup", stop);
+    doos.addEventListener("pointercancel", stop);
+    doos.addEventListener("wheel", e => {
+      e.preventDefault();
+      this.zoom(e.deltaY < 0 ? 1 : -1, e.offsetX, e.offsetY);
+    }, { passive: false });
+    $("#kaart-in").onclick  = () => this.zoom(1);
+    $("#kaart-uit").onclick = () => this.zoom(-1);
+    $("#kaart-fit").onclick = () => { this.pasIn(); this.teken(); };
+    window.addEventListener("resize", () => { if (huidigeTab === "kaart") this.teken(); });
+  },
+
+  zoom(richting, ox, oy){
+    const doos = $("#kaart-doos");
+    const W = doos.clientWidth, H = doos.clientHeight;
+    if (ox === undefined){ ox = W/2; oy = H/2; }
+    const nieuwZ = Math.max(1, Math.min(18, this.z + richting));
+    if (nieuwZ === this.z) return;
+    const f = Math.pow(2, nieuwZ - this.z);
+    /* houd het punt onder de cursor op zijn plek */
+    const wx = this.cx - W/2 + ox, wy = this.cy - H/2 + oy;
+    this.cx = wx * f - ox + W/2;
+    this.cy = wy * f - oy + H/2;
+    this.z = nieuwZ;
+    this.teken();
+  },
+
+  pasIn(){
+    const doos = $("#kaart-doos");
+    const W = doos.clientWidth || 600, H = doos.clientHeight || 400;
+    if (!this.punten.length){ this.z = 3; this.cx = this.lonX(5, 3); this.cy = this.latY(52, 3); return; }
+    const lats = this.punten.map(p => p.lat), lons = this.punten.map(p => p.lon);
+    const minLat = Math.min(...lats), maxLat = Math.max(...lats);
+    const minLon = Math.min(...lons), maxLon = Math.max(...lons);
+    let z = 18;
+    for (; z > 1; z--){
+      const bx = Math.abs(this.lonX(maxLon,z) - this.lonX(minLon,z));
+      const by = Math.abs(this.latY(minLat,z) - this.latY(maxLat,z));
+      if (bx < W * 0.82 && by < H * 0.82) break;
+    }
+    this.z = z;
+    this.cx = (this.lonX(minLon,z) + this.lonX(maxLon,z)) / 2;
+    this.cy = (this.latY(minLat,z) + this.latY(maxLat,z)) / 2;
+  },
+
+  teken(){
+    const doos = $("#kaart-doos");
+    const W = doos.clientWidth, H = doos.clientHeight;
+    if (!W || !H) return;
+    const n = Math.pow(2, this.z), wereld = 256 * n;
+    this.cy = Math.max(H/2, Math.min(wereld - H/2, this.cy));
+    const lx = this.cx - W/2, ly = this.cy - H/2;
+
+    /* tegels */
+    const laag = $("#kaart-tegels");
+    const nodig = new Set();
+    const x0 = Math.floor(lx / 256), x1 = Math.floor((lx + W) / 256);
+    const y0 = Math.max(0, Math.floor(ly / 256)), y1 = Math.min(n - 1, Math.floor((ly + H) / 256));
+    for (let ty = y0; ty <= y1; ty++) for (let tx = x0; tx <= x1; tx++){
+      const wrap = ((tx % n) + n) % n;
+      const sleutel = this.z + "/" + wrap + "/" + ty + "/" + tx;
+      nodig.add(sleutel);
+      let img = this.tegels.get(sleutel);
+      if (!img){
+        img = new Image();
+        img.src = "https://tile.openstreetmap.org/" + this.z + "/" + wrap + "/" + ty + ".png";
+        img.alt = ""; img.draggable = false;
+        img.onerror = () => { this.mislukt++; img.style.background = "#182030"; this.melding(); };
+        laag.appendChild(img);
+        this.tegels.set(sleutel, img);
+      }
+      img.style.left = (tx * 256 - lx) + "px";
+      img.style.top  = (ty * 256 - ly) + "px";
+    }
+    this.tegels.forEach((img, sleutel) => {
+      if (!nodig.has(sleutel)){ img.remove(); this.tegels.delete(sleutel); }
+    });
+
+    /* punten */
+    const pl = $("#kaart-punten"); pl.innerHTML = "";
+    this.punten.forEach(p => {
+      let px = this.lonX(p.lon, this.z) - lx;
+      const py = this.latY(p.lat, this.z) - ly;
+      while (px < -128) px += wereld;
+      while (px > W + 128) px -= wereld;
+      if (px < -20 || px > W + 20 || py < -20 || py > H + 20) return;
+      const d = el("div","punt");
+      d.style.left = px + "px"; d.style.top = py + "px"; d.style.background = p.kleur;
+      d.title = p.titel;
+      d.onclick = () => toonRecord(p.rec, p.type);
+      pl.appendChild(d);
+    });
+  },
+
+  melding(){
+    if (this.mislukt > 6 && !this._gemeld){
+      this._gemeld = true;
+      $("#kaart-status").innerHTML = '<span style="color:var(--red)">kaartachtergrond laadt niet — de punten kloppen wel</span>';
+    }
+  },
+};
+
+async function laadKaartTab(){
+  Kaart.init();
+  const leg = $("#kaart-legenda");
+  if (!leg.dataset.klaar){
+    leg.innerHTML = KAART_LAGEN.map(([t,l,k]) =>
+      '<span><i style="background:' + k + '"></i>' + esc(l) + "</span>").join("") +
+      '<span style="margin-left:auto">kaartgegevens © OpenStreetMap</span>';
+    leg.dataset.klaar = "1";
+  }
+  if (!Kaart.punten.length) haalKaartPunten();
+  else Kaart.teken();
+}
+$("#kaart-laad").onclick = () => haalKaartPunten();
+
+async function haalKaartPunten(){
+  const st = $("#kaart-status");
+  st.innerHTML = '<span class="spin"></span> laden';
+  const punten = [];
+  for (const [type, label, kleur] of KAART_LAGEN){
+    try {
+      const r = await query(type, { limit: 400 });
+      (r.records || []).forEach(rec => {
+        const lat = v(rec,"latitude"), lon = v(rec,"longitude");
+        if (typeof lat !== "number" || typeof lon !== "number") return;
+        if (lat === 0 && lon === 0) return;
+        const d = SCHEMA[type] || {};
+        punten.push({ lat, lon, kleur, type, rec,
+          titel: label + " · " + ((d.titel && v(rec,d.titel)) || (d.tekst && knip(v(rec,d.tekst),60)) || "") });
+      });
+    } catch(e){ /* type leeg of geen index */ }
+  }
+  Kaart.punten = punten;
+  st.textContent = punten.length + " punten";
+  Kaart.pasIn(); Kaart.teken();
+}
+
+/* =====================================================================
    Uitleg / verbinding
    ===================================================================== */
 function laadInfo(){
@@ -2399,6 +2876,17 @@ function laadInfo(){
 /* Token uit een koppel-link (#t=…) overnemen en de link meteen opschonen,
    zodat hij niet in de adresbalk blijft staan. */
 (function leesKoppelLink(){
+  /* ?t=… blijft in de URL staan. Dat is met opzet: zet je de pagina op je
+     beginscherm, dan bewaart iOS die URL, en heeft de app zijn eigen opslag
+     toch weer gevuld bij de eerste start. #t=… wordt wél gewist. */
+  const q = new URLSearchParams(location.search);
+  const uitQuery = q.get("t");
+  if (uitQuery) {
+    State.token = uitQuery;
+    localStorage.setItem(LS.token, State.token);
+    if (q.get("e") === "development") { State.env = "development"; localStorage.setItem(LS.env, "development"); }
+    return;
+  }
   const h = location.hash || "";
   const m = /[#&]t=([A-Za-z0-9_\-]+)/.exec(h);
   if (!m) return;
@@ -2407,6 +2895,11 @@ function laadInfo(){
   if (/[#&]e=development/.test(h)) { State.env = "development"; localStorage.setItem(LS.env, "development"); }
   history.replaceState(null, "", location.pathname + location.search);
 })();
+
+/* Draait dit vanaf het beginscherm? Dan de uitleg over de aparte opslag tonen. */
+const opBeginscherm = window.navigator.standalone === true ||
+  (window.matchMedia && window.matchMedia("(display-mode: standalone)").matches);
+if (opBeginscherm && !State.token) $("#gate-standalone").classList.remove("hide");
 
 $("#origin-hint").textContent = (location.protocol === "file:") ? "(geen — dit is een los bestand)" : location.origin;
 if (location.protocol === "file:") {
@@ -2419,6 +2912,16 @@ $("#env-select").value = State.env;
 $("#env-select").onchange = () => { localStorage.setItem(LS.env, $("#env-select").value); location.reload(); };
 $("#token-input").value = State.token;
 
+$("#token-plak").onclick = async () => {
+  try {
+    const t = (await navigator.clipboard.readText() || "").trim();
+    if (!t) { toast("Er staat niets op het klembord.", "err"); return; }
+    /* iemand kan de hele link geplakt hebben in plaats van alleen het token */
+    const m = /[?&#]t=([A-Za-z0-9_\-]+)/.exec(t);
+    $("#token-input").value = m ? m[1] : t;
+    toast("Geplakt. Druk nu op Bewaren en laden.", "ok");
+  } catch(e){ toast("Plakken lukte niet — houd je vinger op het veld en kies Plak.", "err"); }
+};
 $("#token-save").onclick = () => {
   const t = $("#token-input").value.trim();
   if (!t) { toast("Plak eerst je API-token.","err"); return; }
@@ -2427,13 +2930,15 @@ $("#token-save").onclick = () => {
 };
 $("#token-clear").onclick = () => { localStorage.removeItem(LS.token); location.reload(); };
 
-function toonKoppelQR(){
+function toonKoppelQR(alsUitnodiging){
   if (!State.token) { toast("Er is nog geen token om te delen.", "err"); return; }
-  const url = location.origin + location.pathname + "#t=" + encodeURIComponent(State.token) +
+  const url = location.origin + location.pathname + "?t=" + encodeURIComponent(State.token) +
               (State.env !== "production" ? "&e=development" : "");
   const body = el("div"); body.style.cssText = "display:flex;flex-direction:column;gap:.85rem;align-items:center";
   body.innerHTML = "<p style='margin:0;color:var(--ink-dim);font-size:.9rem;text-align:center'>" +
-    "Scan dit één keer met de camera van je telefoon. De beheerpagina opent daar met je token er al in.</p>";
+    (alsUitnodiging
+      ? "Laat de ander dit scannen. De pagina opent bij hen, ze loggen in met hun eigen Apple ID en sturen jou daarna hun CloudKit-ID."
+      : "Scan dit één keer met de camera van je telefoon. De beheerpagina opent daar met je token er al in.") + "</p>";
   try {
     const q = QR.encode(url);
     const rand = 4, schaal = Math.max(3, Math.floor(280 / (q.size + rand*2)));
@@ -2453,15 +2958,18 @@ function toonKoppelQR(){
   const uitleg = el("div");
   uitleg.style.cssText = "font-size:.83rem;color:var(--muted);line-height:1.5";
   uitleg.innerHTML =
+    (alsUitnodiging ? "<b style='color:var(--ink-dim)'>Het token opent alleen de pagina.</b> Wijzigen mag pas als jij die persoon in de rol <code>beheerder</code> zet. Zonder dat kunnen ze meekijken, meer niet.<br><br>" : "") +
     "<b style='color:var(--ink-dim)'>Daarna hoef je dit nooit meer te doen.</b> Je token en je Apple-inlog blijven in de " +
     "browser van je telefoon staan.<br><br>" +
-    "<b style='color:var(--ink-dim)'>Zet hem wel op je beginscherm.</b> Open op je telefoon het deelmenu en kies " +
-    "<b>Zet op beginscherm</b>. Dan krijg je een eigen icoontje, opent hij zonder adresbalk, én — belangrijker — " +
-    "wist Safari je inlog niet meer weg als je een week niet kijkt. Zonder dat gebeurt dat wel.<br><br>" +
+    "<b style='color:var(--ink-dim)'>Zet hem op je beginscherm — maar in deze volgorde.</b> Scan de code, en zet de " +
+    "pagina <i>die dan opent</i> meteen op je beginscherm via het deelmenu → <b>Zet op beginscherm</b>. Het token zit " +
+    "in die link, dus de app op je beginscherm start daarna altijd ingelogd. Doe je het andersom, dan vraagt hij " +
+    "opnieuw om een token: een app op het beginscherm heeft een eigen opslag, los van Safari.<br><br>" +
+    "Het scheelt ook dat Safari je inlog niet meer weggooit als je een week niet kijkt.<br><br>" +
     "Deel deze code met niemand anders: wie hem scant heeft jouw token. Op je telefoon wordt hij meteen uit de adresbalk gehaald.";
   body.appendChild(uitleg);
 
-  Sheet.open("Telefoon koppelen", body, [
+  Sheet.open(alsUitnodiging ? "Iemand uitnodigen" : "Telefoon koppelen", body, [
     { label:"Link kopiëren", on: async (btn) => {
         try { await navigator.clipboard.writeText(url); toast("Gekopieerd. Bewaar hem als een wachtwoord.", "ok"); }
         catch(e){ toast("Kopiëren lukte niet — scan de code.", "err"); }
