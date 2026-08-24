@@ -239,6 +239,7 @@ label.f>span.hint{font-weight:400;font-size:.74rem;color:#6B7486}
       </div>
     </div>
     <span class="spacer"></span>
+    <button class="iconbtn" id="pair" title="Open deze tool op je telefoon">Telefoon</button>
     <button class="iconbtn" id="refresh-all" title="Alles opnieuw laden">Verversen</button>
     <button class="iconbtn" id="signout">Uitloggen</button>
   </div>
@@ -329,6 +330,17 @@ label.f>span.hint{font-weight:400;font-size:.74rem;color:#6B7486}
         </div>
       </div>
       <div class="card-b tight" id="usr-list"><div class="empty">Laden…</div></div>
+    </div>
+    <div class="card">
+      <div class="card-h"><h2>Mensen in de huidige App Store-versie</h2><span style="flex:1"></span>
+        <span class="sub" id="surv-count"></span>
+      </div>
+      <div class="card-b" style="font-size:.82rem;color:var(--muted);padding-bottom:0">
+        Versie 1.3.1 kent nog geen gebruikersaccounts. Wie de app gebruikt zie je wél aan hun
+        survival-status: elke gebruiker schrijft er één. Blokkeren kan hier ook — er wordt dan alvast
+        een account aangemaakt, zodat de blokkade meteen geldt zodra ze naar 2.2 updaten.
+      </div>
+      <div class="card-b tight" id="surv-list"><div class="empty">Laden…</div></div>
     </div>
   </section>
 
@@ -662,6 +674,211 @@ const FEATURE_VLAGGEN = [
   ["expedities","Expedities"],
 ];
 
+/* Minimale QR-encoder: byte-modus, foutcorrectieniveau L, versies 1 t/m 12.
+   Opzet volgt de standaardvolgorde: functiepatronen, data, masker, formaatbits. */
+const QR = (function(){
+  const CAP_L = [0,17,32,53,78,106,134,154,192,230,271,321,367];
+  const BLK_L = [null,
+    [7,[1,19]], [10,[1,34]], [15,[1,55]], [20,[1,80]], [26,[1,108]],
+    [18,[2,68]], [20,[2,78]], [24,[2,97]], [30,[2,116]],
+    [18,[2,68],[2,69]], [20,[4,81]], [24,[2,92],[2,93]] ];
+  const ALIGN = [null,[],[6,18],[6,22],[6,26],[6,30],[6,34],
+    [6,22,38],[6,24,42],[6,26,46],[6,28,50],[6,30,54],[6,32,58]];
+
+  const EXP = new Uint8Array(512), LOG = new Uint8Array(256);
+  (function(){ let x = 1;
+    for (let i = 0; i < 255; i++){ EXP[i] = x; LOG[x] = i; x <<= 1; if (x & 0x100) x ^= 0x11D; }
+    for (let i = 255; i < 512; i++) EXP[i] = EXP[i-255];
+  })();
+  const mul = (a,b) => (a === 0 || b === 0) ? 0 : EXP[LOG[a] + LOG[b]];
+
+  function genPoly(n){
+    let p = [1];
+    for (let i = 0; i < n; i++){
+      const q = new Array(p.length + 1).fill(0);
+      for (let j = 0; j < p.length; j++){ q[j] ^= p[j]; q[j+1] ^= mul(p[j], EXP[i]); }
+      p = q;
+    }
+    return p;
+  }
+  function ecc(data, n){
+    const gen = genPoly(n), res = new Array(n).fill(0);
+    for (const d of data){
+      const factor = d ^ res[0];
+      res.shift(); res.push(0);
+      if (factor !== 0) for (let j = 0; j < n; j++) res[j] ^= mul(gen[j+1], factor);
+    }
+    return res;
+  }
+  function formatBits(mask){
+    const data = (0b01 << 3) | mask;            /* niveau L = 01 */
+    let v = data;
+    for (let i = 0; i < 10; i++) v = (v << 1) ^ ((v >> 9) * 0x537);
+    return ((data << 10) | v) ^ 0x5412;
+  }
+  function versionBits(version){
+    let v = version;
+    for (let i = 0; i < 12; i++) v = (v << 1) ^ ((v >> 11) * 0x1F25);
+    return (version << 12) | v;
+  }
+  const getBit = (x, i) => (x >>> i) & 1;
+
+  function encode(tekst){
+    const bytes = new TextEncoder().encode(tekst);
+    let version = 0;
+    for (let v = 1; v <= 12; v++) if (bytes.length <= CAP_L[v]) { version = v; break; }
+    if (!version) throw new Error("Tekst te lang voor deze QR-code.");
+
+    const size = 17 + 4 * version;
+    const spec = BLK_L[version], ecLen = spec[0], groepen = spec.slice(1);
+    const totaalData = groepen.reduce((a,g) => a + g[0]*g[1], 0);
+
+    /* --- bits --- */
+    const bits = [];
+    const push = (val, len) => { for (let i = len - 1; i >= 0; i--) bits.push((val >> i) & 1); };
+    push(0b0100, 4);
+    push(bytes.length, version <= 9 ? 8 : 16);
+    bytes.forEach(b => push(b, 8));
+    for (let i = 0; i < 4 && bits.length < totaalData * 8; i++) bits.push(0);
+    while (bits.length % 8) bits.push(0);
+    const dataCw = [];
+    for (let i = 0; i < bits.length; i += 8){ let b = 0; for (let j = 0; j < 8; j++) b = (b<<1)|bits[i+j]; dataCw.push(b); }
+    for (let i = 0; dataCw.length < totaalData; i++) dataCw.push(i % 2 === 0 ? 0xEC : 0x11);
+
+    const dB = [], eB = [];
+    let p = 0;
+    groepen.forEach(([n, len]) => { for (let i = 0; i < n; i++){ const b = dataCw.slice(p, p+len); p += len; dB.push(b); eB.push(ecc(b, ecLen)); } });
+    const alle = [];
+    const maxLen = Math.max(...dB.map(b => b.length));
+    for (let i = 0; i < maxLen; i++) dB.forEach(b => { if (i < b.length) alle.push(b[i]); });
+    for (let i = 0; i < ecLen; i++) eB.forEach(b => alle.push(b[i]));
+
+    /* --- matrix --- */
+    const mod = Array.from({length:size}, () => new Array(size).fill(0));
+    const fn  = Array.from({length:size}, () => new Array(size).fill(false));
+    const setF = (r,c,v) => { if (r>=0 && r<size && c>=0 && c<size){ mod[r][c] = v; fn[r][c] = true; } };
+
+    /* timing */
+    for (let i = 0; i < size; i++){ setF(6, i, i % 2 === 0 ? 1 : 0); setF(i, 6, i % 2 === 0 ? 1 : 0); }
+    /* vinders met scheidingsstroken */
+    const vinder = (r0,c0) => {
+      for (let dy = -4; dy <= 4; dy++) for (let dx = -4; dx <= 4; dx++){
+        const d = Math.max(Math.abs(dx), Math.abs(dy));
+        setF(r0+dy, c0+dx, (d !== 2 && d !== 4) ? 1 : 0);
+      }
+    };
+    vinder(3,3); vinder(3,size-4); vinder(size-4,3);
+    /* uitlijning */
+    const cs = ALIGN[version];
+    for (let i = 0; i < cs.length; i++) for (let j = 0; j < cs.length; j++){
+      if ((i===0&&j===0) || (i===0&&j===cs.length-1) || (i===cs.length-1&&j===0)) continue;
+      for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++)
+        setF(cs[i]+dy, cs[j]+dx, Math.max(Math.abs(dx),Math.abs(dy)) !== 1 ? 1 : 0);
+    }
+    /* formaat reserveren (waarde later) */
+    tekenFormaat(0);
+    if (version >= 7) tekenVersie();
+
+    function tekenFormaat(mask){
+      const f = formatBits(mask);
+      for (let i = 0; i <= 5; i++) setF(i, 8, getBit(f, i));
+      setF(7, 8, getBit(f, 6));
+      setF(8, 8, getBit(f, 7));
+      setF(8, 7, getBit(f, 8));
+      for (let i = 9; i < 15; i++) setF(8, 14 - i, getBit(f, i));
+      for (let i = 0; i < 8; i++) setF(8, size - 1 - i, getBit(f, i));
+      for (let i = 8; i < 15; i++) setF(size - 15 + i, 8, getBit(f, i));
+      setF(size - 8, 8, 1);
+    }
+    function tekenVersie(){
+      const b = versionBits(version);
+      for (let i = 0; i < 18; i++){
+        const bit = getBit(b, i), a = size - 11 + (i % 3), c = Math.floor(i / 3);
+        setF(c, a, bit); setF(a, c, bit);
+      }
+    }
+
+    /* --- data plaatsen --- */
+    let i = 0;
+    for (let rechts = size - 1; rechts >= 1; rechts -= 2){
+      if (rechts === 6) rechts = 5;
+      for (let vert = 0; vert < size; vert++){
+        for (let j = 0; j < 2; j++){
+          const c = rechts - j;
+          const omhoog = ((rechts + 1) & 2) === 0;
+          const r = omhoog ? size - 1 - vert : vert;
+          if (fn[r][c]) continue;
+          mod[r][c] = i < alle.length * 8 ? getBit(alle[i >>> 3], 7 - (i & 7)) : 0;
+          i++;
+        }
+      }
+    }
+
+    /* --- masker kiezen --- */
+    const maskFn = [
+      (r,c) => (r+c) % 2 === 0,
+      (r,c) => r % 2 === 0,
+      (r,c) => c % 3 === 0,
+      (r,c) => (r+c) % 3 === 0,
+      (r,c) => (Math.floor(r/2) + Math.floor(c/3)) % 2 === 0,
+      (r,c) => ((r*c) % 2) + ((r*c) % 3) === 0,
+      (r,c) => ((((r*c) % 2) + ((r*c) % 3)) % 2) === 0,
+      (r,c) => (((((r+c) % 2)) + ((r*c) % 3)) % 2) === 0,
+    ];
+    let besteMask = 0, besteScore = Infinity;
+    for (let mask = 0; mask < 8; mask++){
+      pasMaskerToe(mask); tekenFormaat(mask);
+      const s = straf();
+      if (s < besteScore){ besteScore = s; besteMask = mask; }
+      pasMaskerToe(mask);
+    }
+    pasMaskerToe(besteMask); tekenFormaat(besteMask);
+
+    function pasMaskerToe(mask){
+      for (let r = 0; r < size; r++) for (let c = 0; c < size; c++)
+        if (!fn[r][c] && maskFn[mask](r,c)) mod[r][c] ^= 1;
+    }
+    function straf(){
+      let pen = 0;
+      for (let r = 0; r < size; r++){
+        let run = 1;
+        for (let c = 1; c < size; c++){
+          if (mod[r][c] === mod[r][c-1]) run++;
+          else { if (run >= 5) pen += 3 + (run-5); run = 1; }
+        }
+        if (run >= 5) pen += 3 + (run-5);
+      }
+      for (let c = 0; c < size; c++){
+        let run = 1;
+        for (let r = 1; r < size; r++){
+          if (mod[r][c] === mod[r-1][c]) run++;
+          else { if (run >= 5) pen += 3 + (run-5); run = 1; }
+        }
+        if (run >= 5) pen += 3 + (run-5);
+      }
+      for (let r = 0; r < size-1; r++) for (let c = 0; c < size-1; c++)
+        if (mod[r][c] === mod[r][c+1] && mod[r][c] === mod[r+1][c] && mod[r][c] === mod[r+1][c+1]) pen += 3;
+      const a = [1,0,1,1,1,0,1,0,0,0,0], b = [0,0,0,0,1,0,1,1,1,0,1];
+      const lijnCheck = lijn => {
+        for (let j = 0; j + 11 <= size; j++){
+          let ma = true, mb = true;
+          for (let k = 0; k < 11; k++){ if (lijn[j+k] !== a[k]) ma = false; if (lijn[j+k] !== b[k]) mb = false; }
+          if (ma) pen += 40; if (mb) pen += 40;
+        }
+      };
+      for (let r = 0; r < size; r++) lijnCheck(mod[r]);
+      for (let c = 0; c < size; c++) lijnCheck(mod.map(row => row[c]));
+      let donker = 0;
+      for (let r = 0; r < size; r++) for (let c = 0; c < size; c++) donker += mod[r][c];
+      pen += Math.floor(Math.abs(donker * 20 - size*size*10) / (size*size)) * 10;
+      return pen;
+    }
+
+    return { modules: mod, size, version };
+  }
+  return { encode };
+})();
+
 /* =====================================================================
    Kleine hulpjes
    ===================================================================== */
@@ -839,9 +1056,26 @@ const Acties = {
     const r = await query("GebruikersAccount", {
       filters: [{ fieldName:"gebruikerCode", comparator:"EQUALS", fieldValue:{ value: gebruikerCode } }], limit: 1, sort: null });
     const rec = (r.records||[])[0];
-    if (!rec) throw new Error("Geen account met code " + gebruikerCode + ". Deze gebruiker heeft de app misschien nog niet geopend sinds versie 2.0.");
-    await patch(rec.recordName, { isBanned: 1, banReden: reden || "" });
-    toast("Geblokkeerd.", "ok");
+    if (rec) {
+      await patch(rec.recordName, { isBanned: 1, banReden: reden || "" });
+      toast("Geblokkeerd.", "ok");
+    } else {
+      /* Nog geen account: die bestaat pas vanaf versie 2.0. We maken hem alvast
+         aan met de blokkade erin. Zodra de app opstart vindt hij dit record op
+         gebruikerCode, werkt het bij en houdt isBanned op 1. */
+      await saveRecord({ recordType:"GebruikersAccount", fields:{
+        gebruikerCode:{ value: gebruikerCode },
+        displayNaam:{ value: "" },
+        profielBeschrijving:{ value: "" },
+        isBanned:{ value: 1 },
+        banReden:{ value: reden || "" },
+        isPro:{ value: 0 },
+        aangemeldOp:{ value: Date.now() },
+        forumPostTelling:{ value: 0 },
+        reactieTelling:{ value: 0 },
+      }});
+      toast("Geblokkeerd — account vooraf aangemaakt, blokkade geldt zodra ze updaten.", "ok");
+    }
     Cache.wis("GebruikersAccount");
   },
 
@@ -1071,7 +1305,7 @@ const TABS = [
   { id:"dashboard", label:"Overzicht", laad: laadDashboard },
   { id:"meldingen", label:"Meldingen", laad: laadMeldingen },
   { id:"forum",     label:"Forum",     laad: laadForumTab },
-  { id:"gebruikers",label:"Gebruikers",laad: laadGebruikers },
+  { id:"gebruikers",label:"Gebruikers",laad: () => { laadGebruikers(); laadSurvival(); } },
   { id:"verborgen", label:"Verborgen", laad: laadVerborgen },
   { id:"berichten", label:"Aankondigingen", laad: laadAankondigingen },
   { id:"config",    label:"Instellingen", laad: laadConfig },
@@ -1117,7 +1351,8 @@ async function laadDashboard(){
     { key:"oud",  type:"ForumMelding", label:"Forummeldingen", cls:"", tab:"meldingen" },
     { key:"ban",  type:"GebruikersAccount", filters:[{fieldName:"isBanned",comparator:"EQUALS",fieldValue:{value:1}}], label:"Geblokkeerd", cls:"", tab:"gebruikers" },
     { key:"hid",  type:"AdminVerborgen", label:"Verborgen", cls:"", tab:"verborgen" },
-    { key:"usr",  type:"GebruikersAccount", label:"Gebruikers", cls:"good", tab:"gebruikers" },
+    { key:"surv", type:"SurvivalStatus", label:"Mensen in de app", cls:"good", tab:"gebruikers" },
+    { key:"usr",  type:"GebruikersAccount", label:"Accounts (2.2+)", cls:"", tab:"gebruikers" },
     { key:"pro",  type:"GebruikersAccount", filters:[{fieldName:"isPro",comparator:"EQUALS",fieldValue:{value:1}}], label:"Pro", cls:"warm", tab:"gebruikers" },
     { key:"post", type:"OutdoorPost", label:"Outdoor posts", cls:"", tab:"forum" },
     { key:"fb",   type:"AppFeedback", filters:[{fieldName:"gelezen",comparator:"EQUALS",fieldValue:{value:0}}], label:"Ongelezen feedback", cls:"warm", tab:"feedback" },
@@ -1369,7 +1604,48 @@ async function laadGebruikers(){
     recs.forEach(rec => n.appendChild(gebruikerRij(rec)));
   } catch(e){ n.innerHTML = leeg(String(e.message||e), "Fout bij laden"); }
 }
-$("#usr-load").onclick = laadGebruikers;
+function survivalRij(rec){
+  const code = v(rec,"uitnodigingsCode") || "";
+  const r = el("div","row"); const body = el("div","body");
+  body.appendChild(el("div","title", esc(v(rec,"naam") || codeWeergave(code) || "Naamloos")));
+  const plaats = [v(rec,"stad"), v(rec,"land")].filter(Boolean).join(", ");
+  const dag = n => (n == null ? "—" : (Math.round(n*10)/10) + " d");
+  const meta = el("div","meta");
+  meta.innerHTML =
+    (code ? '<span class="mono">' + esc(codeWeergave(code)) + "</span>" : "") +
+    (plaats ? "<span>" + esc(plaats) + "</span>" : "") +
+    "<span>voorraad " + esc(dag(v(rec,"overlevingsDagen"))) + "</span>" +
+    "<span>eten " + esc(dag(v(rec,"voedselDagen"))) + "</span>" +
+    "<span>water " + esc(dag(v(rec,"waterDagen"))) + "</span>" +
+    "<span>" + (v(rec,"aantalItems")||0) + " items</span>" +
+    "<span>bijgewerkt " + esc(fmtGeleden(v(rec,"bijgewerktOp"))) + "</span>";
+  body.appendChild(meta);
+  if (v(rec,"actiefNoodplan")) body.appendChild(el("div","text",
+    '<span class="pill red">noodplan actief</span> ' + esc(v(rec,"actiefNoodplan")) + " — " + esc(fmtDate(v(rec,"noodplanTijd")))));
+  const acts = el("div","acts");
+  const b1 = el("button","btn sm","Alles bekijken"); b1.onclick = () => toonRecord(rec,"SurvivalStatus");
+  acts.appendChild(b1);
+  if (code) {
+    const b2 = el("button","btn sm danger","Blokkeren"); b2.onclick = () => vraagBlokkeer(code);
+    acts.appendChild(b2);
+  }
+  body.appendChild(acts); r.appendChild(body);
+  return r;
+}
+
+async function laadSurvival(){
+  const n = $("#surv-list"); bezig(n);
+  try {
+    const r = await query("SurvivalStatus", { limit: 400 });
+    const recs = r.records || [];
+    $("#surv-count").textContent = recs.length + (r.moreComing ? "+" : "") + " mensen";
+    n.innerHTML = "";
+    if (!recs.length) { n.innerHTML = leeg("Nog niemand.", "Leeg"); return; }
+    recs.forEach(rec => n.appendChild(survivalRij(rec)));
+  } catch(e){ n.innerHTML = leeg(String(e.message||e), "Fout bij laden"); }
+}
+
+$("#usr-load").onclick = () => { laadGebruikers(); laadSurvival(); };
 $("#usr-filter").onchange = laadGebruikers;
 $("#usr-q").addEventListener("keydown", e => { if (e.key === "Enter") laadGebruikers(); });
 
@@ -1710,13 +1986,17 @@ $("#st-load").onclick = async (e) => {
     const users = await haalAlles("GebruikersAccount", { onVoortgang: n => st.textContent = "gebruikers… " + n });
     statsGebruikers = users;
 
+    st.textContent = "survival-status…";
+    const surv = await haalAlles("SurvivalStatus", { max: 5000 }).catch(()=>[]);
+    const prepfam = await haalAlles("PrepFamilyGebruiker", { max: 5000 }).catch(()=>[]);
+
     st.textContent = "feedback…";
     const fb = await haalAlles("AppFeedback", { max: 2000 }).catch(()=>[]);
 
     st.textContent = "content…";
     const inhoudTypes = ["OutdoorPost","ErvaringPost","BuurtPost","ForumReactie","TrailConditie","PlaatsAlert",
                          "PublicSafeSpot","WaterBron","SharedRoute","Expeditie","SegmentLeaderboard",
-                         "BuddyCheckIn","NoodplanActivatie","ReferralRecord","Chatbericht","SurvivalStatus"];
+                         "BuddyCheckIn","NoodplanActivatie","ReferralRecord","Chatbericht","SurvivalStatus","PrepFamilyGebruiker"];
     const inhoud = [];
     for (const t of inhoudTypes) {
       st.textContent = "content… " + (SCHEMA[t] || {}).label;
@@ -1732,8 +2012,17 @@ $("#st-load").onclick = async (e) => {
     const nieuwSinds  = d => users.filter(u => (v(u,"aangemeldOp") || 0) > nu - d*dag).length;
     const metPost = users.filter(u => (v(u,"forumPostTelling")||0) + (v(u,"reactieTelling")||0) > 0);
 
+    const metNoodplan = surv.filter(r => (v(r,"actiefNoodplan") || "") !== "").length;
+    const survActief = d => surv.filter(r => (v(r,"bijgewerktOp") || 0) > nu - d*dag).length;
+    const voorraden = surv.map(r => v(r,"overlevingsDagen")).filter(x => typeof x === "number" && x > 0);
+    const gemVoorraad = voorraden.length ? (voorraden.reduce((a,b)=>a+b,0) / voorraden.length) : 0;
+
     const kern = [
-      ["Gebruikers", users.length, ""],
+      ["Mensen in de app", surv.length, "good"],
+      ["Bijgewerkt deze maand", survActief(30), ""],
+      ["Noodplan actief", metNoodplan, metNoodplan ? "alert" : ""],
+      ["Gem. voorraad", (Math.round(gemVoorraad*10)/10) + " d", "warm"],
+      ["Accounts (2.2+)", users.length, ""],
       ["Pro", pro.length + (users.length ? " (" + Math.round(pro.length/users.length*100) + "%)" : ""), "warm"],
       ["Geblokkeerd", geband.length, geband.length ? "alert" : ""],
       ["Actief deze week", actiefSinds(7), "good"],
@@ -1771,7 +2060,17 @@ $("#st-load").onclick = async (e) => {
       users.forEach(u => { const w = (v(u,sleutel) || "onbekend"); m[w] = (m[w]||0)+1; });
       return Object.entries(m).sort((a,b) => b[1]-a[1]).slice(0,10);
     };
-    $("#st-versies").innerHTML = ""; $("#st-versies").appendChild(balken(tel("appVersie").map(([l,n]) => ["v"+l, n, "var(--blue)"])));
+    $("#st-versies").innerHTML = "";
+    if (users.length) $("#st-versies").appendChild(balken(tel("appVersie").map(([l,n]) => ["v"+l, n, "var(--blue)"])));
+    else {
+      const landen = {};
+      surv.concat(prepfam).forEach(r => { const w = v(r,"land") || "onbekend"; landen[w] = (landen[w]||0)+1; });
+      const rijen = Object.entries(landen).sort((a,b)=>b[1]-a[1]).slice(0,10).map(([l,n]) => [l, n, "var(--blue)"]);
+      const kop = el("div","", "Appversies staan pas in de database vanaf 2.2. Zolang die niet live is, hier de landenverdeling uit de survival-statussen.");
+      kop.style.cssText = "font-size:.8rem;color:var(--muted);margin-bottom:.6rem";
+      $("#st-versies").appendChild(kop);
+      $("#st-versies").appendChild(balken(rijen));
+    }
     $("#st-toestellen").innerHTML = ""; $("#st-toestellen").appendChild(balken(tel("apparaatModel").map(([l,n]) => [l, n, "var(--violet)"])));
 
     /* --- Pro-lijst --- */
@@ -1844,6 +2143,18 @@ function laadInfo(){
 /* =====================================================================
    Opstarten
    ===================================================================== */
+/* Token uit een koppel-link (#t=…) overnemen en de link meteen opschonen,
+   zodat hij niet in de adresbalk blijft staan. */
+(function leesKoppelLink(){
+  const h = location.hash || "";
+  const m = /[#&]t=([A-Za-z0-9_\-]+)/.exec(h);
+  if (!m) return;
+  State.token = decodeURIComponent(m[1]);
+  localStorage.setItem(LS.token, State.token);
+  if (/[#&]e=development/.test(h)) { State.env = "development"; localStorage.setItem(LS.env, "development"); }
+  history.replaceState(null, "", location.pathname + location.search);
+})();
+
 $("#origin-hint").textContent = (location.protocol === "file:") ? "(geen — dit is een los bestand)" : location.origin;
 if (location.protocol === "file:") {
   const w = el("div","card");
@@ -1862,6 +2173,38 @@ $("#token-save").onclick = () => {
   location.reload();
 };
 $("#token-clear").onclick = () => { localStorage.removeItem(LS.token); location.reload(); };
+
+function toonKoppelQR(){
+  if (!State.token) { toast("Er is nog geen token om te delen.", "err"); return; }
+  const url = location.origin + location.pathname + "#t=" + encodeURIComponent(State.token) +
+              (State.env !== "production" ? "&e=development" : "");
+  const body = el("div"); body.style.cssText = "display:flex;flex-direction:column;gap:.85rem;align-items:center";
+  body.innerHTML = "<p style='margin:0;color:var(--ink-dim);font-size:.9rem;text-align:center'>" +
+    "Scan dit met de camera van je telefoon. De beheerpagina opent daar met je token er al in — " +
+    "je hoeft niets over te typen.</p>";
+  try {
+    const q = QR.encode(url);
+    const rand = 4, schaal = Math.max(3, Math.floor(280 / (q.size + rand*2)));
+    const px = (q.size + rand*2) * schaal;
+    const cv = document.createElement("canvas");
+    cv.width = px; cv.height = px;
+    cv.style.cssText = "width:100%;max-width:" + px + "px;height:auto;image-rendering:pixelated;border-radius:8px;background:#fff;padding:0";
+    const g = cv.getContext("2d");
+    g.fillStyle = "#FFFFFF"; g.fillRect(0, 0, px, px);
+    g.fillStyle = "#000000";
+    for (let y = 0; y < q.size; y++) for (let x = 0; x < q.size; x++)
+      if (q.modules[y][x]) g.fillRect((x+rand)*schaal, (y+rand)*schaal, schaal, schaal);
+    body.appendChild(cv);
+  } catch(e){
+    body.appendChild(el("div","", '<span style="color:var(--red)">QR maken lukte niet: ' + esc(String(e.message||e)) + "</span>"));
+  }
+  const waarschuwing = el("div","", "Deel deze code met niemand anders — wie hem scant heeft jouw token. " +
+    "Op je telefoon wordt hij meteen uit de adresbalk gehaald.");
+  waarschuwing.style.cssText = "font-size:.8rem;color:var(--muted);text-align:center";
+  body.appendChild(waarschuwing);
+  Sheet.open("Telefoon koppelen", body, [{ label:"Klaar", cls:"primary", on: () => Sheet.close() }]);
+}
+$("#pair").onclick = toonKoppelQR;
 
 $("#refresh-all").onclick = () => { Cache.wis(); const t = TABS.find(x=>x.id===huidigeTab); if (t) t.laad(); toast("Verversen…"); };
 $("#signout").onclick = () => {
