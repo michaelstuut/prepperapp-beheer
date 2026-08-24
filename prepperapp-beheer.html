@@ -1,0 +1,1961 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="dark">
+<title>PrepperApp Beheer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=Public+Sans:ital,wght@0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@400;500;700&display=swap">
+<style>
+:root{
+  --ground:#0B0E13; --surface:#131822; --raised:#1A212D; --edge:#28303F; --edge-soft:#1F2734;
+  --ink:#E7EAF0; --ink-dim:#B4BCCB; --muted:#7F8899;
+  --amber:#F0B429; --amber-dim:#B8891C; --amber-soft:#2E2510;
+  --red:#E4574C; --red-soft:#331917; --green:#4FB37A; --green-soft:#12291C;
+  --blue:#5B9DD9; --blue-soft:#12212E; --violet:#9B7BD4;
+  --r:10px; --shadow:0 1px 0 rgba(255,255,255,.03) inset, 0 6px 24px rgba(0,0,0,.35);
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  background:var(--ground); color:var(--ink);
+  font-family:"Public Sans",system-ui,-apple-system,sans-serif;
+  font-size:15px; line-height:1.5; -webkit-font-smoothing:antialiased;
+  padding-bottom:env(safe-area-inset-bottom);
+}
+h1,h2,h3{font-family:"Bricolage Grotesque","Public Sans",system-ui,sans-serif;font-weight:700;margin:0;letter-spacing:-.01em;text-wrap:balance}
+code,.mono,kbd{font-family:"JetBrains Mono",ui-monospace,SFMono-Regular,monospace;font-variant-numeric:tabular-nums}
+button,input,select,textarea{font:inherit;color:inherit}
+a{color:var(--amber)}
+
+/* ---------- chrome ---------- */
+.topbar{
+  position:sticky; top:0; z-index:40; background:rgba(11,14,19,.92);
+  backdrop-filter:blur(12px); border-bottom:1px solid var(--edge);
+  padding:env(safe-area-inset-top) 0 0;
+}
+.topbar-in{display:flex;align-items:center;gap:.75rem;padding:.6rem .9rem;max-width:72rem;margin:0 auto}
+.brand{display:flex;align-items:center;gap:.55rem;min-width:0}
+.dot{width:9px;height:9px;border-radius:50%;background:var(--muted);flex:none}
+.dot.live{background:var(--green);box-shadow:0 0 0 3px var(--green-soft)}
+.dot.dev{background:var(--blue);box-shadow:0 0 0 3px var(--blue-soft)}
+.brand b{font-family:"Bricolage Grotesque",sans-serif;font-size:.98rem;letter-spacing:-.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block;max-width:11rem}
+.brand .env{font-size:.68rem;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block;max-width:11rem}
+.topbar .spacer{flex:1}
+.iconbtn{background:var(--raised);border:1px solid var(--edge);border-radius:8px;padding:.4rem .6rem;font-size:.8rem;cursor:pointer;white-space:nowrap}
+.iconbtn:hover{border-color:var(--amber-dim)}
+.iconbtn:active{transform:translateY(1px)}
+
+.tabs{
+  display:flex;gap:.25rem;overflow-x:auto;padding:.4rem .9rem .55rem;max-width:72rem;margin:0 auto;
+  scrollbar-width:none;-webkit-overflow-scrolling:touch;
+}
+.tabs::-webkit-scrollbar{display:none}
+.tab{
+  flex:none;background:none;border:1px solid transparent;border-radius:999px;
+  padding:.35rem .8rem;color:var(--muted);font-size:.85rem;font-weight:500;cursor:pointer;white-space:nowrap
+}
+.tab:hover{color:var(--ink-dim)}
+.tab[aria-selected="true"]{background:var(--amber-soft);border-color:var(--amber-dim);color:var(--amber)}
+.tab .badge{
+  display:inline-block;margin-left:.35rem;min-width:1.15em;padding:0 .3em;border-radius:999px;
+  background:var(--red);color:#fff;font-size:.68rem;font-weight:700;line-height:1.5;text-align:center;
+  font-family:"JetBrains Mono",monospace
+}
+
+main{max-width:72rem;margin:0 auto;padding:1.1rem .9rem 5rem}
+.view{display:none;flex-direction:column;gap:1rem}
+.view.on{display:flex}
+
+/* ---------- building blocks ---------- */
+.card{background:var(--surface);border:1px solid var(--edge);border-radius:var(--r);box-shadow:var(--shadow)}
+.card-h{display:flex;align-items:center;gap:.6rem;padding:.75rem .9rem;border-bottom:1px solid var(--edge-soft)}
+.card-h h2{font-size:1rem}
+.card-h .sub{color:var(--muted);font-size:.8rem}
+.card-b{padding:.9rem}
+.card-b.tight{padding:0}
+
+.grid{display:grid;gap:.7rem}
+@media(min-width:40rem){ .grid.c2{grid-template-columns:1fr 1fr} .grid.c3{grid-template-columns:repeat(3,1fr)} .grid.c4{grid-template-columns:repeat(4,1fr)} }
+@media(max-width:39.99rem){ .grid.c3,.grid.c4{grid-template-columns:1fr 1fr} }
+
+.stat{background:var(--surface);border:1px solid var(--edge);border-radius:var(--r);padding:.75rem .85rem;display:flex;flex-direction:column;gap:.15rem;text-align:left;cursor:pointer;width:100%}
+.stat:hover{border-color:var(--amber-dim)}
+.stat .n{font-family:"JetBrains Mono",monospace;font-size:1.55rem;font-weight:700;line-height:1.1;letter-spacing:-.02em}
+.stat .l{font-size:.76rem;color:var(--muted);letter-spacing:.02em}
+.stat.alert .n{color:var(--red)}
+.stat.good .n{color:var(--green)}
+.stat.warm .n{color:var(--amber)}
+
+.row{display:flex;gap:.6rem;align-items:flex-start;padding:.8rem .9rem;border-bottom:1px solid var(--edge-soft)}
+.row:last-child{border-bottom:none}
+.row .body{flex:1;min-width:0}
+.row .title{font-weight:600;font-size:.95rem;line-height:1.35;overflow-wrap:anywhere}
+.row .meta{color:var(--muted);font-size:.78rem;margin-top:.15rem;display:flex;flex-wrap:wrap;gap:.15rem .6rem;align-items:center}
+.row .text{margin-top:.4rem;color:var(--ink-dim);font-size:.88rem;overflow-wrap:anywhere;white-space:pre-wrap}
+.row .acts{display:flex;flex-wrap:wrap;gap:.35rem;margin-top:.6rem}
+
+.pill{display:inline-flex;align-items:center;gap:.3rem;padding:.08rem .45rem;border-radius:999px;font-size:.7rem;font-weight:600;letter-spacing:.02em;border:1px solid var(--edge);color:var(--muted);white-space:nowrap}
+.pill.red{color:var(--red);border-color:var(--red);background:var(--red-soft)}
+.pill.green{color:var(--green);border-color:var(--green);background:var(--green-soft)}
+.pill.amber{color:var(--amber);border-color:var(--amber-dim);background:var(--amber-soft)}
+.pill.blue{color:var(--blue);border-color:var(--blue);background:var(--blue-soft)}
+.pill.plain{color:var(--ink-dim)}
+
+.btn{background:var(--raised);border:1px solid var(--edge);border-radius:7px;padding:.36rem .7rem;font-size:.82rem;font-weight:500;cursor:pointer;white-space:nowrap}
+.btn:hover{border-color:var(--muted)}
+.btn:active{transform:translateY(1px)}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn.primary{background:var(--amber);border-color:var(--amber);color:#1A1204;font-weight:600}
+.btn.primary:hover{filter:brightness(1.07)}
+.btn.danger{color:var(--red);border-color:#4A2420}
+.btn.danger:hover{background:var(--red-soft);border-color:var(--red)}
+.btn.ok{color:var(--green);border-color:#204532}
+.btn.ok:hover{background:var(--green-soft);border-color:var(--green)}
+.btn.sm{padding:.24rem .55rem;font-size:.76rem}
+
+input[type=text],input[type=number],input[type=search],input[type=datetime-local],select,textarea{
+  width:100%;background:var(--ground);border:1px solid var(--edge);border-radius:8px;
+  padding:.5rem .6rem;font-size:.9rem;outline:none
+}
+input:focus,select:focus,textarea:focus{border-color:var(--amber-dim);box-shadow:0 0 0 3px var(--amber-soft)}
+textarea{min-height:5.5rem;resize:vertical;line-height:1.45}
+label.f{display:flex;flex-direction:column;gap:.28rem;font-size:.78rem;color:var(--muted);font-weight:500}
+label.f>span.hint{font-weight:400;font-size:.74rem;color:#6B7486}
+.switch{display:flex;align-items:center;gap:.55rem;font-size:.88rem;color:var(--ink-dim);cursor:pointer;user-select:none}
+.switch input{width:1.05rem;height:1.05rem;accent-color:var(--amber)}
+
+.toolbar{display:flex;flex-wrap:wrap;gap:.5rem;align-items:flex-end}
+.toolbar > *{flex:1 1 10rem;min-width:0}
+.toolbar .narrow{flex:0 0 auto}
+.toolbar > button.btn{flex:0 0 auto;padding:.5rem .9rem}
+
+.empty{padding:2rem 1rem;text-align:center;color:var(--muted);font-size:.88rem}
+.empty b{display:block;color:var(--ink-dim);font-family:"Bricolage Grotesque",sans-serif;font-size:1rem;margin-bottom:.25rem}
+.spin{display:inline-block;width:.85em;height:.85em;border:2px solid var(--edge);border-top-color:var(--amber);border-radius:50%;animation:sp .7s linear infinite;vertical-align:-.1em}
+@keyframes sp{to{transform:rotate(360deg)}}
+@media(prefers-reduced-motion:reduce){.spin{animation-duration:2s}}
+
+.kv{display:grid;grid-template-columns:minmax(6rem,10rem) 1fr;gap:.3rem .7rem;font-size:.83rem;align-items:baseline}
+.kv dt{color:var(--muted);font-family:"JetBrains Mono",monospace;font-size:.76rem;overflow-wrap:anywhere}
+.kv dd{margin:0;overflow-wrap:anywhere;white-space:pre-wrap}
+@media(max-width:30rem){.kv{grid-template-columns:1fr;gap:.05rem}.kv dd{margin-bottom:.45rem}}
+
+.scrollx{overflow-x:auto}
+
+/* ---------- sheet / dialog ---------- */
+.sheet{position:fixed;inset:0;z-index:60;display:none;align-items:flex-end;justify-content:center;background:rgba(3,5,8,.66);backdrop-filter:blur(3px)}
+.sheet.on{display:flex}
+.sheet-in{background:var(--surface);border:1px solid var(--edge);border-radius:16px 16px 0 0;width:100%;max-width:40rem;max-height:88vh;overflow:auto;box-shadow:0 -8px 40px rgba(0,0,0,.5);padding-bottom:calc(1rem + env(safe-area-inset-bottom))}
+@media(min-width:40rem){.sheet{align-items:center}.sheet-in{border-radius:14px}}
+.sheet-h{position:sticky;top:0;background:var(--surface);display:flex;align-items:center;gap:.6rem;padding:.85rem .95rem;border-bottom:1px solid var(--edge-soft);z-index:2}
+.sheet-h h2{font-size:1.02rem;flex:1;min-width:0}
+.sheet-b{padding:.95rem;display:flex;flex-direction:column;gap:.75rem}
+.sheet-f{display:flex;gap:.5rem;padding:.85rem .95rem;border-top:1px solid var(--edge-soft);position:sticky;bottom:0;background:var(--surface)}
+.sheet-f .btn{flex:1}
+
+/* ---------- toast ---------- */
+#toasts{position:fixed;left:0;right:0;bottom:calc(1rem + env(safe-area-inset-bottom));z-index:80;display:flex;flex-direction:column;align-items:center;gap:.4rem;pointer-events:none;padding:0 .9rem}
+.toast{background:var(--raised);border:1px solid var(--edge);border-left:3px solid var(--amber);border-radius:9px;padding:.55rem .8rem;font-size:.85rem;max-width:32rem;box-shadow:0 8px 30px rgba(0,0,0,.5)}
+.toast.err{border-left-color:var(--red)}
+.toast.ok{border-left-color:var(--green)}
+
+/* ---------- gate ---------- */
+#gate{max-width:32rem;margin:0 auto;padding:2.5rem .9rem;display:flex;flex-direction:column;gap:1.1rem}
+#gate h1{font-size:1.7rem}
+#gate p{color:var(--ink-dim);margin:0;font-size:.92rem}
+#gate .step{display:flex;gap:.7rem;align-items:flex-start}
+#gate .step .n{font-family:"JetBrains Mono",monospace;font-size:.72rem;font-weight:700;color:var(--amber);background:var(--amber-soft);border-radius:5px;padding:.1rem .38rem;flex:none;margin-top:.15rem}
+#signin-slot{min-height:2.6rem;display:flex;align-items:center;gap:.6rem;flex-wrap:wrap}
+.hide{display:none !important}
+</style>
+</head>
+<body>
+
+<!-- ============================= GATE ============================= -->
+<section id="gate">
+  <div>
+    <h1>PrepperApp Beheer</h1>
+    <p>Moderatie en beheer van de publieke CloudKit-database van <code>iCloud.com.stuut.PrepperApp</code>.</p>
+  </div>
+
+  <div class="card">
+    <div class="card-h"><h2>1 · API-token</h2></div>
+    <div class="card-b" style="display:flex;flex-direction:column;gap:.7rem">
+      <p style="font-size:.86rem;color:var(--muted);margin:0">
+        Aanmaken in CloudKit Console → je container → <b>Tokens</b> → <b>API Tokens</b>.
+        Zet bij dat token dit adres als toegestane origin:
+        <code id="origin-hint" style="color:var(--amber)"></code>
+      </p>
+      <label class="f">Token
+        <input type="text" id="token-input" autocomplete="off" autocapitalize="none" spellcheck="false"
+               placeholder="plak hier je CloudKit API-token">
+        <span class="hint">Wordt alleen in deze browser bewaard. Een API-token is aan dit adres gebonden en geeft op zichzelf geen schrijfrechten.</span>
+      </label>
+      <div style="display:flex;gap:.5rem;flex-wrap:wrap">
+        <button class="btn primary" id="token-save">Bewaren en laden</button>
+        <button class="btn" id="token-clear">Wissen</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-h"><h2>2 · Inloggen</h2></div>
+    <div class="card-b" style="display:flex;flex-direction:column;gap:.7rem">
+      <p style="font-size:.86rem;color:var(--muted);margin:0">
+        Log in met dezelfde Apple ID als je ontwikkelaarsaccount. Alleen die account heeft de rol
+        <code>beheerder</code> en mag schrijven.
+      </p>
+      <div id="signin-slot"><span style="color:var(--muted);font-size:.86rem">Eerst een token invoeren.</span></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-h"><h2>Omgeving</h2></div>
+    <div class="card-b">
+      <label class="f">Database
+        <select id="env-select">
+          <option value="production">Production — de echte gebruikers</option>
+          <option value="development">Development — testdata</option>
+        </select>
+        <span class="hint">Wisselen laadt de pagina opnieuw.</span>
+      </label>
+    </div>
+  </div>
+</section>
+
+<!-- ============================= APP ============================= -->
+<div id="app" class="hide">
+
+<header class="topbar">
+  <div class="topbar-in">
+    <div class="brand">
+      <span class="dot" id="env-dot"></span>
+      <div style="min-width:0">
+        <b>PrepperApp Beheer</b><br>
+        <span class="env" id="env-label">—</span>
+      </div>
+    </div>
+    <span class="spacer"></span>
+    <button class="iconbtn" id="refresh-all" title="Alles opnieuw laden">Verversen</button>
+    <button class="iconbtn" id="signout">Uitloggen</button>
+  </div>
+  <nav class="tabs" role="tablist" id="tabs"></nav>
+</header>
+
+<main>
+
+  <!-- ---------- Dashboard ---------- -->
+  <section class="view" id="v-dashboard" role="tabpanel">
+    <div class="grid c4" id="stats"></div>
+    <div class="card">
+      <div class="card-h"><h2>Nu aandacht nodig</h2><span class="spacer" style="flex:1"></span><span class="sub" id="dash-when"></span></div>
+      <div class="card-b tight" id="dash-attention"><div class="empty">Laden…</div></div>
+    </div>
+    <div class="grid c2">
+      <div class="card">
+        <div class="card-h"><h2>Laatste forumposts</h2></div>
+        <div class="card-b tight" id="dash-posts"><div class="empty">Laden…</div></div>
+      </div>
+      <div class="card">
+        <div class="card-h"><h2>Nieuwe gebruikers</h2></div>
+        <div class="card-b tight" id="dash-users"><div class="empty">Laden…</div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ---------- Meldingen ---------- -->
+  <section class="view" id="v-meldingen" role="tabpanel">
+    <div class="card">
+      <div class="card-h"><h2>Meldingen van gebruikers</h2><span style="flex:1"></span>
+        <label class="switch"><input type="checkbox" id="mld-open-only" checked> alleen open</label>
+      </div>
+      <div class="card-b tight" id="mld-list"><div class="empty">Laden…</div></div>
+    </div>
+    <p style="color:var(--muted);font-size:.8rem;margin:0">
+      <b style="color:var(--ink-dim)">MisbruikMelding</b> komt uit het meldknopje in de app en heeft een reden en een
+      afhandelvinkje. <b style="color:var(--ink-dim)">ForumMelding</b> is het oudere type zonder reden — daar is
+      &ldquo;afgehandeld&rdquo; simpelweg de melding weggooien.
+    </p>
+  </section>
+
+  <!-- ---------- Forum ---------- -->
+  <section class="view" id="v-forum" role="tabpanel">
+    <div class="card">
+      <div class="card-b">
+        <div class="toolbar">
+          <label class="f narrow" style="flex:0 0 11rem">Soort
+            <select id="forum-type">
+              <option value="OutdoorPost">Outdoor posts</option>
+              <option value="ErvaringPost">Ervaringen</option>
+              <option value="BuurtPost">Buurtberichten</option>
+              <option value="ForumReactie">Reacties</option>
+              <option value="TrailConditie">Trailmeldingen</option>
+              <option value="PlaatsAlert">Plaatsmeldingen</option>
+              <option value="PublicSafeSpot">Veilige plekken</option>
+              <option value="WaterBron">Waterbronnen</option>
+            </select>
+          </label>
+          <label class="f">Zoeken in tekst of code
+            <input type="search" id="forum-q" placeholder="woord, of gebruikerscode">
+          </label>
+          <button class="btn narrow" id="forum-load">Laden</button>
+        </div>
+      </div>
+      <div class="card-b tight" id="forum-list"><div class="empty">Kies een soort en druk op laden.</div></div>
+      <div class="card-b" id="forum-more" style="display:none"><button class="btn" id="forum-more-btn" style="width:100%">Meer laden</button></div>
+    </div>
+  </section>
+
+  <!-- ---------- Gebruikers ---------- -->
+  <section class="view" id="v-gebruikers" role="tabpanel">
+    <div class="card">
+      <div class="card-b">
+        <div class="toolbar">
+          <label class="f">Zoeken op naam of code
+            <input type="search" id="usr-q" placeholder="bijv. A3F9K2QP of Michael">
+          </label>
+          <label class="f narrow" style="flex:0 0 10rem">Filter
+            <select id="usr-filter">
+              <option value="alle">Iedereen</option>
+              <option value="banned">Geblokkeerd</option>
+              <option value="pro">Pro</option>
+              <option value="actief">Heeft geplaatst</option>
+            </select>
+          </label>
+          <button class="btn narrow" id="usr-load">Laden</button>
+        </div>
+      </div>
+      <div class="card-b tight" id="usr-list"><div class="empty">Laden…</div></div>
+    </div>
+  </section>
+
+  <!-- ---------- Verborgen ---------- -->
+  <section class="view" id="v-verborgen" role="tabpanel">
+    <div class="card">
+      <div class="card-h"><h2>Verborgen content</h2><span style="flex:1"></span>
+        <button class="btn sm" id="hid-add">Handmatig verbergen</button>
+      </div>
+      <div class="card-b tight" id="hid-list"><div class="empty">Laden…</div></div>
+    </div>
+    <p style="color:var(--muted);font-size:.8rem;margin:0">
+      De app haalt deze lijst op bij het opstarten en bij het openen van een forum- of kaartscherm, en tot 500 items.
+      Verbergen werkt dus pas bij hun volgende keer laden, niet meteen.
+    </p>
+  </section>
+
+  <!-- ---------- Aankondigingen ---------- -->
+  <section class="view" id="v-berichten" role="tabpanel">
+    <div class="card">
+      <div class="card-h"><h2>Aankondiging plaatsen</h2></div>
+      <div class="card-b" style="display:flex;flex-direction:column;gap:.7rem">
+        <label class="f">Titel<input type="text" id="ank-titel" maxlength="80" placeholder="Korte kop"></label>
+        <label class="f">Tekst<textarea id="ank-inhoud" maxlength="600" placeholder="Wat je wilt melden"></textarea></label>
+        <label class="f narrow" style="max-width:12rem">Prioriteit
+          <select id="ank-prio"><option value="3">Hoog</option><option value="2">Gewoon</option><option value="1" selected>Laag</option></select>
+        </label>
+        <div><button class="btn primary" id="ank-save">Plaatsen</button></div>
+        <p style="margin:0;font-size:.8rem;color:var(--muted)">Verschijnt als banner in de app. De app laadt de tien nieuwste en sorteert op prioriteit. Gebruikers kunnen een banner wegklikken.</p>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-h"><h2>Geplaatst</h2></div>
+      <div class="card-b tight" id="ank-list"><div class="empty">Laden…</div></div>
+    </div>
+  </section>
+
+  <!-- ---------- Config ---------- -->
+  <section class="view" id="v-config" role="tabpanel">
+    <div class="card">
+      <div class="card-h"><h2>App-instellingen op afstand</h2><span style="flex:1"></span><span class="sub" id="cfg-state"></span></div>
+      <div class="card-b" style="display:flex;flex-direction:column;gap:.85rem">
+        <label class="switch"><input type="checkbox" id="cfg-banner-actief"> Balk bovenin de app tonen</label>
+        <label class="f">Tekst in de balk<input type="text" id="cfg-banner-tekst" maxlength="200"></label>
+        <div class="grid c2">
+          <label class="f">Kleur
+            <select id="cfg-banner-kleur"><option value="goud">Goud</option><option value="rood">Rood</option><option value="groen">Groen</option><option value="blauw">Blauw</option></select>
+          </label>
+          <label class="f">Verloopt op<input type="datetime-local" id="cfg-banner-verloopt"><span class="hint">Leeg = blijft staan</span></label>
+        </div>
+        <label class="f">Minimaal vereiste appversie
+          <input type="text" id="cfg-minversie" placeholder="1.0">
+          <span class="hint">Oudere versies krijgen een verplichte-updatemelding. Voorzichtig: te hoog zetten blokkeert iedereen.</span>
+        </label>
+        <div>
+          <div style="font-size:.78rem;color:var(--muted);font-weight:500;margin-bottom:.4rem">Functies uitschakelen</div>
+          <div id="cfg-vlaggen" style="display:flex;flex-direction:column;gap:.4rem"></div>
+        </div>
+        <div><button class="btn primary" id="cfg-save">Opslaan</button></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ---------- Feedback ---------- -->
+  <section class="view" id="v-feedback" role="tabpanel">
+    <div class="card">
+      <div class="card-h"><h2>Feedback uit de app</h2><span style="flex:1"></span>
+        <label class="switch"><input type="checkbox" id="fb-unread"> alleen ongelezen</label>
+      </div>
+      <div class="card-b tight" id="fb-list"><div class="empty">Laden…</div></div>
+    </div>
+  </section>
+
+  <!-- ---------- Statistieken ---------- -->
+  <section class="view" id="v-stats" role="tabpanel">
+    <div class="card">
+      <div class="card-h"><h2>Cijfers</h2><span style="flex:1"></span>
+        <span class="sub" id="st-state"></span>
+        <button class="btn sm" id="st-load">Alles tellen</button>
+      </div>
+      <div class="card-b" style="font-size:.84rem;color:var(--muted)">
+        Dit telt écht alles, niet de eerste paar honderd. Bij veel records duurt het even —
+        CloudKit geeft maximaal 400 records per keer, dus het haalt ze in stukjes op.
+      </div>
+    </div>
+
+    <div class="grid c4" id="st-kerncijfers"></div>
+
+    <div class="grid c2">
+      <div class="card">
+        <div class="card-h"><h2>Nieuwe gebruikers per week</h2></div>
+        <div class="card-b" id="st-groei"><div class="empty">Nog niet geteld.</div></div>
+      </div>
+      <div class="card">
+        <div class="card-h"><h2>Laatst actief</h2><span style="flex:1"></span><span class="sub">app geopend</span></div>
+        <div class="card-b" id="st-actief"><div class="empty">Nog niet geteld.</div></div>
+      </div>
+    </div>
+
+    <div class="grid c2">
+      <div class="card">
+        <div class="card-h"><h2>Appversies in gebruik</h2></div>
+        <div class="card-b" id="st-versies"><div class="empty">Nog niet geteld.</div></div>
+      </div>
+      <div class="card">
+        <div class="card-h"><h2>Toestellen</h2></div>
+        <div class="card-b" id="st-toestellen"><div class="empty">Nog niet geteld.</div></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-h"><h2>Wie heeft Pro</h2><span style="flex:1"></span>
+        <button class="btn sm" id="st-pro-export">Lijst exporteren</button>
+      </div>
+      <div class="card-b tight" id="st-pro"><div class="empty">Nog niet geteld.</div></div>
+    </div>
+
+    <div class="card">
+      <div class="card-h"><h2>Meest actieve leden</h2><span style="flex:1"></span><span class="sub">posts + reacties</span></div>
+      <div class="card-b tight" id="st-top"><div class="empty">Nog niet geteld.</div></div>
+    </div>
+
+    <div class="card">
+      <div class="card-h"><h2>Hoeveel staat er in de database</h2></div>
+      <div class="card-b tight scrollx" id="st-inhoud"><div class="empty">Nog niet geteld.</div></div>
+    </div>
+
+    <div class="card">
+      <div class="card-h"><h2>Feedback</h2></div>
+      <div class="card-b" id="st-feedback"><div class="empty">Nog niet geteld.</div></div>
+    </div>
+  </section>
+
+  <!-- ---------- Records ---------- -->
+  <section class="view" id="v-records" role="tabpanel">
+    <div class="card">
+      <div class="card-b">
+        <div class="toolbar">
+          <label class="f">Recordtype<select id="rec-type"></select></label>
+          <label class="f narrow" style="flex:0 0 9rem">Aantal
+            <select id="rec-limit"><option>50</option><option selected>100</option><option>200</option><option>400</option></select>
+          </label>
+          <button class="btn narrow" id="rec-load">Laden</button>
+        </div>
+        <div class="toolbar" style="margin-top:.6rem">
+          <label class="f narrow" style="flex:1 1 9rem">Veld<select id="rec-field"></select></label>
+          <label class="f narrow" style="flex:0 0 8rem">Vergelijking
+            <select id="rec-cmp">
+              <option value="EQUALS">is gelijk aan</option>
+              <option value="NOT_EQUALS">is niet</option>
+              <option value="GREATER_THAN">groter dan</option>
+              <option value="LESS_THAN">kleiner dan</option>
+              <option value="BEGINS_WITH">begint met</option>
+              <option value="LIST_CONTAINS">lijst bevat</option>
+            </select>
+          </label>
+          <label class="f">Waarde<input type="text" id="rec-value" placeholder="leeg = geen filter"></label>
+        </div>
+        <div style="margin-top:.6rem;display:flex;gap:.5rem;flex-wrap:wrap">
+          <button class="btn sm" id="rec-new">Nieuw record</button>
+          <button class="btn sm" id="rec-export">Exporteren als JSON</button>
+          <span id="rec-count" style="color:var(--muted);font-size:.8rem;align-self:center"></span>
+        </div>
+      </div>
+      <div class="card-b tight" id="rec-list"><div class="empty">Kies een recordtype.</div></div>
+      <div class="card-b" id="rec-more" style="display:none"><button class="btn" id="rec-more-btn" style="width:100%">Meer laden</button></div>
+    </div>
+  </section>
+
+  <!-- ---------- Info ---------- -->
+  <section class="view" id="v-info" role="tabpanel">
+    <div class="card">
+      <div class="card-h"><h2>Wat deze knoppen echt doen</h2></div>
+      <div class="card-b" style="display:flex;flex-direction:column;gap:.8rem;font-size:.88rem;color:var(--ink-dim)">
+        <div><b style="color:var(--ink)">Verbergen</b> — maakt een <code>AdminVerborgen</code>-record met de recordnaam van de post.
+          De app filtert die eruit in het forum en op de kaart. De lijst wordt geladen bij opstarten en bij het openen van
+          een forum- of kaartscherm, tot 500 items. Het werkt dus niet direct op een telefoon die al open staat.</div>
+        <div><b style="color:var(--ink)">Blokkeren</b> — zet <code>isBanned</code> op 1 bij het account.
+          Alle feeds filteren geblokkeerde codes eruit, en de app kijkt ook naar de gehashte Apple-account, dus opnieuw
+          installeren helpt niet.</div>
+        <div><b style="color:var(--ink)">Verwijderen</b> — gooit het record echt weg uit CloudKit. Niet terug te draaien.
+          Verbergen is bijna altijd de betere eerste stap.</div>
+        <div><b style="color:var(--ink)">Aankondiging</b> — banner in de app bij het opstarten. De app haalt de tien
+          nieuwste op en sorteert op prioriteit. Er is geen vervaldatum: weghalen doe je zelf.</div>
+        <div><b style="color:var(--ink)">Pro geven</b> — zet alleen <code>isPro</code> in CloudKit. De app bepaalt Pro
+          via de App Store-aankoop en schrijft dit veld bij elke start terug. Het is een aantekening voor jou, geen
+          manier om Pro uit te delen.</div>
+        <div><b style="color:var(--ink)">Zoeken</b> — CloudKit kan niet midden in een tekst zoeken. Een code van acht
+          tekens zoekt echt in de database; een gewoon woord filtert alleen wat al geladen is.</div>
+        <div><b style="color:var(--ink)">Pushbericht</b> — <code>AdminPushBericht</code>-records worden in versie 2.2
+          door de app <b>niet</b> gelezen. Ze doen dus niets tot dat gebouwd is. Ze staan hier alleen om te bekijken.</div>
+        <div><b style="color:var(--ink)">Chatberichten</b> — <code>inhoud</code> is end-to-end versleuteld. Je ziet dat
+          er een bericht is, niet wat er staat. Dat is met opzet.</div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-h"><h2>Verbinding</h2></div>
+      <div class="card-b"><dl class="kv" id="info-kv"></dl></div>
+    </div>
+  </section>
+
+</main>
+</div>
+
+<div class="sheet" id="sheet"><div class="sheet-in">
+  <div class="sheet-h"><h2 id="sheet-title">—</h2><button class="iconbtn" id="sheet-x">Sluiten</button></div>
+  <div class="sheet-b" id="sheet-body"></div>
+  <div class="sheet-f" id="sheet-foot"></div>
+</div></div>
+
+<div id="toasts"></div>
+
+<script src="https://cdn.apple-cloudkit.com/ck/2/cloudkit.js" async></script>
+<script>
+"use strict";
+
+/* =====================================================================
+   PrepperApp Beheer — één pagina, praat rechtstreeks met CloudKit.
+   Container: iCloud.com.stuut.PrepperApp, publieke database.
+   ===================================================================== */
+
+const CONTAINER = "iCloud.com.stuut.PrepperApp";
+const LS = { token: "pa.token", env: "pa.env" };
+
+/* ---------------------------------------------------------------------
+   Schema. Overgenomen uit prepperapp-schema.ckdb plus de velden die de
+   Swift-code schrijft maar nog niet in dat bestand staan.
+   q = queryable, s = sortable. Alleen queryable velden kun je filteren,
+   alleen sortable velden kun je sorteren — anders geeft CloudKit een fout.
+   --------------------------------------------------------------------- */
+const T = { STR:"STRING", INT:"INT64", DBL:"DOUBLE", TS:"TIMESTAMP", LIST:"LIST<STRING>", BYTES:"BYTES", ASSET:"ASSET", REF:"REFERENCE" };
+
+const SCHEMA = {
+  /* --- forum en gebruikerscontent --- */
+  OutdoorPost: { label:"Outdoor posts", groep:"Forum", sort:"datum", titel:"titel", tekst:"inhoud", auteur:"auteurCode", datum:"datum",
+    f:{ titel:[T.STR], inhoud:[T.STR], auteurCode:[T.STR,"q"], auteurNaam:[T.STR], datum:[T.TS,"qs"], type:[T.STR,"q"],
+        activiteit:[T.STR,"q"], regio:[T.STR,"q"], afstandKm:[T.DBL], duurMinuten:[T.INT], hoogteM:[T.INT],
+        likesCount:[T.INT,"qs"], reactiesAantal:[T.INT], routeNaam:[T.STR], routeCoordinatenJSON:[T.STR], foto:[T.ASSET] } },
+  ErvaringPost: { label:"Ervaringen", groep:"Forum", sort:"geplaatst", titel:"titel", tekst:"beschrijving", auteur:"auteurCode", datum:"geplaatst",
+    f:{ titel:[T.STR], beschrijving:[T.STR], auteurCode:[T.STR,"q"], geplaatst:[T.TS,"qs"], forumCategorie:[T.STR,"q"],
+        activiteitType:[T.STR], regio:[T.STR,"q"], likesCount:[T.INT,"qs"] } },
+  BuurtPost: { label:"Buurtberichten", groep:"Forum", sort:"geplaatst", titel:"titel", tekst:"beschrijving", auteur:"auteurCode", datum:"geplaatst",
+    f:{ titel:[T.STR], beschrijving:[T.STR], auteurCode:[T.STR,"q"], geplaatst:[T.TS,"qs"], categorie:[T.STR,"q"],
+        type:[T.STR,"q"], postcode:[T.STR,"q"], isActief:[T.INT,"q"] } },
+  ForumReactie: { label:"Reacties", groep:"Forum", sort:"tijdstip", tekst:"tekst", auteur:"auteurCode", datum:"tijdstip",
+    f:{ tekst:[T.STR], auteurCode:[T.STR,"q"], postID:[T.STR,"q"], tijdstip:[T.TS,"qs"] } },
+
+  /* --- meldingen --- */
+  MisbruikMelding: { label:"Misbruikmeldingen", groep:"Moderatie", sort:"gemeldOp", datum:"gemeldOp",
+    f:{ postID:[T.STR,"q"], postType:[T.STR,"q"], melderCode:[T.STR,"q"], reden:[T.STR], behandeld:[T.INT,"q"], gemeldOp:[T.TS,"qs"] } },
+  ForumMelding: { label:"Forummeldingen (oud)", groep:"Moderatie", sort:"tijdstip", datum:"tijdstip",
+    f:{ postID:[T.STR,"q"], melderCode:[T.STR,"q"], tijdstip:[T.TS,"qs"] } },
+  AdminVerborgen: { label:"Verborgen content", groep:"Moderatie", sort:"datum", datum:"datum",
+    f:{ doelRecordName:[T.STR,"q"], doelType:[T.STR,"q"], reden:[T.STR], datum:[T.TS,"qs"] } },
+
+  /* --- accounts --- */
+  GebruikersAccount: { label:"Gebruikers", groep:"Mensen", sort:"aangemeldOp", datum:"aangemeldOp", auteur:"gebruikerCode",
+    f:{ gebruikerCode:[T.STR,"q"], displayNaam:[T.STR], profielBeschrijving:[T.STR], isBanned:[T.INT,"q"], banReden:[T.STR],
+        isPro:[T.INT,"q"], aangemeldOp:[T.TS,"qs"], apparaatModel:[T.STR], appVersie:[T.STR],
+        forumPostTelling:[T.INT], reactieTelling:[T.INT], chatPubKey:[T.STR], appleAccountHash:[T.STR] } },
+  SurvivalStatus: { label:"Survival-status", groep:"Mensen", sort:"bijgewerktOp", datum:"bijgewerktOp", titel:"naam",
+    f:{ naam:[T.STR,"q"], stad:[T.STR,"q"], land:[T.STR,"q"], uitnodigingsCode:[T.STR,"q"], aantalItems:[T.INT,"qs"],
+        overlevingsDagen:[T.DBL,"qs"], voedselDagen:[T.DBL,"qs"], waterDagen:[T.DBL,"qs"],
+        actiefNoodplan:[T.STR,"q"], noodplanTijd:[T.TS,"qs"], bijgewerktOp:[T.TS,"qs"] } },
+  PrepFamilyGebruiker: { label:"PrepFamily-gebruikers", groep:"Mensen", sort:"tijdstip", datum:"tijdstip",
+    f:{ stad:[T.STR,"q"], land:[T.STR,"q"], tijdstip:[T.TS,"qs"] } },
+  ReferralRecord: { label:"Uitnodigingen", groep:"Mensen", sort:"datum", datum:"datum",
+    f:{ afzenderCode:[T.STR,"q"], ontvangerCode:[T.STR,"q"], datum:[T.TS,"qs"] } },
+
+  /* --- kaart --- */
+  PlaatsAlert: { label:"Plaatsmeldingen", groep:"Kaart", sort:"gemeldOp", tekst:"beschrijving", auteur:"eigenaarCode", datum:"gemeldOp",
+    f:{ beschrijving:[T.STR,"q"], type:[T.STR,"q"], stad:[T.STR,"q"], land:[T.STR,"q"], eigenaarCode:[T.STR,"q"],
+        latitude:[T.DBL,"qs"], longitude:[T.DBL,"qs"], gemeldOp:[T.TS,"qs"] } },
+  PublicSafeSpot: { label:"Veilige plekken", groep:"Kaart", sort:"toegevoegdOp", titel:"naam", tekst:"beschrijving", auteur:"eigenaarCode", datum:"toegevoegdOp",
+    f:{ naam:[T.STR,"q"], beschrijving:[T.STR,"q"], type:[T.STR,"q"], scenario:[T.STR,"q"], eigenaarCode:[T.STR,"q"],
+        latitude:[T.DBL,"qs"], longitude:[T.DBL,"qs"], toegevoegdOp:[T.TS,"qs"] } },
+  WaterBron: { label:"Waterbronnen", groep:"Kaart", sort:"datum", titel:"naam", tekst:"notities", auteur:"auteurCode", datum:"datum",
+    f:{ naam:[T.STR], notities:[T.STR], type:[T.STR,"q"], auteurCode:[T.STR,"q"], kwaliteitScore:[T.INT,"qs"],
+        latitude:[T.DBL,"qs"], longitude:[T.DBL,"qs"], datum:[T.TS,"qs"] } },
+  TrailConditie: { label:"Trailmeldingen", groep:"Kaart", sort:"datum", tekst:"beschrijving", auteur:"auteurCode", datum:"datum",
+    f:{ beschrijving:[T.STR], type:[T.STR,"q"], ernst:[T.STR,"q"], routeTag:[T.STR,"q"], auteurCode:[T.STR,"q"],
+        bevestigdDoor:[T.INT], latitude:[T.DBL,"qs"], longitude:[T.DBL,"qs"], datum:[T.TS,"qs"], foto:[T.ASSET] } },
+  TrailBuddyLocatie: { label:"Buddy-locaties", groep:"Kaart", sort:"tijdstempel", titel:"naam", auteur:"eigenaarCode", datum:"tijdstempel",
+    f:{ naam:[T.STR], eigenaarCode:[T.STR,"q"], isActief:[T.INT,"q"], latitude:[T.DBL,"qs"], longitude:[T.DBL,"qs"],
+        locatieVersleuteld:[T.BYTES], tijdstempel:[T.TS,"qs"] } },
+  BuddyCheckIn: { label:"Buddy-checkins", groep:"Kaart", sort:"tijdstempel", titel:"naam", auteur:"auteurCode", datum:"tijdstempel",
+    f:{ naam:[T.STR], routeNaam:[T.STR], auteurCode:[T.STR,"q"], isOK:[T.INT,"q"],
+        latitude:[T.DBL,"qs"], longitude:[T.DBL,"qs"], tijdstempel:[T.TS,"qs"] } },
+
+  /* --- routes en expedities --- */
+  SharedRoute: { label:"Gedeelde routes", groep:"Routes", sort:"startDatum", titel:"naam", tekst:"routeNotitie", auteur:"eigenaarCode", datum:"startDatum",
+    f:{ naam:[T.STR], routeNotitie:[T.STR], eigenaarCode:[T.STR,"q"], gedeeldMet:[T.LIST,"q"], modus:[T.STR],
+        kleurHex:[T.STR], afstandMeters:[T.DBL], duurSeconden:[T.DBL], startDatum:[T.TS,"qs"],
+        coordinatenJSON:[T.BYTES], waypointsJSON:[T.BYTES] } },
+  Expeditie: { label:"Expedities", groep:"Routes", sort:"datum", titel:"naam", tekst:"beschrijving", auteur:"eigenaarCode", datum:"datum",
+    f:{ naam:[T.STR], beschrijving:[T.STR], eigenaarCode:[T.STR,"q"], deelnemersCodes:[T.LIST,"q"],
+        datum:[T.TS,"qs"], startDatum:[T.TS,"qs"], eindDatum:[T.TS,"qs"] } },
+  SegmentLeaderboard: { label:"Segmenttijden", groep:"Routes", sort:"datum", titel:"segmentNaam", auteur:"auteurCode", datum:"datum",
+    f:{ segmentNaam:[T.STR], segmentID:[T.STR,"q"], auteurCode:[T.STR,"q"], auteurNaam:[T.STR],
+        tijdSeconden:[T.DBL,"qs"], datum:[T.TS,"qs"] } },
+
+  /* --- overig --- */
+  Chatbericht: { label:"Chatberichten", groep:"Overig", sort:"tijdstempel", datum:"tijdstempel",
+    f:{ gesprekID:[T.STR,"q"], afzenderCode:[T.STR], ontvangerCode:[T.STR,"q"], berichtID:[T.STR],
+        inhoud:[T.BYTES], tijdstempel:[T.TS,"qs"] } },
+  NoodplanActivatie: { label:"Noodplan-activaties", groep:"Overig", sort:"tijdstempel", titel:"scenario", auteur:"eigenaarCode", datum:"tijdstempel",
+    f:{ scenario:[T.STR], eigenaarCode:[T.STR,"q"], tijdstempel:[T.TS,"qs"] } },
+  AppFeedback: { label:"Feedback", groep:"Overig", sort:"ingediendOp", tekst:"tekst", auteur:"gebruikerCode", datum:"ingediendOp",
+    f:{ tekst:[T.STR], beoordeling:[T.INT,"qs"], gebruikerCode:[T.STR,"q"], appVersie:[T.STR],
+        gelezen:[T.INT,"q"], ingediendOp:[T.TS,"qs"] } },
+  AdminAankondiging: { label:"Aankondigingen", groep:"Beheer", sort:"datum", titel:"titel", tekst:"inhoud", datum:"datum",
+    f:{ titel:[T.STR], inhoud:[T.STR], prioriteit:[T.INT,"qs"], datum:[T.TS,"qs"] } },
+  AdminPushBericht: { label:"Pushberichten (nog niet actief)", groep:"Beheer", sort:"gepubliceerdOp", titel:"titel", tekst:"inhoud", datum:"gepubliceerdOp",
+    f:{ titel:[T.STR], inhoud:[T.STR], doelGroep:[T.STR,"q"], gepubliceerdOp:[T.TS,"qs"], verlooptOp:[T.TS,"qs"] } },
+  AppConfig: { label:"App-instellingen", groep:"Beheer", sort:null,
+    f:{ bannerTekst:[T.STR], bannerKleur:[T.STR], bannerActief:[T.INT,"q"], bannerVerlooptOp:[T.TS,"qs"],
+        minVereistVersie:[T.STR], uitgeschakeldeFeatures:[T.LIST,"q"] } },
+};
+
+/* Postsoorten waarop "verbergen" zinvol is. */
+const VERBERGBAAR = ["OutdoorPost","ErvaringPost","BuurtPost","ForumReactie","TrailConditie","PlaatsAlert","PublicSafeSpot","WaterBron"];
+
+/* postType uit MisbruikMelding → recordtype */
+const POSTTYPE_MAP = { outdoor:"OutdoorPost", ervaring:"ErvaringPost", reactie:"ForumReactie", buurt:"BuurtPost" };
+
+const FEATURE_VLAGGEN = [
+  ["forum_posten","Forum: nieuwe posts plaatsen"],
+  ["ai_assistent","AI-assistent"],
+  ["crisis_modus","Crisismodus"],
+  ["outdoor_forum","Outdoor-forum"],
+  ["expedities","Expedities"],
+];
+
+/* =====================================================================
+   Kleine hulpjes
+   ===================================================================== */
+const $  = (s, r) => (r||document).querySelector(s);
+const $$ = (s, r) => Array.from((r||document).querySelectorAll(s));
+const esc = s => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const el = (tag, cls, html) => { const n = document.createElement(tag); if (cls) n.className = cls; if (html != null) n.innerHTML = html; return n; };
+
+function fmtDate(v){
+  if (v == null || v === "") return "—";
+  const d = v instanceof Date ? v : new Date(typeof v === "number" ? v : Date.parse(v));
+  if (isNaN(d)) return String(v);
+  return d.toLocaleString("nl-NL",{day:"numeric",month:"short",year:"numeric",hour:"2-digit",minute:"2-digit"});
+}
+function fmtGeleden(v){
+  if (v == null) return "";
+  const d = v instanceof Date ? v : new Date(v);
+  if (isNaN(d)) return "";
+  const s = (Date.now() - d.getTime())/1000;
+  if (s < 60) return "zojuist";
+  if (s < 3600) return Math.floor(s/60) + " min geleden";
+  if (s < 86400) return Math.floor(s/3600) + " uur geleden";
+  const dg = Math.floor(s/86400);
+  if (dg === 1) return "gisteren";
+  if (dg < 30) return dg + " dagen geleden";
+  return fmtDate(d);
+}
+function codeWeergave(c){ c = String(c||""); return c.length === 8 ? c.slice(0,4)+"-"+c.slice(4) : (c || "—"); }
+function knip(s, n){ s = String(s||""); return s.length > n ? s.slice(0,n) + "…" : s; }
+
+function toast(msg, kind){
+  const t = el("div", "toast" + (kind ? " " + kind : ""), esc(msg));
+  $("#toasts").appendChild(t);
+  setTimeout(() => { t.style.transition = "opacity .3s"; t.style.opacity = "0"; setTimeout(()=>t.remove(), 320); }, kind === "err" ? 6000 : 3200);
+}
+
+/* Sheet: één herbruikbaar paneel voor detail, bewerken en bevestigen. */
+const Sheet = {
+  open(title, bodyNode, buttons){
+    $("#sheet-title").textContent = title;
+    const b = $("#sheet-body"); b.innerHTML = ""; b.appendChild(bodyNode);
+    const f = $("#sheet-foot"); f.innerHTML = "";
+    (buttons||[]).forEach(spec => {
+      const btn = el("button", "btn " + (spec.cls||""), esc(spec.label));
+      btn.onclick = () => spec.on(btn);
+      f.appendChild(btn);
+    });
+    $("#sheet").classList.add("on");
+  },
+  close(){ $("#sheet").classList.remove("on"); },
+};
+$("#sheet-x").onclick = () => Sheet.close();
+$("#sheet").addEventListener("click", e => { if (e.target.id === "sheet") Sheet.close(); });
+document.addEventListener("keydown", e => { if (e.key === "Escape") Sheet.close(); });
+
+function bevestig(titel, uitleg, knopLabel, fn, gevaarlijk){
+  const body = el("div"); body.innerHTML = "<p style='margin:0;color:var(--ink-dim);font-size:.92rem'>" + uitleg + "</p>";
+  Sheet.open(titel, body, [
+    { label:"Annuleren", on:()=>Sheet.close() },
+    { label:knopLabel, cls: gevaarlijk ? "danger" : "primary", on: async (btn) => {
+        btn.disabled = true; btn.innerHTML = '<span class="spin"></span> bezig';
+        try { await fn(); Sheet.close(); }
+        catch(e){ toast(String(e && e.message || e), "err"); btn.disabled = false; btn.textContent = knopLabel; }
+      } },
+  ]);
+}
+
+/* =====================================================================
+   CloudKit-laag
+   ===================================================================== */
+const State = {
+  env: localStorage.getItem(LS.env) || "production",
+  token: localStorage.getItem(LS.token) || "",
+  container: null,
+  db: null,
+  user: null,
+  klaar: false,
+};
+
+function ckFout(resp){
+  if (resp && resp.hasErrors) {
+    const e = resp.errors[0] || {};
+    const msg = e.reason || e.serverErrorCode || "Onbekende CloudKit-fout";
+    const err = new Error(msg);
+    err.code = e.serverErrorCode;
+    throw err;
+  }
+  return resp;
+}
+
+/** Eén query. Valt terug op ongesorteerd als het sorteerveld geen index heeft. */
+async function query(recordType, opts){
+  opts = opts || {};
+  const def = SCHEMA[recordType] || { f:{} };
+  const q = { recordType };
+  if (opts.filters && opts.filters.length) q.filterBy = opts.filters;
+  const sortVeld = opts.sort !== undefined ? opts.sort : def.sort;
+  if (sortVeld) q.sortBy = [{ fieldName: sortVeld, ascending: opts.asc === true }];
+  const o = { resultsLimit: opts.limit || 100 };
+  if (opts.continuationMarker) o.continuationMarker = opts.continuationMarker;
+
+  try {
+    return ckFout(await State.db.performQuery(q, o));
+  } catch (e) {
+    if (sortVeld && /sort|index|not marked/i.test(String(e.message))) {
+      delete q.sortBy;
+      return ckFout(await State.db.performQuery(q, o));
+    }
+    throw e;
+  }
+}
+
+async function tel(recordType, filters){
+  /* CloudKit kent geen COUNT. We halen tot 400 op en melden "400+" als het
+     er meer zijn, zodat een teller nooit liegt. */
+  const r = await query(recordType, { filters, limit: 400 });
+  const n = (r.records || []).length;
+  return { n, meer: !!r.moreComing };
+}
+
+async function fetchRecord(recordName){
+  const r = ckFout(await State.db.fetchRecords([recordName]));
+  return (r.records || [])[0] || null;
+}
+
+async function saveRecord(rec){
+  const r = ckFout(await State.db.saveRecords([rec]));
+  return (r.records || [])[0] || null;
+}
+
+async function deleteRecord(recordName){
+  return ckFout(await State.db.deleteRecords([recordName]));
+}
+
+/** Werkt losse velden bij op een bestaand record, met de juiste changeTag. */
+async function patch(recordName, velden){
+  const huidig = await fetchRecord(recordName);
+  if (!huidig) throw new Error("Record niet gevonden — misschien net verwijderd.");
+  const fields = {};
+  Object.keys(velden).forEach(k => { fields[k] = { value: velden[k] }; });
+  return saveRecord({ recordName, recordType: huidig.recordType, recordChangeTag: huidig.recordChangeTag, fields });
+}
+
+/* Waarde uit een CloudKit-veld halen in gewone JS. */
+function v(rec, naam){
+  const f = rec && rec.fields && rec.fields[naam];
+  return f ? f.value : undefined;
+}
+
+/* =====================================================================
+   Moderatie-acties. Elke actie hier komt overeen met wat de app leest.
+   ===================================================================== */
+const Acties = {
+  async verberg(recordName, doelType, reden){
+    const bestaand = await query("AdminVerborgen", {
+      filters: [{ fieldName:"doelRecordName", comparator:"EQUALS", fieldValue:{ value: recordName } }], limit: 1 });
+    if ((bestaand.records||[]).length) { toast("Stond al verborgen."); return; }
+    await saveRecord({ recordType:"AdminVerborgen", fields:{
+      doelRecordName:{ value: recordName },
+      doelType:{ value: doelType || "onbekend" },
+      reden:{ value: reden || "" },
+      datum:{ value: Date.now() },
+    }});
+    toast("Verborgen. Zichtbaar effect zodra de app opnieuw laadt.", "ok");
+    Cache.wis("AdminVerborgen");
+  },
+
+  async herstel(adminVerborgenRecordName){
+    await deleteRecord(adminVerborgenRecordName);
+    toast("Weer zichtbaar gemaakt.", "ok");
+    Cache.wis("AdminVerborgen");
+  },
+
+  async blokkeer(gebruikerCode, reden){
+    const r = await query("GebruikersAccount", {
+      filters: [{ fieldName:"gebruikerCode", comparator:"EQUALS", fieldValue:{ value: gebruikerCode } }], limit: 1, sort: null });
+    const rec = (r.records||[])[0];
+    if (!rec) throw new Error("Geen account met code " + gebruikerCode + ". Deze gebruiker heeft de app misschien nog niet geopend sinds versie 2.0.");
+    await patch(rec.recordName, { isBanned: 1, banReden: reden || "" });
+    toast("Geblokkeerd.", "ok");
+    Cache.wis("GebruikersAccount");
+  },
+
+  async deblokkeer(recordName){
+    await patch(recordName, { isBanned: 0, banReden: "" });
+    toast("Blokkade opgeheven.", "ok");
+    Cache.wis("GebruikersAccount");
+  },
+
+  async setPro(recordName, aan){
+    await patch(recordName, { isPro: aan ? 1 : 0 });
+    toast(aan ? "Pro toegekend." : "Pro ingetrokken.", "ok");
+    Cache.wis("GebruikersAccount");
+  },
+
+  async behandeld(recordName, aan){
+    await patch(recordName, { behandeld: aan ? 1 : 0 });
+    Cache.wis("MisbruikMelding");
+  },
+
+  async gelezen(recordName, aan){
+    await patch(recordName, { gelezen: aan ? 1 : 0 });
+    Cache.wis("AppFeedback");
+  },
+
+  async verwijder(recordName){
+    await deleteRecord(recordName);
+    toast("Verwijderd.", "ok");
+  },
+};
+
+/* Heel simpele cache, zodat tabs wisselen niet elke keer opnieuw laadt. */
+const Cache = {
+  d: {},
+  zet(k, val){ this.d[k] = { val, t: Date.now() }; },
+  haal(k, maxMs){ const e = this.d[k]; return (e && Date.now() - e.t < (maxMs || 60000)) ? e.val : null; },
+  wis(k){ if (k) delete this.d[k]; else this.d = {}; },
+};
+
+/* =====================================================================
+   Weergave-onderdelen
+   ===================================================================== */
+function leeg(tekst, kop){
+  return '<div class="empty">' + (kop ? "<b>" + esc(kop) + "</b>" : "") + esc(tekst) + "</div>";
+}
+function bezig(node){ node.innerHTML = '<div class="empty"><span class="spin"></span> Laden…</div>'; }
+
+/** Toont een willekeurig record als leesbare rij. */
+function rij(rec, type, extraActs){
+  const def = SCHEMA[type] || { f:{} };
+  const r = el("div", "row");
+  const body = el("div", "body");
+
+  const titel = def.titel ? v(rec, def.titel) : null;
+  const tekst = def.tekst ? v(rec, def.tekst) : null;
+  const auteur = def.auteur ? v(rec, def.auteur) : null;
+  const datum = def.datum ? v(rec, def.datum) : (rec.created && rec.created.timestamp);
+
+  body.appendChild(el("div", "title", esc(titel || knip(tekst, 70) || def.label || type)));
+
+  const meta = el("div", "meta");
+  if (auteur) meta.innerHTML += '<span class="mono">' + esc(codeWeergave(auteur)) + "</span>";
+  if (datum) meta.innerHTML += "<span>" + esc(fmtGeleden(datum)) + "</span>";
+  const lat = v(rec, "latitude"), lon = v(rec, "longitude");
+  if (typeof lat === "number" && typeof lon === "number")
+    meta.innerHTML += '<span class="mono">' + lat.toFixed(3) + ", " + lon.toFixed(3) + "</span>";
+  const likes = v(rec, "likesCount");
+  if (typeof likes === "number" && likes > 0) meta.innerHTML += "<span>" + likes + " likes</span>";
+  meta.innerHTML += '<span class="mono" style="opacity:.55">' + esc(knip(rec.recordName, 12)) + "</span>";
+  body.appendChild(meta);
+
+  if (titel && tekst) body.appendChild(el("div", "text", esc(knip(tekst, 260))));
+
+  const acts = el("div", "acts");
+  const mk = (label, cls, fn) => { const b = el("button", "btn sm " + (cls||""), esc(label)); b.onclick = fn; acts.appendChild(b); return b; };
+  mk("Bekijken", "", () => toonRecord(rec, type));
+  if (VERBERGBAAR.includes(type)) mk("Verbergen", "", () => vraagVerberg(rec.recordName, type));
+  if (auteur) mk("Blokkeer", "danger", () => vraagBlokkeer(auteur));
+  mk("Verwijderen", "danger", () => bevestig("Definitief verwijderen?",
+      "Dit gooit het record echt weg uit CloudKit. Niet terug te draaien. Verbergen is bijna altijd de betere eerste stap.",
+      "Verwijderen", async () => { await Acties.verwijder(rec.recordName); r.remove(); }, true));
+  (extraActs||[]).forEach(a => mk(a.label, a.cls, a.on));
+  body.appendChild(acts);
+
+  r.appendChild(body);
+  return r;
+}
+
+/** Detailpaneel: alle velden, plus bewerken. */
+function toonRecord(rec, type){
+  const def = SCHEMA[type] || { f:{} };
+  const wrap = el("div");
+  const dl = el("dl", "kv");
+  const add = (k, htmlWaarde) => { dl.appendChild(el("dt", "", esc(k))); dl.appendChild(el("dd", "", htmlWaarde)); };
+
+  add("recordName", '<span class="mono">' + esc(rec.recordName) + "</span>");
+  add("recordType", esc(rec.recordType));
+  if (rec.created) add("aangemaakt", esc(fmtDate(rec.created.timestamp)));
+  if (rec.modified) add("gewijzigd", esc(fmtDate(rec.modified.timestamp)));
+
+  const veldnamen = Object.keys(rec.fields || {}).sort();
+  veldnamen.forEach(k => {
+    const f = rec.fields[k];
+    const t = (def.f[k] && def.f[k][0]) || f.type || "";
+    let w;
+    if (t === T.ASSET || (f.value && f.value.downloadURL)) {
+      w = '<a href="' + esc(f.value.downloadURL) + '" target="_blank" rel="noopener">foto openen</a>';
+    } else if (t === T.BYTES) {
+      const len = typeof f.value === "string" ? Math.round(f.value.length * 3 / 4) : 0;
+      w = '<span style="color:var(--muted)">versleuteld / binair, ' + len + " bytes</span>";
+    } else if (t === T.TS) {
+      w = esc(fmtDate(f.value));
+    } else if (Array.isArray(f.value)) {
+      w = f.value.length ? f.value.map(x => '<span class="pill plain">' + esc(x) + "</span>").join(" ") : '<span style="color:var(--muted)">leeg</span>';
+    } else if (f.value === "" || f.value == null) {
+      w = '<span style="color:var(--muted)">leeg</span>';
+    } else {
+      w = esc(String(f.value));
+    }
+    add(k, w);
+  });
+  wrap.appendChild(dl);
+
+  Sheet.open(def.label || type, wrap, [
+    { label:"Bewerken", on: () => bewerkRecord(rec, type) },
+    { label:"Sluiten", cls:"primary", on: () => Sheet.close() },
+  ]);
+}
+
+/** Bewerkformulier: elk veld dat veilig te typen is. */
+function bewerkRecord(rec, type){
+  const def = SCHEMA[type] || { f:{} };
+  const form = el("div"); form.style.cssText = "display:flex;flex-direction:column;gap:.7rem";
+  const inputs = {};
+  const velden = Object.keys(def.f).length ? Object.keys(def.f) : Object.keys(rec.fields||{});
+
+  velden.forEach(k => {
+    const t = (def.f[k] && def.f[k][0]) || T.STR;
+    if (t === T.ASSET || t === T.BYTES || t === T.REF) return;
+    const huidig = v(rec, k);
+    const lab = el("label", "f"); lab.appendChild(el("span", "", esc(k) + '  <span style="opacity:.5">' + esc(t) + "</span>"));
+    let inp;
+    if (t === T.LIST) {
+      inp = el("input"); inp.type = "text";
+      inp.value = Array.isArray(huidig) ? huidig.join(", ") : "";
+      lab.appendChild(inp); lab.appendChild(el("span","hint","gescheiden door komma's"));
+    } else if (t === T.TS) {
+      inp = el("input"); inp.type = "datetime-local";
+      if (typeof huidig === "number") { const d = new Date(huidig - new Date().getTimezoneOffset()*60000); inp.value = d.toISOString().slice(0,16); }
+      lab.appendChild(inp);
+    } else if (t === T.INT || t === T.DBL) {
+      inp = el("input"); inp.type = "number"; if (t === T.DBL) inp.step = "any";
+      inp.value = (huidig == null ? "" : huidig); lab.appendChild(inp);
+    } else if ((huidig != null && String(huidig).length > 80) || ["inhoud","beschrijving","tekst","notities","profielBeschrijving","routeNotitie"].includes(k)) {
+      inp = el("textarea"); inp.value = huidig == null ? "" : String(huidig); lab.appendChild(inp);
+    } else {
+      inp = el("input"); inp.type = "text"; inp.value = huidig == null ? "" : String(huidig); lab.appendChild(inp);
+    }
+    inputs[k] = { inp, t };
+    form.appendChild(lab);
+  });
+
+  Sheet.open((rec.recordName ? "Bewerken" : "Nieuw") + " · " + (def.label || type), form, [
+    { label:"Annuleren", on: () => Sheet.close() },
+    { label:"Opslaan", cls:"primary", on: async (btn) => {
+        btn.disabled = true; btn.innerHTML = '<span class="spin"></span> opslaan';
+        try {
+          const fields = {};
+          Object.keys(inputs).forEach(k => {
+            const { inp, t } = inputs[k];
+            const raw = inp.value.trim();
+            if (t === T.LIST) fields[k] = { value: raw ? raw.split(",").map(s=>s.trim()).filter(Boolean) : [] };
+            else if (t === T.TS) { if (raw) fields[k] = { value: new Date(raw).getTime() }; }
+            else if (t === T.INT) { if (raw !== "") fields[k] = { value: parseInt(raw,10) }; }
+            else if (t === T.DBL) { if (raw !== "") fields[k] = { value: parseFloat(raw) }; }
+            else fields[k] = { value: raw };
+          });
+          if (rec.recordName) {
+            const vers = await fetchRecord(rec.recordName);
+            await saveRecord({ recordName: rec.recordName, recordType: type, recordChangeTag: vers.recordChangeTag, fields });
+          } else {
+            await saveRecord({ recordType: type, fields });
+          }
+          toast("Opgeslagen.", "ok"); Cache.wis(type); Sheet.close(); herlaadHuidigeTab();
+        } catch(e){ toast(String(e.message||e), "err"); btn.disabled = false; btn.textContent = "Opslaan"; }
+      } },
+  ]);
+}
+
+function vraagVerberg(recordName, doelType){
+  const body = el("div"); body.style.cssText = "display:flex;flex-direction:column;gap:.7rem";
+  body.innerHTML = "<p style='margin:0;color:var(--ink-dim);font-size:.9rem'>De post blijft bestaan maar wordt door de app uit alle lijsten gefilterd. Terugdraaien kan altijd bij <b>Verborgen</b>.</p>";
+  const lab = el("label","f"); lab.appendChild(el("span","","Reden (alleen voor jezelf)"));
+  const inp = el("input"); inp.type = "text"; inp.placeholder = "bijv. scheldpartij"; lab.appendChild(inp);
+  body.appendChild(lab);
+  Sheet.open("Verbergen", body, [
+    { label:"Annuleren", on:()=>Sheet.close() },
+    { label:"Verbergen", cls:"primary", on: async (btn) => {
+        btn.disabled = true; btn.innerHTML = '<span class="spin"></span>';
+        try { await Acties.verberg(recordName, doelType, inp.value.trim()); Sheet.close(); herlaadHuidigeTab(); }
+        catch(e){ toast(String(e.message||e),"err"); btn.disabled=false; btn.textContent="Verbergen"; }
+      } },
+  ]);
+}
+
+function vraagBlokkeer(code){
+  const body = el("div"); body.style.cssText = "display:flex;flex-direction:column;gap:.7rem";
+  body.innerHTML = "<p style='margin:0;color:var(--ink-dim);font-size:.9rem'>Blokkeert <b class='mono'>" + esc(codeWeergave(code)) +
+    "</b>. Al hun berichten verdwijnen uit de feeds en opnieuw installeren helpt niet — de blokkade hangt ook aan hun Apple-account.</p>";
+  const lab = el("label","f"); lab.appendChild(el("span","","Reden"));
+  const inp = el("input"); inp.type = "text"; inp.placeholder = "bijv. herhaald scheldgedrag"; lab.appendChild(inp);
+  body.appendChild(lab);
+  Sheet.open("Gebruiker blokkeren", body, [
+    { label:"Annuleren", on:()=>Sheet.close() },
+    { label:"Blokkeren", cls:"danger", on: async (btn) => {
+        btn.disabled = true; btn.innerHTML = '<span class="spin"></span>';
+        try { await Acties.blokkeer(code, inp.value.trim()); Sheet.close(); herlaadHuidigeTab(); }
+        catch(e){ toast(String(e.message||e),"err"); btn.disabled=false; btn.textContent="Blokkeren"; }
+      } },
+  ]);
+}
+
+/* =====================================================================
+   Tabs
+   ===================================================================== */
+const TABS = [
+  { id:"dashboard", label:"Overzicht", laad: laadDashboard },
+  { id:"meldingen", label:"Meldingen", laad: laadMeldingen },
+  { id:"forum",     label:"Forum",     laad: laadForumTab },
+  { id:"gebruikers",label:"Gebruikers",laad: laadGebruikers },
+  { id:"verborgen", label:"Verborgen", laad: laadVerborgen },
+  { id:"berichten", label:"Aankondigingen", laad: laadAankondigingen },
+  { id:"config",    label:"Instellingen", laad: laadConfig },
+  { id:"feedback",  label:"Feedback",  laad: laadFeedback },
+  { id:"stats",     label:"Statistieken", laad: laadStats },
+  { id:"records",   label:"Alle records", laad: laadRecordsTab },
+  { id:"info",      label:"Uitleg",    laad: laadInfo },
+];
+let huidigeTab = "dashboard";
+
+function bouwTabs(){
+  const n = $("#tabs"); n.innerHTML = "";
+  TABS.forEach(t => {
+    const b = el("button", "tab", esc(t.label) + '<span class="badge hide" id="badge-' + t.id + '">0</span>');
+    b.setAttribute("role","tab"); b.setAttribute("aria-selected", String(t.id === huidigeTab));
+    b.onclick = () => gaNaar(t.id);
+    n.appendChild(b);
+  });
+}
+function gaNaar(id){
+  huidigeTab = id;
+  $$(".tab").forEach((b,i) => b.setAttribute("aria-selected", String(TABS[i].id === id)));
+  $$(".view").forEach(v => v.classList.toggle("on", v.id === "v-" + id));
+  location.hash = id;
+  const t = TABS.find(x => x.id === id);
+  if (t) t.laad();
+}
+function herlaadHuidigeTab(){ const t = TABS.find(x => x.id === huidigeTab); if (t) { Cache.wis(); t.laad(); } }
+function zetBadge(tabId, n){
+  const b = $("#badge-" + tabId); if (!b) return;
+  if (n > 0) { b.textContent = n > 99 ? "99+" : n; b.classList.remove("hide"); } else b.classList.add("hide");
+}
+
+/* =====================================================================
+   Overzicht
+   ===================================================================== */
+async function laadDashboard(){
+  const stats = $("#stats"); const att = $("#dash-attention");
+  if (!stats.dataset.loaded) stats.innerHTML = '<div class="empty" style="grid-column:1/-1"><span class="spin"></span> Laden…</div>';
+
+  const wil = [
+    { key:"open", type:"MisbruikMelding", filters:[{fieldName:"behandeld",comparator:"EQUALS",fieldValue:{value:0}}], label:"Open meldingen", cls:"alert", tab:"meldingen" },
+    { key:"oud",  type:"ForumMelding", label:"Forummeldingen", cls:"", tab:"meldingen" },
+    { key:"ban",  type:"GebruikersAccount", filters:[{fieldName:"isBanned",comparator:"EQUALS",fieldValue:{value:1}}], label:"Geblokkeerd", cls:"", tab:"gebruikers" },
+    { key:"hid",  type:"AdminVerborgen", label:"Verborgen", cls:"", tab:"verborgen" },
+    { key:"usr",  type:"GebruikersAccount", label:"Gebruikers", cls:"good", tab:"gebruikers" },
+    { key:"pro",  type:"GebruikersAccount", filters:[{fieldName:"isPro",comparator:"EQUALS",fieldValue:{value:1}}], label:"Pro", cls:"warm", tab:"gebruikers" },
+    { key:"post", type:"OutdoorPost", label:"Outdoor posts", cls:"", tab:"forum" },
+    { key:"fb",   type:"AppFeedback", filters:[{fieldName:"gelezen",comparator:"EQUALS",fieldValue:{value:0}}], label:"Ongelezen feedback", cls:"warm", tab:"feedback" },
+  ];
+
+  const uitslagen = await Promise.all(wil.map(async w => {
+    try { return Object.assign({}, w, await tel(w.type, w.filters)); }
+    catch(e){ return Object.assign({}, w, { n:null, fout:String(e.message||e) }); }
+  }));
+
+  stats.innerHTML = ""; stats.dataset.loaded = "1";
+  uitslagen.forEach(u => {
+    const b = el("button", "stat " + (u.n ? u.cls : ""));
+    b.innerHTML = '<span class="n">' + (u.n == null ? "?" : (u.n + (u.meer ? "+" : ""))) + '</span><span class="l">' + esc(u.label) + "</span>";
+    b.title = u.fout || "";
+    b.onclick = () => gaNaar(u.tab);
+    stats.appendChild(b);
+  });
+
+  const open = uitslagen.find(u => u.key === "open");
+  const oud  = uitslagen.find(u => u.key === "oud");
+  zetBadge("meldingen", (open && open.n || 0) + (oud && oud.n || 0));
+  const fb = uitslagen.find(u => u.key === "fb");
+  zetBadge("feedback", fb && fb.n || 0);
+
+  $("#dash-when").textContent = "bijgewerkt " + new Date().toLocaleTimeString("nl-NL",{hour:"2-digit",minute:"2-digit"});
+
+  /* aandachtslijst */
+  bezig(att);
+  try {
+    const [mis, forumM] = await Promise.all([
+      query("MisbruikMelding", { filters:[{fieldName:"behandeld",comparator:"EQUALS",fieldValue:{value:0}}], limit:25 }).catch(()=>({records:[]})),
+      query("ForumMelding", { limit:25 }).catch(()=>({records:[]})),
+    ]);
+    const alles = (mis.records||[]).concat(forumM.records||[]);
+    att.innerHTML = "";
+    if (!alles.length) { att.innerHTML = leeg("Niets open. Rustige nacht.", "Alles afgehandeld"); }
+    else alles.slice(0,10).forEach(r => att.appendChild(meldingRij(r, r.recordType)));
+  } catch(e){ att.innerHTML = leeg(String(e.message||e), "Kon meldingen niet laden"); }
+
+  /* laatste posts + nieuwe gebruikers */
+  vulLijst("#dash-posts", () => query("OutdoorPost", { limit: 8 }), "OutdoorPost");
+  vulLijst("#dash-users", () => query("GebruikersAccount", { limit: 8 }), "GebruikersAccount", gebruikerRij);
+}
+
+async function vulLijst(sel, fn, type, renderer){
+  const n = $(sel); bezig(n);
+  try {
+    const r = await fn();
+    n.innerHTML = "";
+    const recs = r.records || [];
+    if (!recs.length) { n.innerHTML = leeg("Nog niets."); return; }
+    recs.forEach(rec => n.appendChild((renderer || rij)(rec, type)));
+  } catch(e){ n.innerHTML = leeg(String(e.message||e), "Fout"); }
+}
+
+/* =====================================================================
+   Meldingen
+   ===================================================================== */
+function meldingRij(rec, type){
+  const isMis = type === "MisbruikMelding";
+  const postID = v(rec,"postID");
+  const behandeld = isMis ? v(rec,"behandeld") === 1 : false;
+  const r = el("div","row");
+  const body = el("div","body");
+
+  body.appendChild(el("div","title", (isMis ? esc(v(rec,"reden") || "Melding zonder reden") : "Melding op een forumpost")));
+  const meta = el("div","meta");
+  meta.innerHTML =
+    '<span class="pill ' + (behandeld ? "green" : "red") + '">' + (behandeld ? "afgehandeld" : "open") + "</span>" +
+    (isMis && v(rec,"postType") ? '<span class="pill plain">' + esc(v(rec,"postType")) + "</span>" : "") +
+    '<span>gemeld door <span class="mono">' + esc(codeWeergave(v(rec,"melderCode"))) + "</span></span>" +
+    "<span>" + esc(fmtGeleden(v(rec, isMis ? "gemeldOp" : "tijdstip"))) + "</span>";
+  body.appendChild(meta);
+
+  const doel = el("div","text"); doel.innerHTML = '<span style="color:var(--muted)">gemelde post laden…</span>';
+  body.appendChild(doel);
+
+  const actsPost = el("div","acts");     /* acties op de gemelde post */
+  const actsMld  = el("div","acts");     /* acties op de melding zelf */
+  const mkIn = (doel) => (label, cls, fn) => { const b = el("button","btn sm "+(cls||""), esc(label)); b.onclick = fn; doel.appendChild(b); return b; };
+  const mk  = mkIn(actsPost);
+  const mkM = mkIn(actsMld);
+
+  let doelRec = null, doelType = null;
+  (async () => {
+    if (!postID) { doel.innerHTML = '<span style="color:var(--muted)">geen postID in deze melding</span>'; return; }
+    try {
+      doelRec = await fetchRecord(postID);
+      if (!doelRec) { doel.innerHTML = '<span style="color:var(--muted)">de gemelde post bestaat niet meer</span>'; return; }
+      doelType = doelRec.recordType;
+      const d = SCHEMA[doelType] || {};
+      const t = (d.titel && v(doelRec,d.titel)) || "";
+      const tx = (d.tekst && v(doelRec,d.tekst)) || "";
+      const au = (d.auteur && v(doelRec,d.auteur)) || "";
+      doel.innerHTML = '<b>' + esc(t || (SCHEMA[doelType]||{}).label || doelType) + "</b>" +
+        (tx ? "<br>" + esc(knip(tx, 220)) : "") +
+        (au ? '<br><span class="mono" style="color:var(--muted);font-size:.8rem">door ' + esc(codeWeergave(au)) + "</span>" : "");
+      mk("Post bekijken","",() => toonRecord(doelRec, doelType));
+      if (VERBERGBAAR.includes(doelType)) mk("Verberg post","",() => vraagVerberg(postID, doelType));
+      if (au) mk("Blokkeer auteur","danger",() => vraagBlokkeer(au));
+      mk("Post verwijderen","danger",() => bevestig("Post definitief verwijderen?",
+        "Het bericht wordt echt uit CloudKit gegooid. Niet terug te draaien.",
+        "Verwijderen", async () => { await Acties.verwijder(postID); doel.innerHTML = '<span style="color:var(--muted)">verwijderd</span>'; }, true));
+    } catch(e){
+      const weg = /NOT_FOUND|not found/i.test(String(e.code||"") + String(e.message||""));
+      doel.innerHTML = '<span style="color:var(--muted)">' + (weg ? "de gemelde post bestaat niet meer" : "kon post niet laden: " + esc(String(e.message||e))) + "</span>";
+      if (weg) mkM("Melding weggooien","",() => bevestig("Melding weggooien?","De post is al weg, dus de melding kan opgeruimd worden.","Weggooien",
+        async () => { await Acties.verwijder(rec.recordName); laadMeldingen(); }));
+    }
+  })();
+
+  if (isMis) {
+    mkM(behandeld ? "Weer openzetten" : "Afgehandeld", behandeld ? "" : "ok", async (ev) => {
+      const b = ev.target; b.disabled = true;
+      try { await Acties.behandeld(rec.recordName, !behandeld); laadMeldingen(); }
+      catch(e){ toast(String(e.message||e),"err"); b.disabled = false; }
+    });
+  } else {
+    mkM("Melding weggooien","",() => bevestig("Melding weggooien?","Dit oude meldingstype heeft geen afhandelvinkje, dus weggooien is hier het afsluiten.","Weggooien",
+      async () => { await Acties.verwijder(rec.recordName); laadMeldingen(); }));
+  }
+  mkM("Melding tonen","",() => toonRecord(rec, type));
+
+  body.appendChild(actsPost);
+  body.appendChild(actsMld);
+  r.appendChild(body);
+  return r;
+}
+
+async function laadMeldingen(){
+  const n = $("#mld-list"); bezig(n);
+  const alleenOpen = $("#mld-open-only").checked;
+  try {
+    const [mis, oud] = await Promise.all([
+      query("MisbruikMelding", { limit:100, filters: alleenOpen ? [{fieldName:"behandeld",comparator:"EQUALS",fieldValue:{value:0}}] : [] }).catch(()=>({records:[]})),
+      query("ForumMelding", { limit:100 }).catch(()=>({records:[]})),
+    ]);
+    const alles = (mis.records||[]).concat(oud.records||[]);
+    n.innerHTML = "";
+    if (!alles.length) { n.innerHTML = leeg(alleenOpen ? "Geen open meldingen." : "Nog geen enkele melding binnen.", "Niets te doen"); }
+    else alles.forEach(r => n.appendChild(meldingRij(r, r.recordType)));
+    zetBadge("meldingen", (mis.records||[]).filter(r => v(r,"behandeld") !== 1).length + (oud.records||[]).length);
+  } catch(e){ n.innerHTML = leeg(String(e.message||e), "Fout bij laden"); }
+}
+$("#mld-open-only").onchange = laadMeldingen;
+
+/* =====================================================================
+   Forum
+   ===================================================================== */
+let forumCont = null, forumType = null, forumGezien = new Set();
+async function laadForumTab(eerste){
+  const type = $("#forum-type").value;
+  const n = $("#forum-list");
+  const q = $("#forum-q").value.trim();
+  if (forumType !== type) { forumCont = null; forumGezien = new Set(); forumType = type; n.innerHTML = ""; }
+  if (!forumCont) bezig(n);
+
+  const def = SCHEMA[type] || { f:{} };
+  const filters = [];
+  if (q) {
+    /* Een code van 8 tekens is bijna zeker een gebruikerscode; anders zoeken
+       we op het begin van de titel, want CloudKit kan geen substring zoeken. */
+    if (/^[A-Za-z0-9]{8}$/.test(q.replace(/-/g,"")) && def.auteur && def.f[def.auteur] && def.f[def.auteur][1])
+      filters.push({ fieldName: def.auteur, comparator:"EQUALS", fieldValue:{ value: q.replace(/-/g,"").toUpperCase() } });
+  }
+
+  try {
+    const r = await query(type, { limit: 50, filters, continuationMarker: forumCont });
+    if (!forumCont) n.innerHTML = "";
+    let recs = r.records || [];
+    if (q && !filters.length) {
+      const naald = q.toLowerCase();
+      recs = recs.filter(rec => JSON.stringify(rec.fields).toLowerCase().includes(naald));
+    }
+    const nieuw = recs.filter(rec => !forumGezien.has(rec.recordName));
+    nieuw.forEach(rec => forumGezien.add(rec.recordName));
+    if (!nieuw.length && !forumGezien.size) n.innerHTML = leeg(q ? "Niets gevonden. CloudKit kan niet midden in een tekst zoeken — dit filtert alleen wat al geladen is." : "Nog niets geplaatst.", "Leeg");
+    nieuw.forEach(rec => n.appendChild(rij(rec, type)));
+    forumCont = (nieuw.length && (r.moreComing || r.continuationMarker)) ? r.continuationMarker : null;
+    $("#forum-more").style.display = forumCont ? "" : "none";
+  } catch(e){ n.innerHTML = leeg(String(e.message||e), "Fout bij laden"); }
+}
+function forumReset(){ forumCont = null; forumGezien = new Set(); $("#forum-list").innerHTML = ""; }
+$("#forum-load").onclick = () => { forumReset(); laadForumTab(); };
+$("#forum-type").onchange = () => { forumReset(); laadForumTab(); };
+$("#forum-more-btn").onclick = () => laadForumTab();
+$("#forum-q").addEventListener("keydown", e => { if (e.key === "Enter") { forumReset(); laadForumTab(); } });
+
+/* =====================================================================
+   Gebruikers
+   ===================================================================== */
+function gebruikerRij(rec){
+  const code = v(rec,"gebruikerCode") || "";
+  const banned = v(rec,"isBanned") === 1;
+  const pro = v(rec,"isPro") === 1;
+  const naam = v(rec,"displayNaam") || "";
+  const r = el("div","row");
+  const body = el("div","body");
+
+  body.appendChild(el("div","title", esc(naam || codeWeergave(code))));
+  const meta = el("div","meta");
+  meta.innerHTML =
+    '<span class="mono">' + esc(codeWeergave(code)) + "</span>" +
+    (banned ? '<span class="pill red">geblokkeerd</span>' : "") +
+    (pro ? '<span class="pill amber">Pro</span>' : "") +
+    "<span>" + (v(rec,"forumPostTelling")||0) + " posts</span>" +
+    "<span>" + (v(rec,"reactieTelling")||0) + " reacties</span>" +
+    "<span>sinds " + esc(fmtGeleden(v(rec,"aangemeldOp"))) + "</span>" +
+    (v(rec,"appVersie") ? '<span class="mono">v' + esc(v(rec,"appVersie")) + "</span>" : "");
+  body.appendChild(meta);
+  if (banned && v(rec,"banReden")) body.appendChild(el("div","text", "Reden: " + esc(v(rec,"banReden"))));
+  else if (v(rec,"profielBeschrijving")) body.appendChild(el("div","text", esc(knip(v(rec,"profielBeschrijving"),180))));
+
+  const acts = el("div","acts");
+  const mk = (label, cls, fn) => { const b = el("button","btn sm "+(cls||""), esc(label)); b.onclick = fn; acts.appendChild(b); return b; };
+  mk("Profiel","",() => toonRecord(rec,"GebruikersAccount"));
+  mk("Posts","",() => { $("#forum-type").value = "OutdoorPost"; $("#forum-q").value = code; gaNaar("forum"); forumReset(); laadForumTab(); });
+  if (banned) mk("Deblokkeren","ok",() => bevestig("Blokkade opheffen?","Deze gebruiker mag daarna weer plaatsen en is weer zichtbaar in de feeds.","Opheffen",
+      async () => { await Acties.deblokkeer(rec.recordName); laadGebruikers(); }));
+  else mk("Blokkeren","danger",() => vraagBlokkeer(code));
+  mk(pro ? "Pro intrekken" : "Pro geven","",() => bevestig(pro ? "Pro intrekken?" : "Pro geven?",
+      "Let op: dit zet alleen een vlaggetje in CloudKit. Pro wordt in de app bepaald door de aankoop in de App Store, en de app schrijft dat vlaggetje bij elke start terug. Het is dus een aantekening, geen sleutel.",
+      pro ? "Intrekken" : "Geven", async () => { await Acties.setPro(rec.recordName, !pro); laadGebruikers(); }));
+  body.appendChild(acts);
+
+  r.appendChild(body);
+  return r;
+}
+
+async function laadGebruikers(){
+  const n = $("#usr-list"); bezig(n);
+  const f = $("#usr-filter").value;
+  const q = $("#usr-q").value.trim();
+  const filters = [];
+  if (f === "banned") filters.push({fieldName:"isBanned",comparator:"EQUALS",fieldValue:{value:1}});
+  if (f === "pro")    filters.push({fieldName:"isPro",comparator:"EQUALS",fieldValue:{value:1}});
+  if (/^[A-Za-z0-9]{8}$/.test(q.replace(/-/g,""))) filters.push({fieldName:"gebruikerCode",comparator:"EQUALS",fieldValue:{value:q.replace(/-/g,"").toUpperCase()}});
+  try {
+    const r = await query("GebruikersAccount", { limit: 400, filters });
+    let recs = r.records || [];
+    if (q && !/^[A-Za-z0-9]{8}$/.test(q.replace(/-/g,""))) {
+      const naald = q.toLowerCase();
+      recs = recs.filter(rec => String(v(rec,"displayNaam")||"").toLowerCase().includes(naald) || String(v(rec,"gebruikerCode")||"").toLowerCase().includes(naald));
+    }
+    if (f === "actief") recs = recs.filter(rec => (v(rec,"forumPostTelling")||0) > 0 || (v(rec,"reactieTelling")||0) > 0);
+    n.innerHTML = "";
+    if (!recs.length) { n.innerHTML = leeg("Niemand gevonden met deze filters.", "Leeg"); return; }
+    recs.forEach(rec => n.appendChild(gebruikerRij(rec)));
+  } catch(e){ n.innerHTML = leeg(String(e.message||e), "Fout bij laden"); }
+}
+$("#usr-load").onclick = laadGebruikers;
+$("#usr-filter").onchange = laadGebruikers;
+$("#usr-q").addEventListener("keydown", e => { if (e.key === "Enter") laadGebruikers(); });
+
+/* =====================================================================
+   Verborgen
+   ===================================================================== */
+async function laadVerborgen(){
+  const n = $("#hid-list"); bezig(n);
+  try {
+    const r = await query("AdminVerborgen", { limit: 400 });
+    const recs = r.records || [];
+    n.innerHTML = "";
+    if (!recs.length) { n.innerHTML = leeg("Er is niets verborgen.", "Leeg"); return; }
+    if (recs.length >= 480) n.appendChild(el("div","row","<div class='body'><div class='text' style='color:var(--red)'>Let op: de app leest maximaal 500 verborgen items. Ruim oude items op.</div></div>"));
+    recs.forEach(rec => {
+      const row = el("div","row"); const body = el("div","body");
+      body.appendChild(el("div","title", esc((SCHEMA[v(rec,"doelType")]||{}).label || v(rec,"doelType") || "onbekend type")));
+      body.appendChild(el("div","meta",
+        '<span class="mono">' + esc(v(rec,"doelRecordName")||"") + "</span>" +
+        "<span>" + esc(fmtGeleden(v(rec,"datum"))) + "</span>"));
+      if (v(rec,"reden")) body.appendChild(el("div","text","Reden: " + esc(v(rec,"reden"))));
+      const acts = el("div","acts");
+      const bOpen = el("button","btn sm","Post bekijken");
+      bOpen.onclick = async () => {
+        try { const p = await fetchRecord(v(rec,"doelRecordName")); if (p) toonRecord(p, p.recordType); else toast("Die post bestaat niet meer.","err"); }
+        catch(e){ toast(String(e.message||e),"err"); }
+      };
+      const bHerstel = el("button","btn sm ok","Weer zichtbaar");
+      bHerstel.onclick = () => bevestig("Weer zichtbaar maken?","De post komt terug in het forum zodra de app opnieuw laadt.","Zichtbaar maken",
+        async () => { await Acties.herstel(rec.recordName); laadVerborgen(); });
+      acts.appendChild(bOpen); acts.appendChild(bHerstel);
+      body.appendChild(acts); row.appendChild(body); n.appendChild(row);
+    });
+  } catch(e){ n.innerHTML = leeg(String(e.message||e), "Fout bij laden"); }
+}
+$("#hid-add").onclick = () => {
+  const body = el("div"); body.style.cssText="display:flex;flex-direction:column;gap:.7rem";
+  const l1 = el("label","f"); l1.appendChild(el("span","","recordName van de post"));
+  const i1 = el("input"); i1.type="text"; i1.placeholder="bijv. 4F2A…"; l1.appendChild(i1);
+  const l2 = el("label","f"); l2.appendChild(el("span","","Soort"));
+  const s = el("select"); VERBERGBAAR.forEach(t => { const o = el("option","",esc((SCHEMA[t]||{}).label||t)); o.value = t; s.appendChild(o); }); l2.appendChild(s);
+  const l3 = el("label","f"); l3.appendChild(el("span","","Reden"));
+  const i3 = el("input"); i3.type="text"; l3.appendChild(i3);
+  body.appendChild(l1); body.appendChild(l2); body.appendChild(l3);
+  Sheet.open("Handmatig verbergen", body, [
+    { label:"Annuleren", on:()=>Sheet.close() },
+    { label:"Verbergen", cls:"primary", on: async (btn) => {
+        if (!i1.value.trim()) { toast("Vul een recordName in.","err"); return; }
+        btn.disabled = true;
+        try { await Acties.verberg(i1.value.trim(), s.value, i3.value.trim()); Sheet.close(); laadVerborgen(); }
+        catch(e){ toast(String(e.message||e),"err"); btn.disabled = false; }
+      } },
+  ]);
+};
+
+/* =====================================================================
+   Aankondigingen
+   ===================================================================== */
+async function laadAankondigingen(){
+  const n = $("#ank-list"); bezig(n);
+  try {
+    const r = await query("AdminAankondiging", { limit: 100 });
+    const recs = r.records || [];
+    n.innerHTML = "";
+    if (!recs.length) { n.innerHTML = leeg("Nog geen aankondigingen.", "Leeg"); return; }
+    recs.forEach(rec => {
+      const row = el("div","row"); const body = el("div","body");
+      body.appendChild(el("div","title", esc(v(rec,"titel")||"(zonder titel)")));
+      const p = v(rec,"prioriteit")||1;
+      body.appendChild(el("div","meta",
+        '<span class="pill ' + (p>=3?"red":p===2?"amber":"plain") + '">' + (p>=3?"hoog":p===2?"gewoon":"laag") + "</span>" +
+        "<span>" + esc(fmtGeleden(v(rec,"datum"))) + "</span>"));
+      if (v(rec,"inhoud")) body.appendChild(el("div","text", esc(v(rec,"inhoud"))));
+      const acts = el("div","acts");
+      const b1 = el("button","btn sm","Bewerken"); b1.onclick = () => bewerkRecord(rec,"AdminAankondiging");
+      const b2 = el("button","btn sm danger","Weghalen");
+      b2.onclick = () => bevestig("Aankondiging weghalen?","De banner verdwijnt uit de app zodra iemand opnieuw laadt.","Weghalen",
+        async () => { await Acties.verwijder(rec.recordName); laadAankondigingen(); });
+      acts.appendChild(b1); acts.appendChild(b2);
+      body.appendChild(acts); row.appendChild(body); n.appendChild(row);
+    });
+  } catch(e){ n.innerHTML = leeg(String(e.message||e), "Fout bij laden"); }
+}
+$("#ank-save").onclick = async (e) => {
+  const titel = $("#ank-titel").value.trim();
+  if (!titel) { toast("Een titel is verplicht — zonder titel toont de app de banner niet.","err"); return; }
+  const b = e.target; b.disabled = true; b.innerHTML = '<span class="spin"></span> plaatsen';
+  try {
+    await saveRecord({ recordType:"AdminAankondiging", fields:{
+      titel:{value:titel}, inhoud:{value:$("#ank-inhoud").value.trim()},
+      prioriteit:{value: parseInt($("#ank-prio").value,10)}, datum:{value: Date.now()} }});
+    $("#ank-titel").value = ""; $("#ank-inhoud").value = "";
+    toast("Geplaatst.","ok"); laadAankondigingen();
+  } catch(err){ toast(String(err.message||err),"err"); }
+  b.disabled = false; b.textContent = "Plaatsen";
+};
+
+/* =====================================================================
+   App-instellingen (AppConfig)
+   ===================================================================== */
+let cfgRecord = null;
+async function laadConfig(){
+  $("#cfg-state").textContent = "laden…";
+  const box = $("#cfg-vlaggen");
+  if (!box.dataset.built) {
+    FEATURE_VLAGGEN.forEach(([sleutel, label]) => {
+      const l = el("label","switch");
+      const i = el("input"); i.type = "checkbox"; i.dataset.vlag = sleutel;
+      l.appendChild(i); l.appendChild(document.createTextNode(label + " uitschakelen"));
+      box.appendChild(l);
+    });
+    box.dataset.built = "1";
+  }
+  try {
+    const r = await query("AppConfig", { limit: 1, sort: null });
+    cfgRecord = (r.records||[])[0] || null;
+    const g = k => cfgRecord ? v(cfgRecord,k) : undefined;
+    $("#cfg-banner-actief").checked = g("bannerActief") === 1;
+    $("#cfg-banner-tekst").value = g("bannerTekst") || "";
+    $("#cfg-banner-kleur").value = g("bannerKleur") || "goud";
+    const vd = g("bannerVerlooptOp");
+    $("#cfg-banner-verloopt").value = typeof vd === "number" ? new Date(vd - new Date().getTimezoneOffset()*60000).toISOString().slice(0,16) : "";
+    $("#cfg-minversie").value = g("minVereistVersie") || "1.0";
+    const uit = g("uitgeschakeldeFeatures") || [];
+    $$("#cfg-vlaggen input").forEach(i => { i.checked = uit.includes(i.dataset.vlag); });
+    $("#cfg-state").textContent = cfgRecord ? "opgehaald" : "nog geen record — opslaan maakt er een";
+  } catch(e){ $("#cfg-state").textContent = "fout: " + (e.message||e); }
+}
+$("#cfg-save").onclick = async (e) => {
+  const b = e.target; b.disabled = true; b.innerHTML = '<span class="spin"></span> opslaan';
+  try {
+    const uit = $$("#cfg-vlaggen input").filter(i => i.checked).map(i => i.dataset.vlag);
+    const vd = $("#cfg-banner-verloopt").value;
+    const fields = {
+      bannerTekst:{ value: $("#cfg-banner-tekst").value.trim() },
+      bannerKleur:{ value: $("#cfg-banner-kleur").value },
+      bannerActief:{ value: $("#cfg-banner-actief").checked ? 1 : 0 },
+      minVereistVersie:{ value: $("#cfg-minversie").value.trim() || "1.0" },
+      uitgeschakeldeFeatures:{ value: uit },
+    };
+    if (vd) fields.bannerVerlooptOp = { value: new Date(vd).getTime() };
+    if (cfgRecord) {
+      const vers = await fetchRecord(cfgRecord.recordName);
+      await saveRecord({ recordName: cfgRecord.recordName, recordType:"AppConfig", recordChangeTag: vers.recordChangeTag, fields });
+    } else {
+      await saveRecord({ recordType:"AppConfig", fields });
+    }
+    toast("Opgeslagen. De app pikt dit op bij de volgende start.","ok");
+    laadConfig();
+  } catch(err){ toast(String(err.message||err),"err"); }
+  b.disabled = false; b.textContent = "Opslaan";
+};
+
+/* =====================================================================
+   Feedback
+   ===================================================================== */
+async function laadFeedback(){
+  const n = $("#fb-list"); bezig(n);
+  const alleenOngelezen = $("#fb-unread").checked;
+  try {
+    const r = await query("AppFeedback", { limit: 200, filters: alleenOngelezen ? [{fieldName:"gelezen",comparator:"EQUALS",fieldValue:{value:0}}] : [] });
+    const recs = r.records || [];
+    n.innerHTML = "";
+    if (!recs.length) { n.innerHTML = leeg(alleenOngelezen ? "Alles gelezen." : "Nog geen feedback binnen.", "Leeg"); return; }
+    recs.forEach(rec => {
+      const gelezen = v(rec,"gelezen") === 1;
+      const ster = v(rec,"beoordeling") || 0;
+      const row = el("div","row"); const body = el("div","body");
+      body.appendChild(el("div","title", "★".repeat(ster) + "☆".repeat(Math.max(0,5-ster))));
+      body.appendChild(el("div","meta",
+        (gelezen ? '<span class="pill plain">gelezen</span>' : '<span class="pill amber">nieuw</span>') +
+        '<span class="mono">' + esc(codeWeergave(v(rec,"gebruikerCode"))) + "</span>" +
+        (v(rec,"appVersie") ? '<span class="mono">v' + esc(v(rec,"appVersie")) + "</span>" : "") +
+        "<span>" + esc(fmtGeleden(v(rec,"ingediendOp"))) + "</span>"));
+      if (v(rec,"tekst")) body.appendChild(el("div","text", esc(v(rec,"tekst"))));
+      const acts = el("div","acts");
+      const b1 = el("button","btn sm " + (gelezen ? "" : "ok"), gelezen ? "Als ongelezen" : "Gelezen");
+      b1.onclick = async () => { b1.disabled = true; try { await Acties.gelezen(rec.recordName, !gelezen); laadFeedback(); } catch(e){ toast(String(e.message||e),"err"); b1.disabled=false; } };
+      const b2 = el("button","btn sm","Gebruiker opzoeken");
+      b2.onclick = () => { $("#usr-q").value = v(rec,"gebruikerCode")||""; $("#usr-filter").value="alle"; gaNaar("gebruikers"); laadGebruikers(); };
+      const b3 = el("button","btn sm danger","Weggooien");
+      b3.onclick = () => bevestig("Feedback weggooien?","Definitief weg uit CloudKit.","Weggooien", async () => { await Acties.verwijder(rec.recordName); laadFeedback(); }, true);
+      acts.appendChild(b1); acts.appendChild(b2); acts.appendChild(b3);
+      body.appendChild(acts); row.appendChild(body); n.appendChild(row);
+    });
+    zetBadge("feedback", recs.filter(r2 => v(r2,"gelezen") !== 1).length);
+  } catch(e){ n.innerHTML = leeg(String(e.message||e), "Fout bij laden"); }
+}
+$("#fb-unread").onchange = laadFeedback;
+
+/* =====================================================================
+   Alle records — de verkenner
+   ===================================================================== */
+let recCont = null, recType = null, recLaatste = [], recGezien = new Set();
+function bouwRecordKiezer(){
+  const sel = $("#rec-type");
+  if (sel.dataset.built) return;
+  const groepen = {};
+  Object.keys(SCHEMA).forEach(t => { const g = SCHEMA[t].groep || "Overig"; (groepen[g] = groepen[g] || []).push(t); });
+  Object.keys(groepen).forEach(g => {
+    const og = document.createElement("optgroup"); og.label = g;
+    groepen[g].forEach(t => { const o = el("option","",esc(SCHEMA[t].label + " · " + t)); o.value = t; og.appendChild(o); });
+    sel.appendChild(og);
+  });
+  sel.dataset.built = "1";
+  sel.onchange = vulVeldKiezer;
+  vulVeldKiezer();
+}
+function vulVeldKiezer(){
+  const t = $("#rec-type").value; const def = SCHEMA[t] || { f:{} };
+  const fs = $("#rec-field"); fs.innerHTML = "";
+  const geen = el("option","","— geen filter —"); geen.value = ""; fs.appendChild(geen);
+  Object.keys(def.f).forEach(k => {
+    if (!(def.f[k][1] || "").includes("q")) return;      /* alleen queryable velden */
+    const o = el("option","",esc(k + " (" + def.f[k][0] + ")")); o.value = k; fs.appendChild(o);
+  });
+}
+async function laadRecordsTab(){
+  bouwRecordKiezer();
+  const t = $("#rec-type").value;
+  const n = $("#rec-list");
+  if (recType !== t) { recCont = null; recType = t; recLaatste = []; recGezien = new Set(); n.innerHTML = leeg("Druk op laden."); return; }
+}
+async function doeRecordQuery(vervolg){
+  const t = $("#rec-type").value;
+  const n = $("#rec-list");
+  const def = SCHEMA[t] || { f:{} };
+  if (!vervolg) { recCont = null; recLaatste = []; recGezien = new Set(); bezig(n); }
+  const veld = $("#rec-field").value, waarde = $("#rec-value").value.trim(), cmp = $("#rec-cmp").value;
+  const filters = [];
+  if (veld && waarde !== "") {
+    const type = def.f[veld][0];
+    let w = waarde;
+    if (type === T.INT) w = parseInt(waarde,10);
+    else if (type === T.DBL) w = parseFloat(waarde);
+    else if (type === T.TS) w = new Date(waarde).getTime();
+    filters.push({ fieldName: veld, comparator: cmp, fieldValue:{ value: w } });
+  }
+  try {
+    const r = await query(t, { limit: parseInt($("#rec-limit").value,10), filters, continuationMarker: vervolg ? recCont : null });
+    if (!vervolg) n.innerHTML = "";
+    const recs = (r.records || []).filter(rec => !recGezien.has(rec.recordName));
+    recs.forEach(rec => recGezien.add(rec.recordName));
+    recLaatste = recLaatste.concat(recs);
+    if (!recs.length && !vervolg) { n.innerHTML = leeg("Geen records die hieraan voldoen.", "Leeg"); }
+    recs.forEach(rec => n.appendChild(rij(rec, t)));
+    recCont = (recs.length && (r.moreComing || r.continuationMarker)) ? r.continuationMarker : null;
+    $("#rec-more").style.display = recCont ? "" : "none";
+    if (!vervolg) $("#rec-count").textContent = recLaatste.length + " geladen";
+    recType = t;
+  } catch(e){
+    const hint = /not marked queryable|not queryable/i.test(String(e.message)) ?
+      " — dit veld heeft geen index in CloudKit. Voeg die toe in het .ckdb en importeer opnieuw." : "";
+    n.innerHTML = leeg(String(e.message||e) + hint, "Fout bij laden");
+  }
+}
+$("#rec-load").onclick = () => doeRecordQuery(false);
+$("#rec-more-btn").onclick = () => doeRecordQuery(true);
+$("#rec-new").onclick = () => bewerkRecord({ fields:{} }, $("#rec-type").value);
+$("#rec-export").onclick = () => {
+  if (!recLaatste.length) { toast("Eerst iets laden.","err"); return; }
+  const blob = new Blob([JSON.stringify(recLaatste, null, 2)], { type:"application/json" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = $("#rec-type").value + "-" + new Date().toISOString().slice(0,10) + ".json";
+  a.click(); setTimeout(()=>URL.revokeObjectURL(a.href), 2000);
+};
+
+/* =====================================================================
+   Statistieken — telt alles, in stukjes van 400
+   ===================================================================== */
+
+/** Haalt élk record van een type op door telkens verder te zoeken vanaf de
+ *  laatst gevonden datum. Betrouwbaarder dan de continuationMarker, want het
+ *  gebruikt gewoon de index die er toch al is. */
+async function haalAlles(recordType, opties){
+  opties = opties || {};
+  const max = opties.max || 5000;
+  const def = SCHEMA[recordType] || {};
+  const sortVeld = def.sort;
+  const gezien = new Set();
+  let uit = [], grens = null, rondes = 0;
+
+  while (uit.length < max && rondes < 40) {
+    rondes++;
+    const filters = (opties.filters || []).slice();
+    if (grens != null && sortVeld)
+      filters.push({ fieldName: sortVeld, comparator:"LESS_THAN_OR_EQUALS", fieldValue:{ value: grens } });
+
+    const r = await query(recordType, { filters, limit: 400 });
+    const alle = r.records || [];
+    const nieuw = alle.filter(x => !gezien.has(x.recordName));
+    nieuw.forEach(x => gezien.add(x.recordName));
+    uit = uit.concat(nieuw);
+    if (opties.onVoortgang) opties.onVoortgang(uit.length);
+
+    if (!sortVeld || alle.length < 400 || !nieuw.length) break;
+    const laatste = alle[alle.length - 1];
+    const nieuweGrens = v(laatste, sortVeld);
+    if (nieuweGrens == null || nieuweGrens === grens) break;
+    grens = nieuweGrens;
+  }
+  return uit;
+}
+
+/** Staafje-lijst zonder externe bibliotheek. */
+function balken(paren, opties){
+  opties = opties || {};
+  const max = Math.max(1, ...paren.map(p => p[1]));
+  const wrap = el("div"); wrap.style.cssText = "display:flex;flex-direction:column;gap:.45rem";
+  if (!paren.length) { wrap.innerHTML = leeg("Geen gegevens."); return wrap; }
+  paren.forEach(([label, n, kleur]) => {
+    const r = el("div");
+    r.style.cssText = "display:grid;grid-template-columns:minmax(4.5rem,8rem) 1fr auto;gap:.6rem;align-items:center;font-size:.83rem";
+    const l = el("div","", esc(label)); l.style.cssText = "color:var(--ink-dim);overflow:hidden;text-overflow:ellipsis;white-space:nowrap";
+    const spoor = el("div"); spoor.style.cssText = "background:var(--edge-soft);border-radius:4px;height:.62rem;overflow:hidden";
+    const vul = el("div"); vul.style.cssText = "height:100%;border-radius:4px;background:" + (kleur || "var(--amber)") + ";width:" + Math.round(n/max*100) + "%";
+    spoor.appendChild(vul);
+    const c = el("div","mono", String(n)); c.style.cssText = "color:var(--muted);font-size:.78rem;min-width:2.5rem;text-align:right";
+    r.appendChild(l); r.appendChild(spoor); r.appendChild(c);
+    wrap.appendChild(r);
+  });
+  if (opties.voet) { const f = el("div","", esc(opties.voet)); f.style.cssText="color:var(--muted);font-size:.76rem;margin-top:.3rem"; wrap.appendChild(f); }
+  return wrap;
+}
+
+let statsGebruikers = [];
+
+function laadStats(){
+  if (!statsGebruikers.length) $("#st-state").textContent = "nog niet geteld";
+}
+
+$("#st-load").onclick = async (e) => {
+  const b = e.target; b.disabled = true; b.innerHTML = '<span class="spin"></span> tellen';
+  const st = $("#st-state");
+  try {
+    st.textContent = "gebruikers…";
+    const users = await haalAlles("GebruikersAccount", { onVoortgang: n => st.textContent = "gebruikers… " + n });
+    statsGebruikers = users;
+
+    st.textContent = "feedback…";
+    const fb = await haalAlles("AppFeedback", { max: 2000 }).catch(()=>[]);
+
+    st.textContent = "content…";
+    const inhoudTypes = ["OutdoorPost","ErvaringPost","BuurtPost","ForumReactie","TrailConditie","PlaatsAlert",
+                         "PublicSafeSpot","WaterBron","SharedRoute","Expeditie","SegmentLeaderboard",
+                         "BuddyCheckIn","NoodplanActivatie","ReferralRecord","Chatbericht","SurvivalStatus"];
+    const inhoud = [];
+    for (const t of inhoudTypes) {
+      st.textContent = "content… " + (SCHEMA[t] || {}).label;
+      try { inhoud.push([t, (await haalAlles(t, { max: 5000 })).length]); }
+      catch(err){ inhoud.push([t, null]); }
+    }
+
+    /* --- kerncijfers --- */
+    const pro = users.filter(u => v(u,"isPro") === 1);
+    const geband = users.filter(u => v(u,"isBanned") === 1);
+    const nu = Date.now(), dag = 864e5;
+    const actiefSinds = d => users.filter(u => u.modified && (nu - u.modified.timestamp) < d*dag).length;
+    const nieuwSinds  = d => users.filter(u => (v(u,"aangemeldOp") || 0) > nu - d*dag).length;
+    const metPost = users.filter(u => (v(u,"forumPostTelling")||0) + (v(u,"reactieTelling")||0) > 0);
+
+    const kern = [
+      ["Gebruikers", users.length, ""],
+      ["Pro", pro.length + (users.length ? " (" + Math.round(pro.length/users.length*100) + "%)" : ""), "warm"],
+      ["Geblokkeerd", geband.length, geband.length ? "alert" : ""],
+      ["Actief deze week", actiefSinds(7), "good"],
+      ["Actief deze maand", actiefSinds(30), ""],
+      ["Nieuw deze week", nieuwSinds(7), "good"],
+      ["Heeft ooit geplaatst", metPost.length, ""],
+      ["Feedback totaal", fb.length, ""],
+    ];
+    const kn = $("#st-kerncijfers"); kn.innerHTML = "";
+    kern.forEach(([label, n, cls]) => {
+      const c = el("div", "stat " + cls); c.style.cursor = "default";
+      c.innerHTML = '<span class="n">' + esc(String(n)) + '</span><span class="l">' + esc(label) + "</span>";
+      kn.appendChild(c);
+    });
+
+    /* --- groei per week --- */
+    const weken = [];
+    for (let i = 7; i >= 0; i--) {
+      const van = nu - (i+1)*7*dag, tot = nu - i*7*dag;
+      const n = users.filter(u => { const d = v(u,"aangemeldOp"); return d > van && d <= tot; }).length;
+      weken.push([i === 0 ? "deze week" : i + " wk terug", n]);
+    }
+    $("#st-groei").innerHTML = ""; $("#st-groei").appendChild(balken(weken));
+
+    /* --- laatst actief --- */
+    const buckets = [["vandaag",1],["deze week",7],["deze maand",30],["3 maanden",90]];
+    const actiefRij = buckets.map(([l,d]) => [l, actiefSinds(d), "var(--green)"]);
+    const nooit = users.filter(u => !u.modified).length;
+    $("#st-actief").innerHTML = "";
+    $("#st-actief").appendChild(balken(actiefRij, { voet: nooit ? nooit + " zonder bekende datum" : "Gemeten aan wanneer de app hun account bijwerkte." }));
+
+    /* --- versies en toestellen --- */
+    const tel = (sleutel) => {
+      const m = {};
+      users.forEach(u => { const w = (v(u,sleutel) || "onbekend"); m[w] = (m[w]||0)+1; });
+      return Object.entries(m).sort((a,b) => b[1]-a[1]).slice(0,10);
+    };
+    $("#st-versies").innerHTML = ""; $("#st-versies").appendChild(balken(tel("appVersie").map(([l,n]) => ["v"+l, n, "var(--blue)"])));
+    $("#st-toestellen").innerHTML = ""; $("#st-toestellen").appendChild(balken(tel("apparaatModel").map(([l,n]) => [l, n, "var(--violet)"])));
+
+    /* --- Pro-lijst --- */
+    const pn = $("#st-pro"); pn.innerHTML = "";
+    if (!pro.length) pn.innerHTML = leeg("Nog niemand met Pro in CloudKit.", "Leeg");
+    else pro.sort((a,b) => (v(b,"aangemeldOp")||0) - (v(a,"aangemeldOp")||0)).forEach(u => pn.appendChild(gebruikerRij(u)));
+
+    /* --- top --- */
+    const tn = $("#st-top"); tn.innerHTML = "";
+    const top = users.slice().sort((a,b) =>
+      ((v(b,"forumPostTelling")||0)+(v(b,"reactieTelling")||0)) - ((v(a,"forumPostTelling")||0)+(v(a,"reactieTelling")||0))
+    ).filter(u => (v(u,"forumPostTelling")||0)+(v(u,"reactieTelling")||0) > 0).slice(0,15);
+    if (!top.length) tn.innerHTML = leeg("Nog niemand heeft geplaatst.", "Leeg");
+    else top.forEach(u => tn.appendChild(gebruikerRij(u)));
+
+    /* --- inhoud --- */
+    const inh = $("#st-inhoud"); inh.innerHTML = "";
+    const wrap = el("div"); wrap.style.padding = ".9rem";
+    wrap.appendChild(balken(inhoud.map(([t,n]) => [(SCHEMA[t]||{}).label || t, n == null ? 0 : n]),
+      { voet: inhoud.some(x => x[1] == null) ? "Types met een streepje konden niet geteld worden — meestal geen index." : "" }));
+    inh.appendChild(wrap);
+
+    /* --- feedback --- */
+    const fn = $("#st-feedback"); fn.innerHTML = "";
+    if (!fb.length) fn.innerHTML = leeg("Nog geen feedback binnen.");
+    else {
+      const gem = fb.reduce((a,r) => a + (v(r,"beoordeling")||0), 0) / fb.length;
+      const verdeling = [5,4,3,2,1].map(ster => [ "★".repeat(ster), fb.filter(r => v(r,"beoordeling") === ster).length,
+        ster >= 4 ? "var(--green)" : ster === 3 ? "var(--amber)" : "var(--red)" ]);
+      const kop = el("div","", "Gemiddeld <b style='font-family:JetBrains Mono,monospace'>" + gem.toFixed(1) + "</b> uit 5 over " + fb.length + " beoordelingen");
+      kop.style.cssText = "margin-bottom:.7rem;color:var(--ink-dim);font-size:.9rem";
+      fn.appendChild(kop); fn.appendChild(balken(verdeling));
+    }
+
+    st.textContent = "geteld " + new Date().toLocaleTimeString("nl-NL",{hour:"2-digit",minute:"2-digit"});
+  } catch(err){
+    st.textContent = "";
+    toast(String(err.message||err), "err");
+  }
+  b.disabled = false; b.textContent = "Alles tellen";
+};
+
+$("#st-pro-export").onclick = () => {
+  const pro = statsGebruikers.filter(u => v(u,"isPro") === 1);
+  if (!pro.length) { toast("Eerst tellen.","err"); return; }
+  const regels = ["code,naam,aangemeld,appversie,geblokkeerd"].concat(pro.map(u =>
+    [v(u,"gebruikerCode"), '"' + String(v(u,"displayNaam")||"").replace(/"/g,'""') + '"',
+     new Date(v(u,"aangemeldOp")||0).toISOString().slice(0,10), v(u,"appVersie")||"", v(u,"isBanned")===1?"ja":"nee"].join(",")));
+  const blob = new Blob([regels.join("\n")], { type:"text/csv" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob); a.download = "pro-gebruikers-" + new Date().toISOString().slice(0,10) + ".csv";
+  a.click(); setTimeout(()=>URL.revokeObjectURL(a.href), 2000);
+};
+
+/* =====================================================================
+   Uitleg / verbinding
+   ===================================================================== */
+function laadInfo(){
+  const dl = $("#info-kv"); dl.innerHTML = "";
+  const add = (k,w) => { dl.appendChild(el("dt","",esc(k))); dl.appendChild(el("dd","",w)); };
+  add("container", '<span class="mono">' + esc(CONTAINER) + "</span>");
+  add("omgeving", esc(State.env));
+  add("database", "public");
+  add("ingelogd als", State.user ? '<span class="mono">' + esc(State.user.userRecordName || "") + "</span>" : "—");
+  add("naam", State.user && State.user.nameComponents ? esc([State.user.nameComponents.givenName, State.user.nameComponents.familyName].filter(Boolean).join(" ")) : "—");
+  add("deze pagina", '<span class="mono">' + esc(location.origin) + "</span>");
+  add("recordtypes", String(Object.keys(SCHEMA).length));
+}
+
+/* =====================================================================
+   Opstarten
+   ===================================================================== */
+$("#origin-hint").textContent = (location.protocol === "file:") ? "(geen — dit is een los bestand)" : location.origin;
+if (location.protocol === "file:") {
+  const w = el("div","card");
+  w.style.cssText = "border-color:var(--red)";
+  w.innerHTML = '<div class="card-b" style="font-size:.88rem;color:var(--ink-dim)"><b style="color:var(--red)">Dit bestand is los geopend.</b> CloudKit laat alleen inloggen toe vanaf een echt webadres, omdat het token aan een adres gekoppeld is. Zet deze pagina online (bijvoorbeeld op GitHub Pages) en open hem via https.</div>';
+  $("#gate").insertBefore(w, $("#gate").children[1]);
+}
+$("#env-select").value = State.env;
+$("#env-select").onchange = () => { localStorage.setItem(LS.env, $("#env-select").value); location.reload(); };
+$("#token-input").value = State.token;
+
+$("#token-save").onclick = () => {
+  const t = $("#token-input").value.trim();
+  if (!t) { toast("Plak eerst je API-token.","err"); return; }
+  localStorage.setItem(LS.token, t); State.token = t;
+  location.reload();
+};
+$("#token-clear").onclick = () => { localStorage.removeItem(LS.token); location.reload(); };
+
+$("#refresh-all").onclick = () => { Cache.wis(); const t = TABS.find(x=>x.id===huidigeTab); if (t) t.laad(); toast("Verversen…"); };
+$("#signout").onclick = () => {
+  const knop = document.querySelector("#apple-sign-out-button a, #apple-sign-out-button button");
+  if (knop) knop.click();
+  else { localStorage.removeItem(LS.token); location.reload(); }
+};
+
+let ckGeladen = false;
+window.addEventListener("cloudkitloaded", () => { ckGeladen = true; startCloudKit(); });
+setTimeout(() => {
+  if (!ckGeladen && typeof window.CloudKit === "undefined") {
+    $("#signin-slot").innerHTML = '<span style="color:var(--red);font-size:.86rem">De CloudKit-bibliotheek van Apple kon niet geladen worden. Controleer je internetverbinding, of open deze pagina niet als los bestand maar via een echt webadres.</span>';
+  }
+}, 6000);
+
+function startCloudKit(){
+  if (!State.token) {
+    $("#signin-slot").innerHTML = '<span style="color:var(--muted);font-size:.86rem">Eerst een token invoeren.</span>';
+    return;
+  }
+  $("#signin-slot").innerHTML = '<div id="apple-sign-in-button"></div><div id="apple-sign-out-button" style="display:none"></div><span id="auth-msg" style="color:var(--muted);font-size:.86rem"><span class="spin"></span> verbinden…</span>';
+
+  try {
+    CloudKit.configure({
+      containers: [{
+        containerIdentifier: CONTAINER,
+        apiTokenAuth: {
+          apiToken: State.token,
+          persist: true,
+          signInButton:  { id:"apple-sign-in-button",  theme:"black" },
+          signOutButton: { id:"apple-sign-out-button", theme:"black" },
+        },
+        environment: State.env,
+      }],
+    });
+  } catch(e){
+    $("#auth-msg").innerHTML = '<span style="color:var(--red)">Configureren mislukt: ' + esc(String(e.message||e)) + "</span>";
+    return;
+  }
+
+  State.container = CloudKit.getDefaultContainer();
+  State.db = State.container.publicCloudDatabase;
+
+  State.container.setUpAuth().then(gebruiker => {
+    if (gebruiker) startApp(gebruiker);
+    else {
+      const m = $("#auth-msg");
+      if (m) m.innerHTML = "Klik op de knop hierboven om in te loggen met je Apple ID.";
+    }
+  }).catch(e => {
+    const m = $("#auth-msg");
+    const s = String(e && (e.reason || e.message) || e);
+    let hulp = "";
+    if (/token|AUTHENTICATION|not found|invalid/i.test(s))
+      hulp = " — controleer of het token klopt en of <b>" + esc(location.origin) + "</b> als toegestane origin bij dat token staat.";
+    if (m) m.innerHTML = '<span style="color:var(--red)">Inloggen mislukt: ' + esc(s) + hulp + "</span>";
+  });
+
+  State.container.whenUserSignsIn().then(startApp).catch(()=>{});
+  State.container.whenUserSignsOut().then(() => { location.reload(); }).catch(()=>{});
+}
+
+function startApp(gebruiker){
+  if (State.klaar) return;
+  State.klaar = true;
+  State.user = gebruiker;
+
+  $("#gate").classList.add("hide");
+  $("#app").classList.remove("hide");
+
+  const prod = State.env === "production";
+  $("#env-dot").className = "dot " + (prod ? "live" : "dev");
+  $("#env-label").textContent = prod ? "Production" : "Development";
+  $("#env-label").title = prod ? "De echte database met echte gebruikers" : "Testomgeving";
+
+  bouwTabs();
+  const uitHash = (location.hash || "").replace("#","");
+  gaNaar(TABS.some(t => t.id === uitHash) ? uitHash : "dashboard");
+
+  /* badges alvast vullen, ook als je op een andere tab begint */
+  (async () => {
+    try {
+      const [m, f] = await Promise.all([
+        tel("MisbruikMelding", [{fieldName:"behandeld",comparator:"EQUALS",fieldValue:{value:0}}]).catch(()=>({n:0})),
+        tel("AppFeedback", [{fieldName:"gelezen",comparator:"EQUALS",fieldValue:{value:0}}]).catch(()=>({n:0})),
+      ]);
+      zetBadge("meldingen", m.n||0); zetBadge("feedback", f.n||0);
+    } catch(e){}
+  })();
+}
+
+/* Als cloudkit.js al klaar was voordat deze code liep. */
+if (typeof window.CloudKit !== "undefined") { ckGeladen = true; startCloudKit(); }
+</script>
+</body>
+</html>
