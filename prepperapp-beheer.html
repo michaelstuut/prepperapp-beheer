@@ -338,6 +338,12 @@ label.f>span.hint{font-weight:400;font-size:.74rem;color:#6B7486}
 
   <!-- ---------- Dashboard ---------- -->
   <section class="view" id="v-dashboard" role="tabpanel">
+    <div class="card" id="sinds-kaart" style="display:none">
+      <div class="card-h"><h2>Sinds je vorige bezoek</h2><span style="flex:1"></span>
+        <span class="sub" id="sinds-wanneer"></span>
+      </div>
+      <div class="card-b tight" id="sinds-lijst"></div>
+    </div>
     <div class="grid c4" id="stats"></div>
     <div class="card">
       <div class="card-h"><h2>Nu aandacht nodig</h2><span class="spacer" style="flex:1"></span><span class="sub" id="dash-when"></span></div>
@@ -470,6 +476,21 @@ label.f>span.hint{font-weight:400;font-size:.74rem;color:#6B7486}
         </div>
       </div>
       <div class="kaart-legenda" id="kaart-legenda"></div>
+    </div>
+  </section>
+
+  <!-- ---------- Controle ---------- -->
+  <section class="view" id="v-controle" role="tabpanel">
+    <div class="card">
+      <div class="card-h"><h2>Controle</h2><span style="flex:1"></span>
+        <span class="sub" id="ct-status"></span>
+        <button class="btn sm" id="ct-laad">Doorlichten</button>
+      </div>
+      <div class="card-b" style="font-size:.84rem;color:var(--muted)">
+        Kijkt of alles nog klopt: haalt elk recordtype op, controleert of de indexen er zijn die deze
+        pagina nodig heeft, en zoekt naar rommel die niemand ziet maar die wel in de weg zit.
+      </div>
+      <div class="card-b tight" id="ct-lijst"><div class="empty">Nog niet gedaan.</div></div>
     </div>
   </section>
 
@@ -776,6 +797,14 @@ label.f>span.hint{font-weight:400;font-size:.74rem;color:#6B7486}
     </div>
 
     <div class="card">
+      <div class="card-h"><h2>Eigen geschiedenis</h2><span style="flex:1"></span>
+        <span class="sub" id="gs-info"></span>
+        <button class="btn sm" id="gs-export">Exporteren</button>
+      </div>
+      <div class="card-b" id="gs-grafiek"><div class="empty">Wordt vanaf nu opgebouwd.</div></div>
+    </div>
+
+    <div class="card">
       <div class="card-h"><h2>Feedback</h2></div>
       <div class="card-b" id="st-feedback"><div class="empty">Nog niet geteld.</div></div>
     </div>
@@ -935,7 +964,7 @@ label.f>span.hint{font-weight:400;font-size:.74rem;color:#6B7486}
    ===================================================================== */
 
 const CONTAINER = "iCloud.com.stuut.PrepperApp";
-const BUILD = 15;
+const BUILD = 16;
 const LS = { token: "pa.token", env: "pa.env" };
 
 /* ---------------------------------------------------------------------
@@ -1885,6 +1914,7 @@ const TABS = [
   { id:"inzicht",   label:"Inzichten", laad: laadInzichtTab },
   { id:"records",   label:"Alle records", laad: laadRecordsTab },
   { id:"logboek",   label:"Logboek",   laad: laadLogboek },
+  { id:"controle",  label:"Controle",  laad: laadControleTab },
   { id:"toegang",   label:"Toegang",   laad: laadToegang },
   { id:"info",      label:"Uitleg",    laad: laadInfo },
 ];
@@ -1953,6 +1983,16 @@ async function laadDashboard(){
   zetBadge("feedback", fb && fb.n || 0);
 
   $("#dash-when").textContent = "bijgewerkt " + new Date().toLocaleTimeString("nl-NL",{hour:"2-digit",minute:"2-digit"});
+
+  /* momentopname van vandaag bewaren, zodat er na verloop van tijd een lijn ontstaat */
+  const pak = k => { const u = uitslagen.find(x => x.key === k); return u && typeof u.n === "number" ? u.n : undefined; };
+  Geschiedenis.bewaar({
+    mensen: pak("surv"), accounts: pak("usr"), pro: pak("pro"),
+    geblokkeerd: pak("ban"), verborgen: pak("hid"), posts: pak("post"),
+    openMeldingen: pak("open"), ongelezenFeedback: pak("fb"),
+  });
+
+  toonSinds();
 
   /* aandachtslijst */
   bezig(att);
@@ -2831,6 +2871,7 @@ let statsGebruikers = [];
 
 function laadStats(){
   if (!statsGebruikers.length) $("#st-state").textContent = "nog niet geteld";
+  tekenGeschiedenis();
 }
 
 $("#st-load").onclick = async (e) => {
@@ -4033,6 +4074,259 @@ $("#iz-laad").onclick = async (e) => {
     });
 
     st.textContent = "geanalyseerd over " + n + " mensen";
+  } catch(err){
+    st.textContent = "";
+    toast(String(err.message||err), "err");
+  }
+  b.disabled = false;
+};
+
+/* =====================================================================
+   Sinds je vorige bezoek
+   ---------------------------------------------------------------------
+   CloudKit kent geen "wat is er nieuw". Deze pagina onthoudt daarom zelf
+   wanneer je voor het laatst keek, en telt bij het opstarten wat er sinds
+   dat moment is bijgekomen.
+   ===================================================================== */
+const VORIG_BEZOEK = parseInt(localStorage.getItem("pa.bezoek") || "0", 10);
+localStorage.setItem("pa.bezoek", String(Date.now()));
+
+async function toonSinds(){
+  if (!VORIG_BEZOEK) return;                       /* eerste keer: niets om mee te vergelijken */
+  const uren = (Date.now() - VORIG_BEZOEK) / 3600000;
+  if (uren < 0.5) return;                          /* net nog gekeken, niet interessant */
+
+  const wil = [
+    ["SurvivalStatus", "bijgewerktOp", "mensen openden de app", "gebruikers", "good"],
+    ["MisbruikMelding", "gemeldOp",    "nieuwe meldingen",      "meldingen",  "alert"],
+    ["OutdoorPost",    "datum",        "nieuwe outdoor posts",  "forum",      ""],
+    ["ErvaringPost",   "geplaatst",    "nieuwe ervaringen",     "forum",      ""],
+    ["ForumReactie",   "tijdstip",     "nieuwe reacties",       "forum",      ""],
+    ["AppFeedback",    "ingediendOp",  "keer feedback",         "feedback",   "warm"],
+    ["Chatbericht",    "tijdstempel",  "chatberichten",         "records",    ""],
+  ];
+
+  const uitslag = await Promise.all(wil.map(async ([type, veld, label, tab, cls]) => {
+    try {
+      const r = await query(type, { limit: 400,
+        filters: [{ fieldName: veld, comparator:"GREATER_THAN", fieldValue:{ value: VORIG_BEZOEK } }] });
+      return { n: (r.records||[]).length, meer: !!r.moreComing, label, tab, cls };
+    } catch(e){ return null; }
+  }));
+
+  const iets = uitslag.filter(Boolean).filter(u => u.n > 0);
+  const n = $("#sinds-lijst"); n.innerHTML = "";
+  $("#sinds-wanneer").textContent = "je was hier " + fmtGeleden(VORIG_BEZOEK);
+  $("#sinds-kaart").style.display = "";
+
+  if (!iets.length){
+    n.innerHTML = leeg("Er is niets bijgekomen sinds je vorige bezoek.", "Rustig gebleven");
+    return;
+  }
+  const rij2 = el("div","row"); const body = el("div","body");
+  const stukjes = iets.map(u => "<b>" + u.n + (u.meer ? "+" : "") + "</b> " + esc(u.label));
+  body.innerHTML = '<div class="title">' + stukjes.join(" · ") + "</div>";
+  const acts = el("div","acts");
+  Array.from(new Set(iets.map(u => u.tab))).forEach(t => {
+    const tab = TABS.find(x => x.id === t);
+    if (!tab) return;
+    const b = el("button","btn sm", esc(tab.label));
+    b.onclick = () => gaNaar(t);
+    acts.appendChild(b);
+  });
+  body.appendChild(acts); rij2.appendChild(body); n.appendChild(rij2);
+}
+
+/* =====================================================================
+   Eigen geschiedenis — dagelijkse momentopname in je eigen browser
+   ---------------------------------------------------------------------
+   CloudKit bewaart geen verleden. Vanaf nu legt deze pagina één keer per
+   dag de belangrijkste tellingen vast, zodat je over een paar weken een
+   echte lijn hebt in plaats van losse getallen.
+   ===================================================================== */
+const Geschiedenis = {
+  sleutel: "pa.geschiedenis",
+  alles(){ try { return JSON.parse(localStorage.getItem(this.sleutel) || "[]"); } catch(e){ return []; } },
+  vandaag(){ return new Date().toISOString().slice(0,10); },
+
+  bewaar(cijfers){
+    const lijst = this.alles();
+    const dag = this.vandaag();
+    const bestaand = lijst.find(x => x.dag === dag);
+    if (bestaand) Object.assign(bestaand, cijfers, { dag });
+    else lijst.push(Object.assign({ dag }, cijfers));
+    localStorage.setItem(this.sleutel, JSON.stringify(lijst.slice(-400)));
+  },
+};
+
+function lijnGrafiek(punten, kleur, label){
+  const W = 640, H = 150, rand = 24;
+  if (punten.length < 2) return el("div","empty","Er is nog maar één dag vastgelegd. Kom morgen terug.");
+  const waarden = punten.map(p => p.y);
+  const max = Math.max(...waarden), min = Math.min(...waarden);
+  const spanne = Math.max(1, max - min);
+  const x = i => rand + i * (W - rand*2) / (punten.length - 1);
+  const y = w => H - rand - (w - min) / spanne * (H - rand*2);
+  const d = punten.map((p,i) => (i ? "L" : "M") + x(i).toFixed(1) + " " + y(p.y).toFixed(1)).join(" ");
+  const vlak = d + " L" + x(punten.length-1).toFixed(1) + " " + (H-rand) + " L" + x(0).toFixed(1) + " " + (H-rand) + " Z";
+  const wrap = el("div");
+  wrap.innerHTML =
+    '<div style="font-size:.8rem;color:var(--muted);margin-bottom:.3rem">' + esc(label) +
+    ' — van ' + min + ' naar ' + waarden[waarden.length-1] + '</div>' +
+    '<svg viewBox="0 0 ' + W + ' ' + H + '" style="width:100%;height:auto;overflow:visible">' +
+    '<path d="' + vlak + '" fill="' + kleur + '" opacity=".14"></path>' +
+    '<path d="' + d + '" fill="none" stroke="' + kleur + '" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"></path>' +
+    punten.map((p,i) => '<circle cx="' + x(i).toFixed(1) + '" cy="' + y(p.y).toFixed(1) + '" r="3" fill="' + kleur + '"><title>' +
+      esc(p.dag + ": " + p.y) + '</title></circle>').join("") +
+    '<text x="' + rand + '" y="' + (H-4) + '" fill="#7F8899" font-size="11">' + esc(punten[0].dag) + '</text>' +
+    '<text x="' + (W-rand) + '" y="' + (H-4) + '" fill="#7F8899" font-size="11" text-anchor="end">' + esc(punten[punten.length-1].dag) + '</text>' +
+    '</svg>';
+  return wrap;
+}
+
+function tekenGeschiedenis(){
+  const lijst = Geschiedenis.alles();
+  const doos = $("#gs-grafiek"); doos.innerHTML = "";
+  $("#gs-info").textContent = lijst.length ? lijst.length + " dagen vastgelegd" : "";
+  if (!lijst.length){ doos.innerHTML = '<div class="empty">Wordt vanaf nu opgebouwd. Elke dag dat je hier kijkt komt er een punt bij.</div>'; return; }
+  const reeksen = [
+    ["mensen", "Mensen in de app", "var(--green)"],
+    ["posts",  "Berichten in het forum", "var(--blue)"],
+    ["pro",    "Pro", "var(--amber)"],
+    ["geblokkeerd", "Geblokkeerd", "var(--red)"],
+  ];
+  reeksen.forEach(([sleutel, label, kleur]) => {
+    const punten = lijst.filter(x => typeof x[sleutel] === "number").map(x => ({ dag: x.dag, y: x[sleutel] }));
+    if (punten.length < 2) return;
+    const w = el("div"); w.style.marginBottom = "1.1rem";
+    w.appendChild(lijnGrafiek(punten, kleur, label));
+    doos.appendChild(w);
+  });
+  if (!doos.children.length) doos.innerHTML = '<div class="empty">Er is nog maar één dag vastgelegd. Kom morgen terug.</div>';
+}
+$("#gs-export").onclick = () => {
+  const lijst = Geschiedenis.alles();
+  if (!lijst.length){ toast("Nog niets vastgelegd.","err"); return; }
+  const kop = Object.keys(lijst[lijst.length-1]);
+  const csv = [kop.join(",")].concat(lijst.map(r => kop.map(k => r[k] ?? "").join(","))).join("\n");
+  const blob = new Blob([csv], { type:"text/csv" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob); a.download = "prepperapp-geschiedenis.csv";
+  a.click(); setTimeout(()=>URL.revokeObjectURL(a.href), 2000);
+};
+
+/* =====================================================================
+   Controle — klopt alles nog
+   ===================================================================== */
+function laadControleTab(){}
+
+$("#ct-laad").onclick = async (e) => {
+  const b = e.target, st = $("#ct-status"), n = $("#ct-lijst");
+  b.disabled = true; n.innerHTML = ""; 
+  const meld = (kop, tekst, ernst, knoppen) => {
+    const r = el("div","row"); const body = el("div","body");
+    body.appendChild(el("div","title", esc(kop)));
+    body.innerHTML += '<div class="meta"><span class="pill ' +
+      (ernst === "fout" ? "red" : ernst === "let op" ? "amber" : "green") + '">' + ernst + "</span></div>";
+    body.appendChild(el("div","text", esc(tekst)));
+    if (knoppen && knoppen.length){
+      const acts = el("div","acts");
+      knoppen.forEach(k => { const kb = el("button","btn sm " + (k.cls||""), esc(k.label)); kb.onclick = () => k.on(kb); acts.appendChild(kb); });
+      body.appendChild(acts);
+    }
+    r.appendChild(body); n.appendChild(r);
+  };
+
+  try {
+    /* 1 · elk recordtype bereikbaar? */
+    const types = Object.keys(SCHEMA);
+    const stuk = [];
+    for (let i = 0; i < types.length; i++){
+      st.textContent = "recordtypes " + (i+1) + "/" + types.length;
+      try { await query(types[i], { limit: 1 }); }
+      catch(err){ stuk.push([types[i], String(err.message||err)]); }
+    }
+    if (stuk.length) meld("Niet elk recordtype is bereikbaar",
+      stuk.map(x => (SCHEMA[x[0]].label || x[0]) + " — " + x[1]).join("; "), "fout");
+    else meld("Alle " + types.length + " recordtypes reageren", "Lezen werkt overal.", "goed");
+
+    /* 2 · indexen die deze pagina wil hebben */
+    st.textContent = "indexen…";
+    const mistZoek = [];
+    for (const t of Object.keys(ZOEKVELD)){
+      const veld = ZOEKVELD[t][0];
+      try {
+        await query(t, { limit: 1, filters: [{ fieldName: veld, comparator:"CONTAINS_ALL_TOKENS", fieldValue:{ value:"test" } }] });
+      } catch(err){ if (/searchable|not marked|index/i.test(String(err.message))) mistZoek.push(t + "." + veld); }
+    }
+    if (mistZoek.length) meld("Zoekindexen ontbreken nog",
+      "Op deze velden kan CloudKit nog niet op woorden zoeken: " + mistZoek.join(", ") +
+      ". De pagina valt daar terug op filteren in wat geladen is. Het schema-script voor 2.3 lost dit op.", "let op");
+    else meld("Alle zoekindexen staan", "Zoeken doorzoekt overal de hele database.", "goed");
+
+    /* 3 · logboek */
+    try { await query("AdminLogboek", { limit: 1 }); meld("Logboek werkt", "Handelingen worden vastgelegd.", "goed"); }
+    catch(err){ meld("Logboek nog niet aangezet",
+      "Het recordtype AdminLogboek bestaat nog niet. Tot die tijd staat alleen een aantekening in de reden-velden.", "let op"); }
+
+    /* 4 · wezen in de verborgen-lijst */
+    st.textContent = "verborgen lijst…";
+    const verborgen = await haalAlles("AdminVerborgen", { max: 1000 }).catch(()=>[]);
+    const wezen = [];
+    for (const rec of verborgen.slice(0, 200)){
+      const doel = v(rec,"doelRecordName");
+      if (!doel) { wezen.push(rec); continue; }
+      try { const p2 = await fetchRecord(doel); if (!p2) wezen.push(rec); }
+      catch(err){ wezen.push(rec); }
+    }
+    if (wezen.length) meld("Verborgen items die nergens meer naar wijzen",
+      wezen.length + " van de " + verborgen.length + " verbergingen wijzen naar een post die niet meer bestaat. " +
+      "Ze doen geen kwaad, maar de app leest maximaal 500 verbergingen — dus ze nemen wel ruimte in.", "let op",
+      [{ label:"Opruimen", cls:"danger", on: async (kb) => {
+          kb.disabled = true;
+          for (const w of wezen){ try { await deleteRecord(w.recordName); } catch(err){} }
+          toast(wezen.length + " opgeruimd.", "ok");
+          kb.textContent = "opgeruimd";
+        } }]);
+    else meld("Verborgen lijst is schoon",
+      verborgen.length + " verbergingen, allemaal wijzen ze naar een bestaande post. Ruimte tot 500.", "goed");
+
+    /* 5 · dubbele berichten — vaak spam */
+    st.textContent = "dubbele berichten…";
+    const dubbel = new Map();
+    for (const t of ["OutdoorPost","ErvaringPost","BuurtPost","ForumReactie"]){
+      const def = SCHEMA[t];
+      const recs = await haalAlles(t, { max: 1000 }).catch(()=>[]);
+      recs.forEach(rec => {
+        const tekst = (def.tekst && v(rec, def.tekst)) || (def.titel && v(rec, def.titel)) || "";
+        if (String(tekst).trim().length < 15) return;
+        const k = String(tekst).trim().toLowerCase().slice(0, 120);
+        const lijst = dubbel.get(k) || [];
+        lijst.push({ rec, type: t }); dubbel.set(k, lijst);
+      });
+    }
+    const groepen = Array.from(dubbel.values()).filter(x => x.length > 1);
+    if (groepen.length) meld("Berichten met dezelfde tekst",
+      groepen.length + " keer staat exact dezelfde tekst meer dan eens in het forum. Dat is meestal spam of " +
+      "iemand die per ongeluk dubbel plaatste.", "let op",
+      [{ label:"Bekijken", on: () => {
+          const body = el("div"); body.style.cssText = "display:flex;flex-direction:column;gap:.6rem";
+          groepen.slice(0,20).forEach(groep => {
+            const kaart = el("div","card");
+            const b2 = el("div","card-b tight kies");
+            groep.forEach(x => b2.appendChild(rij(x.rec, x.type)));
+            kaart.appendChild(b2); body.appendChild(kaart);
+          });
+          Sheet.open("Dubbele berichten", body, [{ label:"Sluiten", cls:"primary", on: () => Sheet.close() }]);
+        } }]);
+    else meld("Geen dubbele berichten", "Elke tekst in het forum komt maar één keer voor.", "goed");
+
+    /* 6 · geblokkeerde accounts zonder code */
+    const accounts = await haalAlles("GebruikersAccount", { max: 2000 }).catch(()=>[]);
+    const raar = accounts.filter(a => !v(a,"gebruikerCode"));
+    if (raar.length) meld("Accounts zonder gebruikerscode", raar.length + " account(s) missen een code. Die doen niets, maar horen er niet te zijn.", "let op");
+
+    st.textContent = "klaar " + new Date().toLocaleTimeString("nl-NL",{hour:"2-digit",minute:"2-digit"});
   } catch(err){
     st.textContent = "";
     toast(String(err.message||err), "err");
