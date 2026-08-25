@@ -12,7 +12,7 @@
 <meta name="theme-color" content="#0B0E13">
 <link rel="apple-touch-icon" href="icoon.png">
 <link rel="icon" href="icoon.png">
-<link rel="manifest" href='data:application/manifest+json,{"name":"PrepperApp Beheer","short_name":"PA Beheer","display":"standalone","background_color":"%230B0E13","theme_color":"%230B0E13","icons":[{"src":"icoon.png","sizes":"180x180","type":"image/png"}]}'>
+<!-- Bewust geen web-app-manifest: iOS zou dan start_url volgen en het token uit de snelkoppeling laten vallen. -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=Public+Sans:ital,wght@0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@400;500;700&display=swap">
@@ -247,10 +247,13 @@ label.f>span.hint{font-weight:400;font-size:.74rem;color:#6B7486}
         <button class="btn" id="token-clear">Wissen</button>
       </div>
       <div id="gate-standalone" class="hide" style="font-size:.86rem;color:var(--ink-dim);border-left:2px solid var(--amber-dim);padding-left:.8rem">
-        Je opent dit vanaf je beginscherm. Die app heeft een <b>eigen opslag</b>, los van Safari — daarom vraagt hij
-        hier opnieuw om het token. Twee manieren: druk op <b>Plakken</b> als je het token gekopieerd hebt, of
-        scan op je Mac de QR bij <b>Telefoon</b>, open die link in Safari en zet hem <i>daarna</i> op je beginscherm.
-        Dan staat het token in de snelkoppeling en is dit eenmalig.
+        <b>Je opent dit vanaf je beginscherm, en er zit geen token in de snelkoppeling.</b>
+        Een app op het beginscherm heeft een eigen opslag, los van Safari, dus je inlog daar telt hier niet.<br><br>
+        Snelste oplossing: druk hieronder op <b>Plakken</b> — je mag ook de hele koppel-link plakken, hij haalt het
+        token er zelf uit.<br><br>
+        Definitief oplossen: verwijder dit icoon van je beginscherm. Scan op je Mac de QR bij <b>Telefoon</b>, en
+        controleer dat er in de adresbalk van Safari <code>?t=</code> staat. Zet <i>die</i> pagina op je beginscherm.
+        Het token zit dan in de snelkoppeling en de app start voortaan meteen ingelogd.
       </div>
     </div>
   </div>
@@ -731,6 +734,7 @@ label.f>span.hint{font-weight:400;font-size:.74rem;color:#6B7486}
    ===================================================================== */
 
 const CONTAINER = "iCloud.com.stuut.PrepperApp";
+const BUILD = 9;
 const LS = { token: "pa.token", env: "pa.env" };
 
 /* ---------------------------------------------------------------------
@@ -2650,6 +2654,8 @@ function laadToegang(){
   add("omgeving", esc(State.env));
   add("container", '<span class="mono">' + esc(CONTAINER) + "</span>");
   add("deze pagina", '<span class="mono">' + esc(location.origin + location.pathname) + "</span>");
+  add("versie", "build " + BUILD + (opBeginscherm ? " · vanaf beginscherm" : " · in de browser"));
+  add("token in de link", new URLSearchParams(location.search).get("t") ? "ja — deze snelkoppeling onthoudt je inlog" : "nee");
   $("#tg-console").href = "https://icloud.developer.apple.com/dashboard/database/teams/8626D25RD6/containers/" +
     encodeURIComponent(CONTAINER) + "/environments/" + (State.env === "production" ? "PRODUCTION" : "DEVELOPMENT") + "/security-roles";
 }
@@ -2851,7 +2857,7 @@ async function haalKaartPunten(){
     } catch(e){ /* type leeg of geen index */ }
   }
   Kaart.punten = punten;
-  st.textContent = punten.length + " punten";
+  st.textContent = punten.length + (punten.length === 1 ? " punt" : " punten");
   Kaart.pasIn(); Kaart.teken();
 }
 
@@ -2868,6 +2874,7 @@ function laadInfo(){
   add("naam", State.user && State.user.nameComponents ? esc([State.user.nameComponents.givenName, State.user.nameComponents.familyName].filter(Boolean).join(" ")) : "—");
   add("deze pagina", '<span class="mono">' + esc(location.origin) + "</span>");
   add("recordtypes", String(Object.keys(SCHEMA).length));
+  add("versie van deze pagina", "build " + BUILD);
 }
 
 /* =====================================================================
@@ -2933,7 +2940,7 @@ $("#token-clear").onclick = () => { localStorage.removeItem(LS.token); location.
 function toonKoppelQR(alsUitnodiging){
   if (!State.token) { toast("Er is nog geen token om te delen.", "err"); return; }
   const url = location.origin + location.pathname + "?t=" + encodeURIComponent(State.token) +
-              (State.env !== "production" ? "&e=development" : "");
+              (State.env !== "production" ? "&e=development" : "") + "&b=" + BUILD;
   const body = el("div"); body.style.cssText = "display:flex;flex-direction:column;gap:.85rem;align-items:center";
   body.innerHTML = "<p style='margin:0;color:var(--ink-dim);font-size:.9rem;text-align:center'>" +
     (alsUitnodiging
