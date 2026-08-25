@@ -173,6 +173,17 @@ label.f>span.hint{font-weight:400;font-size:.74rem;color:#6B7486}
   box-shadow:0 -8px 30px rgba(0,0,0,.45);
 }
 #balk.on{display:flex}
+
+#hs-banner{
+  position:fixed;left:0;right:0;bottom:0;z-index:72;
+  background:var(--amber);color:#1A1204;
+  padding:.8rem .9rem calc(.8rem + env(safe-area-inset-bottom));
+  display:flex;gap:.8rem;align-items:center;font-size:.86rem;line-height:1.4;
+  box-shadow:0 -8px 30px rgba(0,0,0,.45);
+}
+#hs-banner.hide{display:none}
+#hs-banner b{font-weight:700}
+#hs-banner .btn{background:rgba(0,0,0,.14);border-color:rgba(0,0,0,.25);color:#1A1204;flex:none}
 #balk .n{font-family:"JetBrains Mono",monospace;font-weight:700;color:var(--amber);margin-right:.3rem}
 
 /* verdacht */
@@ -706,6 +717,14 @@ label.f>span.hint{font-weight:400;font-size:.74rem;color:#6B7486}
 </main>
 </div>
 
+<div id="hs-banner" class="hide">
+  <div>
+    <b>Klaar om op je beginscherm te zetten.</b><br>
+    <span>Het token zit nu in het adres. Druk op het deelknopje van Safari en kies <b>Zet op beginscherm</b>.</span>
+  </div>
+  <button class="btn sm" id="hs-weg">Later</button>
+</div>
+
 <div id="balk">
   <span class="n" id="balk-n">0</span>
   <span style="color:var(--ink-dim);font-size:.85rem">geselecteerd</span>
@@ -734,7 +753,7 @@ label.f>span.hint{font-weight:400;font-size:.74rem;color:#6B7486}
    ===================================================================== */
 
 const CONTAINER = "iCloud.com.stuut.PrepperApp";
-const BUILD = 9;
+const BUILD = 10;
 const LS = { token: "pa.token", env: "pa.env" };
 
 /* ---------------------------------------------------------------------
@@ -2903,10 +2922,26 @@ function laadInfo(){
   history.replaceState(null, "", location.pathname + location.search);
 })();
 
+/* Staat het token in het adres en zijn we in de browser? Dan is dit hét moment
+   om de pagina op het beginscherm te zetten. */
+function toonBeginschermBanner(){
+  const heeftToken = !!new URLSearchParams(location.search).get("t");
+  const inBrowser = !(window.navigator.standalone === true ||
+    (window.matchMedia && window.matchMedia("(display-mode: standalone)").matches));
+  const weggeklikt = sessionStorage.getItem("pa.hsweg") === "1";
+  if (heeftToken && inBrowser && !weggeklikt) $("#hs-banner").classList.remove("hide");
+}
+$("#hs-weg").onclick = () => { sessionStorage.setItem("pa.hsweg","1"); $("#hs-banner").classList.add("hide"); };
+
 /* Draait dit vanaf het beginscherm? Dan de uitleg over de aparte opslag tonen. */
 const opBeginscherm = window.navigator.standalone === true ||
   (window.matchMedia && window.matchMedia("(display-mode: standalone)").matches);
-if (opBeginscherm && !State.token) $("#gate-standalone").classList.remove("hide");
+if (opBeginscherm && !State.token) {
+  $("#gate-standalone").classList.remove("hide");
+  $("#token-plak").classList.add("primary");
+  $("#token-save").classList.remove("primary");
+}
+toonBeginschermBanner();
 
 $("#origin-hint").textContent = (location.protocol === "file:") ? "(geen — dit is een los bestand)" : location.origin;
 if (location.protocol === "file:") {
@@ -2968,23 +3003,29 @@ function toonKoppelQR(alsUitnodiging){
     (alsUitnodiging ? "<b style='color:var(--ink-dim)'>Het token opent alleen de pagina.</b> Wijzigen mag pas als jij die persoon in de rol <code>beheerder</code> zet. Zonder dat kunnen ze meekijken, meer niet.<br><br>" : "") +
     "<b style='color:var(--ink-dim)'>Daarna hoef je dit nooit meer te doen.</b> Je token en je Apple-inlog blijven in de " +
     "browser van je telefoon staan.<br><br>" +
-    "<b style='color:var(--ink-dim)'>Zet hem op je beginscherm — maar in deze volgorde.</b> Scan de code, en zet de " +
-    "pagina <i>die dan opent</i> meteen op je beginscherm via het deelmenu → <b>Zet op beginscherm</b>. Het token zit " +
-    "in die link, dus de app op je beginscherm start daarna altijd ingelogd. Doe je het andersom, dan vraagt hij " +
-    "opnieuw om een token: een app op het beginscherm heeft een eigen opslag, los van Safari.<br><br>" +
-    "Het scheelt ook dat Safari je inlog niet meer weggooit als je een week niet kijkt.<br><br>" +
+    "<b style='color:var(--ink-dim)'>Op je beginscherm zetten?</b> Druk hieronder op " +
+    "<b>Klaarzetten voor beginscherm</b>. Deze pagina laadt dan opnieuw met je token in het adres, en pas " +
+    "dán zet je hem via het deelmenu op je beginscherm. iOS bewaart namelijk letterlijk het adres dat op dat " +
+    "moment open staat, en een app op het beginscherm heeft een eigen opslag: wat je in Safari ingelogd bent " +
+    "telt daar niet.<br><br>" +
     "Deel deze code met niemand anders: wie hem scant heeft jouw token. Op je telefoon wordt hij meteen uit de adresbalk gehaald.";
   body.appendChild(uitleg);
 
-  Sheet.open(alsUitnodiging ? "Iemand uitnodigen" : "Telefoon koppelen", body, [
+  const knoppen = [];
+  if (!alsUitnodiging) knoppen.push({ label:"Klaarzetten voor beginscherm", cls:"primary", on: () => {
+    /* Zet het token in de adresbalk. iOS bewaart bij "Zet op beginscherm"
+       precies de URL die op dat moment open staat — dus die moet het token bevatten. */
+    location.href = url;
+  }});
+  Sheet.open(alsUitnodiging ? "Iemand uitnodigen" : "Telefoon koppelen", body, knoppen.concat([
     { label:"Link kopiëren", on: async (btn) => {
         try { await navigator.clipboard.writeText(url); toast("Gekopieerd. Bewaar hem als een wachtwoord.", "ok"); }
         catch(e){ toast("Kopiëren lukte niet — scan de code.", "err"); }
       } },
-    { label:"Klaar", cls:"primary", on: () => Sheet.close() },
-  ]);
+    { label:"Klaar", on: () => Sheet.close() },
+  ]));
 }
-$("#pair").onclick = toonKoppelQR;
+$("#pair").onclick = () => toonKoppelQR();
 
 $("#refresh-all").onclick = () => { Cache.wis(); const t = TABS.find(x=>x.id===huidigeTab); if (t) t.laad(); toast("Verversen…"); };
 
