@@ -202,6 +202,19 @@ label.f>span.hint{font-weight:400;font-size:.74rem;color:#6B7486}
 .kaart-legenda{display:flex;flex-wrap:wrap;gap:.5rem .9rem;padding:.7rem .9rem;font-size:.78rem;color:var(--muted);border-top:1px solid var(--edge-soft)}
 .kaart-legenda span{display:inline-flex;align-items:center;gap:.35rem}
 .kaart-legenda i{width:.7rem;height:.7rem;border-radius:50%;display:inline-block}
+#kaart-lijnen{position:absolute;inset:0;pointer-events:none}
+.kaart-lagen{display:flex;flex-wrap:wrap;gap:.4rem;padding:.7rem .9rem;border-bottom:1px solid var(--edge-soft)}
+.laagknop{background:var(--raised);border:1px solid var(--edge);border-radius:999px;padding:.22rem .6rem;font-size:.78rem;cursor:pointer;display:inline-flex;align-items:center;gap:.35rem}
+.laagknop[aria-pressed="true"]{border-color:var(--amber-dim);background:var(--amber-soft);color:var(--amber)}
+.laagknop i{width:.6rem;height:.6rem;border-radius:50%;display:inline-block}
+.stad{position:absolute;transform:translate(-50%,-50%);border-radius:50%;background:rgba(240,180,41,.28);border:2px solid var(--amber);
+  display:flex;align-items:center;justify-content:center;font-family:"JetBrains Mono",monospace;font-size:.7rem;font-weight:700;color:#1A1204;pointer-events:auto;cursor:pointer}
+.stad b{background:var(--amber);border-radius:999px;padding:0 .3em}
+
+#netdoek{width:100%;height:min(66vh,32rem);display:block;background:#0E1219;border-radius:0 0 10px 10px;touch-action:none;cursor:grab}
+.netlegenda{display:flex;flex-wrap:wrap;gap:.5rem .9rem;padding:.7rem .9rem;font-size:.78rem;color:var(--muted);border-top:1px solid var(--edge-soft)}
+.netlegenda span{display:inline-flex;align-items:center;gap:.35rem}
+.netlegenda i{width:1.1rem;height:0;border-top:2px solid;display:inline-block}
 
 /* ---------- sheet / dialog ---------- */
 .sheet{position:fixed;inset:0;z-index:60;display:none;align-items:flex-end;justify-content:center;background:rgba(3,5,8,.66);backdrop-filter:blur(3px)}
@@ -424,10 +437,13 @@ label.f>span.hint{font-weight:400;font-size:.74rem;color:#6B7486}
     <div class="card">
       <div class="card-h"><h2>Kaart</h2><span style="flex:1"></span>
         <span class="sub" id="kaart-status"></span>
-        <button class="btn sm" id="kaart-laad">Punten laden</button>
+        <button class="btn sm" id="kaart-laad">Punten en routes laden</button>
+        <button class="btn sm" id="kaart-steden">Woonplaatsen opzoeken</button>
       </div>
+      <div class="kaart-lagen" id="kaart-lagen"></div>
       <div id="kaart-doos">
         <div id="kaart-tegels"></div>
+        <canvas id="kaart-lijnen"></canvas>
         <div id="kaart-punten"></div>
         <div class="kaart-knoppen">
           <button id="kaart-in" title="Inzoomen">+</button>
@@ -493,6 +509,35 @@ label.f>span.hint{font-weight:400;font-size:.74rem;color:#6B7486}
       </div>
     </div>
     <div id="dos-inhoud"><div class="card"><div class="empty">Vul een code in, of druk in een lijst op <b>Dossier</b>.</div></div></div>
+  </section>
+
+  <!-- ---------- Netwerk ---------- -->
+  <section class="view" id="v-netwerk" role="tabpanel">
+    <div class="card">
+      <div class="card-h"><h2>Wie gebruikt de app samen</h2><span style="flex:1"></span>
+        <span class="sub" id="net-status"></span>
+        <button class="btn sm" id="net-laad">Netwerk opbouwen</button>
+      </div>
+      <canvas id="netdoek"></canvas>
+      <div class="netlegenda" id="net-legenda"></div>
+    </div>
+    <div class="grid c2">
+      <div class="card">
+        <div class="card-h"><h2>Groepjes</h2><span style="flex:1"></span><span class="sub">mensen die via elkaar verbonden zijn</span></div>
+        <div class="card-b tight" id="net-groepen"><div class="empty">Nog niet opgebouwd.</div></div>
+      </div>
+      <div class="card">
+        <div class="card-h"><h2>Meeste verbindingen</h2></div>
+        <div class="card-b tight" id="net-top"><div class="empty">Nog niet opgebouwd.</div></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-b" style="font-size:.82rem;color:var(--muted)">
+        Verbindingen komen uit vier bronnen: een uitnodiging die iemand verstuurde, een route die met iemand
+        gedeeld is, samen in een expeditie zitten, en chatberichten over en weer. De inhoud van chats is
+        versleuteld — alleen dát er contact was is zichtbaar.
+      </div>
+    </div>
   </section>
 
   <!-- ---------- Verborgen ---------- -->
@@ -635,6 +680,33 @@ label.f>span.hint{font-weight:400;font-size:.74rem;color:#6B7486}
       <div class="card-b tight scrollx" id="st-inhoud"><div class="empty">Nog niet geteld.</div></div>
     </div>
 
+    <div class="grid c2">
+      <div class="card">
+        <div class="card-h"><h2>Buiten onderweg</h2><span style="flex:1"></span><span class="sub">routes en posts samen</span></div>
+        <div class="card-b" id="st-onderweg"><div class="empty">Nog niet geteld.</div></div>
+      </div>
+      <div class="card">
+        <div class="card-h"><h2>Wat mensen doen</h2></div>
+        <div class="card-b" id="st-activiteit"><div class="empty">Nog niet geteld.</div></div>
+      </div>
+    </div>
+
+    <div class="grid c2">
+      <div class="card">
+        <div class="card-h"><h2>Waar</h2><span style="flex:1"></span><span class="sub">regio en woonplaats</span></div>
+        <div class="card-b" id="st-waar"><div class="empty">Nog niet geteld.</div></div>
+      </div>
+      <div class="card">
+        <div class="card-h"><h2>Wanneer</h2><span style="flex:1"></span><span class="sub">dag en uur</span></div>
+        <div class="card-b" id="st-wanneer"><div class="empty">Nog niet geteld.</div></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-h"><h2>Activiteit per maand</h2></div>
+      <div class="card-b" id="st-maanden"><div class="empty">Nog niet geteld.</div></div>
+    </div>
+
     <div class="card">
       <div class="card-h"><h2>Feedback</h2></div>
       <div class="card-b" id="st-feedback"><div class="empty">Nog niet geteld.</div></div>
@@ -753,7 +825,7 @@ label.f>span.hint{font-weight:400;font-size:.74rem;color:#6B7486}
    ===================================================================== */
 
 const CONTAINER = "iCloud.com.stuut.PrepperApp";
-const BUILD = 10;
+const BUILD = 11;
 const LS = { token: "pa.token", env: "pa.env" };
 
 /* ---------------------------------------------------------------------
@@ -1509,6 +1581,7 @@ const TABS = [
   { id:"gebruikers",label:"Gebruikers",laad: () => { laadGebruikers(); laadSurvival(); } },
   { id:"dossier",   label:"Dossier",   laad: laadDossierTab },
   { id:"kaart",     label:"Kaart",     laad: laadKaartTab },
+  { id:"netwerk",   label:"Netwerk",   laad: laadNetwerkTab },
   { id:"verborgen", label:"Verborgen", laad: laadVerborgen },
   { id:"berichten", label:"Aankondigingen", laad: laadAankondigingen },
   { id:"config",    label:"Instellingen", laad: laadConfig },
@@ -2534,6 +2607,100 @@ $("#st-load").onclick = async (e) => {
       { voet: inhoud.some(x => x[1] == null) ? "Types met een streepje konden niet geteld worden — meestal geen index." : "" }));
     inh.appendChild(wrap);
 
+    /* --- buiten onderweg --- */
+    st.textContent = "routes…";
+    const sroutes = await haalAlles("SharedRoute", { max: 3000 }).catch(()=>[]);
+    const posts   = await haalAlles("OutdoorPost", { max: 3000 }).catch(()=>[]);
+    const ervaringen = await haalAlles("ErvaringPost", { max: 3000 }).catch(()=>[]);
+    const segmenten  = await haalAlles("SegmentLeaderboard", { max: 3000 }).catch(()=>[]);
+
+    const kmUitRoutes = sroutes.map(r => (v(r,"afstandMeters") || 0) / 1000);
+    const kmUitPosts  = posts.map(r => v(r,"afstandKm") || 0);
+    const alleKm = kmUitRoutes.concat(kmUitPosts).filter(x => x > 0);
+    const totaalKm = alleKm.reduce((a,b) => a+b, 0);
+    const urenRoutes = sroutes.reduce((a,r) => a + (v(r,"duurSeconden") || 0)/3600, 0);
+    const urenPosts  = posts.reduce((a,r) => a + (v(r,"duurMinuten") || 0)/60, 0);
+    const langste = alleKm.length ? Math.max(...alleKm) : 0;
+    const on = $("#st-onderweg"); on.innerHTML = "";
+    if (!alleKm.length) on.innerHTML = leeg("Nog geen routes of afstanden vastgelegd.");
+    else {
+      const dl = el("dl","kv");
+      const zet = (k,w) => { dl.appendChild(el("dt","",esc(k))); dl.appendChild(el("dd","",w)); };
+      zet("samen afgelegd", "<b>" + totaalKm.toFixed(1) + " km</b> over " + alleKm.length + " tochten");
+      zet("gemiddeld", (totaalKm/alleKm.length).toFixed(1) + " km per tocht");
+      zet("langste", langste.toFixed(1) + " km");
+      zet("tijd onderweg", (urenRoutes + urenPosts).toFixed(1) + " uur");
+      zet("gedeelde routes", String(sroutes.length));
+      zet("segmenttijden", String(segmenten.length));
+      on.appendChild(dl);
+    }
+
+    /* --- activiteiten --- */
+    const telVeld = (recs, veld) => {
+      const m = {};
+      recs.forEach(r => { const w = (v(r,veld) || "").trim(); if (w) m[w] = (m[w]||0)+1; });
+      return Object.entries(m).sort((a,b) => b[1]-a[1]).slice(0,12);
+    };
+    const act = telVeld(posts,"activiteit").concat(telVeld(posts,"type")).concat(telVeld(ervaringen,"activiteitType"));
+    const actSom = {};
+    act.forEach(([l,n]) => { actSom[l] = (actSom[l]||0)+n; });
+    const actRij = Object.entries(actSom).sort((a,b)=>b[1]-a[1]).slice(0,12).map(([l,n]) => [l,n,"var(--green)"]);
+    $("#st-activiteit").innerHTML = "";
+    $("#st-activiteit").appendChild(actRij.length ? balken(actRij) : el("div","empty","Nog geen activiteiten vastgelegd."));
+
+    /* --- waar --- */
+    const regios = {};
+    posts.concat(ervaringen).forEach(r => { const w = (v(r,"regio")||"").trim(); if (w) regios[w] = (regios[w]||0)+1; });
+    const plaatsen = {};
+    surv.concat(prepfam).forEach(r => { const w = (v(r,"stad")||"").trim(); if (w) plaatsen[w] = (plaatsen[w]||0)+1; });
+    const wn = $("#st-waar"); wn.innerHTML = "";
+    const regioRij = Object.entries(regios).sort((a,b)=>b[1]-a[1]).slice(0,10).map(([l,n]) => [l,n,"var(--green)"]);
+    const plaatsRij = Object.entries(plaatsen).sort((a,b)=>b[1]-a[1]).slice(0,10).map(([l,n]) => [l,n,"var(--amber)"]);
+    if (regioRij.length){
+      const k1 = el("div","","Waar geplaatst wordt"); k1.style.cssText="font-size:.78rem;color:var(--muted);margin-bottom:.4rem";
+      wn.appendChild(k1); wn.appendChild(balken(regioRij));
+    }
+    const k2 = el("div","","Waar mensen wonen"); k2.style.cssText="font-size:.78rem;color:var(--muted);margin:.9rem 0 .4rem";
+    wn.appendChild(k2);
+    wn.appendChild(plaatsRij.length ? balken(plaatsRij) : el("div","empty","Nog geen woonplaatsen bekend."));
+
+    /* --- wanneer --- */
+    const dagNamen = ["zondag","maandag","dinsdag","woensdag","donderdag","vrijdag","zaterdag"];
+    const dagen = new Array(7).fill(0), uren = new Array(24).fill(0), maanden = {};
+    const tijden = [];
+    const pak = (recs, veld) => recs.forEach(r => { const t = v(r,veld); if (typeof t === "number") tijden.push(t); });
+    pak(posts,"datum"); pak(ervaringen,"geplaatst"); pak(sroutes,"startDatum");
+    pak(surv,"bijgewerktOp"); pak(segmenten,"datum");
+    tijden.forEach(t => {
+      const d = new Date(t);
+      dagen[d.getDay()]++; uren[d.getHours()]++;
+      const m = d.getFullYear() + "-" + String(d.getMonth()+1).padStart(2,"0");
+      maanden[m] = (maanden[m]||0)+1;
+    });
+    const wan = $("#st-wanneer"); wan.innerHTML = "";
+    if (!tijden.length) wan.innerHTML = leeg("Nog te weinig gegevens.");
+    else {
+      const volgorde = [1,2,3,4,5,6,0];
+      wan.appendChild(balken(volgorde.map(i => [dagNamen[i], dagen[i], "var(--blue)"])));
+      const k3 = el("div","","Op welk uur"); k3.style.cssText="font-size:.78rem;color:var(--muted);margin:.9rem 0 .4rem";
+      wan.appendChild(k3);
+      const uurRij = [];
+      for (let u = 0; u < 24; u += 3){
+        const som = uren.slice(u, u+3).reduce((a,b)=>a+b,0);
+        uurRij.push([String(u).padStart(2,"0") + "–" + String(Math.min(24,u+3)).padStart(2,"0"), som, "var(--violet)"]);
+      }
+      wan.appendChild(balken(uurRij));
+    }
+
+    const mn = $("#st-maanden"); mn.innerHTML = "";
+    const maandRij = Object.entries(maanden).sort().slice(-12).map(([m,n]) => {
+      const [jr,mm] = m.split("-");
+      const naam = ["jan","feb","mrt","apr","mei","jun","jul","aug","sep","okt","nov","dec"][parseInt(mm,10)-1];
+      return [naam + " " + jr.slice(2), n, "var(--amber)"];
+    });
+    mn.appendChild(maandRij.length ? balken(maandRij, { voet: "alles wat een datum heeft: posts, ervaringen, routes, segmenttijden en bijgewerkte survival-statussen" })
+                                   : el("div","empty","Nog te weinig gegevens."));
+
     /* --- feedback --- */
     const fn = $("#st-feedback"); fn.innerHTML = "";
     if (!fb.length) fn.innerHTML = leeg("Nog geen feedback binnen.");
@@ -2717,7 +2884,7 @@ const KAART_LAGEN = [
   ["TrailBuddyLocatie", "Buddy-locaties",   "#C69A5C"],
 ];
 const Kaart = {
-  z: 3, cx: 0, cy: 0, punten: [], tegels: new Map(), mislukt: 0, klaar: false,
+  z: 3, cx: 0, cy: 0, punten: [], routes: [], steden: [], tegels: new Map(), mislukt: 0, klaar: false,
 
   lonX(lon, z){ return (lon + 180) / 360 * 256 * Math.pow(2, z); },
   latY(lat, z){
@@ -2772,8 +2939,11 @@ const Kaart = {
   pasIn(){
     const doos = $("#kaart-doos");
     const W = doos.clientWidth || 600, H = doos.clientHeight || 400;
-    if (!this.punten.length){ this.z = 3; this.cx = this.lonX(5, 3); this.cy = this.latY(52, 3); return; }
-    const lats = this.punten.map(p => p.lat), lons = this.punten.map(p => p.lon);
+    const alles = this.punten.slice();
+    (this.routes||[]).forEach(r => r.punten.forEach(p => alles.push(p)));
+    (this.steden||[]).forEach(p => alles.push(p));
+    if (!alles.length){ this.z = 3; this.cx = this.lonX(5, 3); this.cy = this.latY(52, 3); return; }
+    const lats = alles.map(p => p.lat), lons = alles.map(p => p.lon);
     const minLat = Math.min(...lats), maxLat = Math.max(...lats);
     const minLon = Math.min(...lons), maxLon = Math.max(...lons);
     let z = 18;
@@ -2820,9 +2990,43 @@ const Kaart = {
       if (!nodig.has(sleutel)){ img.remove(); this.tegels.delete(sleutel); }
     });
 
+    /* routes op een canvas eroverheen */
+    const doek = $("#kaart-lijnen");
+    const dpr = Math.min(2, window.devicePixelRatio || 1);
+    doek.width = W * dpr; doek.height = H * dpr;
+    doek.style.width = W + "px"; doek.style.height = H + "px";
+    const g = doek.getContext("2d");
+    g.setTransform(dpr, 0, 0, dpr, 0, 0);
+    g.clearRect(0, 0, W, H);
+    if (!KAART_UIT.has("_routes")) (this.routes || []).forEach(r => {
+      g.beginPath();
+      r.punten.forEach((p, i) => {
+        const x = this.lonX(p.lon, this.z) - lx, y = this.latY(p.lat, this.z) - ly;
+        if (i === 0) g.moveTo(x, y); else g.lineTo(x, y);
+      });
+      g.strokeStyle = r.kleur; g.lineWidth = 3; g.lineJoin = "round"; g.lineCap = "round";
+      g.globalAlpha = .85; g.stroke();
+      g.globalAlpha = .25; g.lineWidth = 7; g.stroke();
+      g.globalAlpha = 1;
+    });
+
     /* punten */
     const pl = $("#kaart-punten"); pl.innerHTML = "";
+
+    if (!KAART_UIT.has("_steden")) (this.steden || []).forEach(p => {
+      const x = this.lonX(p.lon, this.z) - lx, y = this.latY(p.lat, this.z) - ly;
+      if (x < -60 || x > W + 60 || y < -60 || y > H + 60) return;
+      const grootte = Math.max(26, Math.min(64, 20 + Math.sqrt(p.n) * 12));
+      const d = el("div","stad", "<b>" + p.n + "</b>");
+      d.style.left = x + "px"; d.style.top = y + "px";
+      d.style.width = grootte + "px"; d.style.height = grootte + "px";
+      d.title = p.naam + " — " + p.n + " mensen";
+      d.onclick = () => toast(p.naam + ": " + p.n + " mensen");
+      pl.appendChild(d);
+    });
+
     this.punten.forEach(p => {
+      if (KAART_UIT.has(p.type)) return;
       let px = this.lonX(p.lon, this.z) - lx;
       const py = this.latY(p.lat, this.z) - ly;
       while (px < -128) px += wereld;
@@ -2839,12 +3043,104 @@ const Kaart = {
   melding(){
     if (this.mislukt > 6 && !this._gemeld){
       this._gemeld = true;
-      $("#kaart-status").innerHTML = '<span style="color:var(--red)">kaartachtergrond laadt niet — de punten kloppen wel</span>';
+      const st = $("#kaart-status");
+      st.innerHTML = (st.textContent ? esc(st.textContent) + " · " : "") +
+        '<span style="color:var(--red)">achtergrond laadt niet</span>';
     }
   },
 };
 
+/* CloudKit geeft BYTES terug als base64. Hier zit JSON in. */
+function leesBytesJSON(waarde){
+  if (waarde == null) return null;
+  try {
+    if (typeof waarde === "string"){
+      const ruw = atob(waarde);
+      const bytes = Uint8Array.from(ruw, c => c.charCodeAt(0));
+      return JSON.parse(new TextDecoder().decode(bytes));
+    }
+  } catch(e){}
+  return null;
+}
+/* Coördinaten kunnen lat/lon of latitude/longitude heten, en soms als tekst. */
+function leesCoords(lijst){
+  if (!Array.isArray(lijst)) return [];
+  return lijst.map(p => {
+    if (!p || typeof p !== "object") return null;
+    const lat = Number(p.lat !== undefined ? p.lat : (p.latitude !== undefined ? p.latitude : p.breedte));
+    const lon = Number(p.lon !== undefined ? p.lon : (p.lng !== undefined ? p.lng : (p.longitude !== undefined ? p.longitude : p.lengte)));
+    if (!isFinite(lat) || !isFinite(lon)) return null;
+    return { lat, lon };
+  }).filter(Boolean);
+}
+
+/* --- lagen aan/uit --- */
+const KAART_UIT = new Set(JSON.parse(localStorage.getItem("pa.kaartuit") || "[]"));
+function bouwLaagKnoppen(){
+  const doos = $("#kaart-lagen");
+  if (doos.dataset.klaar) return;
+  const alles = KAART_LAGEN.map(([t,l,k]) => [t,l,k]).concat([["_routes","Gelopen routes","#F0B429"],["_steden","Woonplaatsen","#C69A5C"]]);
+  alles.forEach(([sleutel,label,kleur]) => {
+    const b = el("button","laagknop", '<i style="background:' + kleur + '"></i>' + esc(label));
+    b.setAttribute("aria-pressed", String(!KAART_UIT.has(sleutel)));
+    b.onclick = () => {
+      if (KAART_UIT.has(sleutel)) KAART_UIT.delete(sleutel); else KAART_UIT.add(sleutel);
+      b.setAttribute("aria-pressed", String(!KAART_UIT.has(sleutel)));
+      localStorage.setItem("pa.kaartuit", JSON.stringify(Array.from(KAART_UIT)));
+      Kaart.teken();
+    };
+    doos.appendChild(b);
+  });
+  doos.dataset.klaar = "1";
+}
+
+/* --- woonplaatsen opzoeken via OpenStreetMap, met eigen geheugen --- */
+async function zoekWoonplaatsen(){
+  const st = $("#kaart-status");
+  const geheugen = JSON.parse(localStorage.getItem("pa.plaatsen") || "{}");
+  st.innerHTML = '<span class="spin"></span> plaatsen verzamelen';
+  const bronnen = await Promise.all([
+    haalAlles("SurvivalStatus", { max: 5000 }).catch(()=>[]),
+    haalAlles("PrepFamilyGebruiker", { max: 5000 }).catch(()=>[]),
+  ]);
+  const tel = new Map();
+  bronnen.flat().forEach(r => {
+    const stad = (v(r,"stad") || "").trim(), land = (v(r,"land") || "").trim();
+    if (!stad) return;
+    const k = stad + ", " + land;
+    tel.set(k, (tel.get(k) || 0) + 1);
+  });
+  const lijst = Array.from(tel.entries()).sort((a,b) => b[1]-a[1]);
+  let nieuw = 0, mislukt = 0;
+  for (let i = 0; i < lijst.length; i++){
+    const [k] = lijst[i];
+    if (geheugen[k]) continue;
+    st.innerHTML = '<span class="spin"></span> opzoeken ' + (i+1) + "/" + lijst.length + " · " + esc(k);
+    const [stad, land] = k.split(", ");
+    try {
+      const u = "https://nominatim.openstreetmap.org/search?format=json&limit=1&city=" +
+        encodeURIComponent(stad) + (land ? "&country=" + encodeURIComponent(land) : "");
+      const res = await fetch(u, { headers: { "Accept":"application/json" } });
+      const j = await res.json();
+      if (j && j[0]) { geheugen[k] = { lat: Number(j[0].lat), lon: Number(j[0].lon) }; nieuw++; }
+      else { geheugen[k] = null; }
+      localStorage.setItem("pa.plaatsen", JSON.stringify(geheugen));
+    } catch(e){ mislukt++; }
+    await new Promise(r => setTimeout(r, 1100));   /* OpenStreetMap vraagt om rustig aan doen */
+  }
+  Kaart.steden = lijst.map(([k, n]) => {
+    const g = geheugen[k];
+    return g ? { naam: k, n, lat: g.lat, lon: g.lon } : null;
+  }).filter(Boolean);
+  st.textContent = Kaart.steden.length + " plaatsen op de kaart" + (nieuw ? ", " + nieuw + " nieuw opgezocht" : "") +
+    (mislukt ? ", " + mislukt + " mislukt" : "");
+  KAART_UIT.delete("_steden");
+  Kaart.pasIn(); Kaart.teken();
+}
+$("#kaart-steden").onclick = (e) => { e.target.disabled = true; zoekWoonplaatsen().finally(() => { e.target.disabled = false; }); };
+
 async function laadKaartTab(){
+  bouwLaagKnoppen();
   Kaart.init();
   const leg = $("#kaart-legenda");
   if (!leg.dataset.klaar){
@@ -2876,9 +3172,286 @@ async function haalKaartPunten(){
     } catch(e){ /* type leeg of geen index */ }
   }
   Kaart.punten = punten;
-  st.textContent = punten.length + (punten.length === 1 ? " punt" : " punten");
+
+  /* routes: gedeelde routes en routes onder outdoor posts */
+  const routes = [];
+  try {
+    const r = await query("SharedRoute", { limit: 400 });
+    (r.records||[]).forEach(rec => {
+      const c = leesCoords(leesBytesJSON(v(rec,"coordinatenJSON")));
+      if (c.length > 1) routes.push({ punten: c, kleur: v(rec,"kleurHex") || "#F0B429", rec, type:"SharedRoute" });
+    });
+  } catch(e){}
+  try {
+    const r = await query("OutdoorPost", { limit: 400 });
+    (r.records||[]).forEach(rec => {
+      const ruw = v(rec,"routeCoordinatenJSON");
+      let arr = null;
+      if (typeof ruw === "string" && ruw.trim().startsWith("[")) { try { arr = JSON.parse(ruw); } catch(e){} }
+      if (!arr) arr = leesBytesJSON(ruw);
+      const c = leesCoords(arr);
+      if (c.length > 1) routes.push({ punten: c, kleur: "#4FB37A", rec, type:"OutdoorPost" });
+    });
+  } catch(e){}
+  Kaart.routes = routes;
+
+  st.textContent = punten.length + (punten.length === 1 ? " punt" : " punten") +
+                   (routes.length ? ", " + routes.length + " route" + (routes.length===1?"":"s") : "");
   Kaart.pasIn(); Kaart.teken();
 }
+
+/* =====================================================================
+   Netwerk — wie gebruikt de app samen
+   ===================================================================== */
+const BAND_KLEUR = { uitnodiging:"#F0B429", route:"#5B9DD9", expeditie:"#4FB37A", chat:"#9B7BD4" };
+const BAND_LABEL = { uitnodiging:"uitnodiging", route:"gedeelde route", expeditie:"samen op expeditie", chat:"chatcontact" };
+
+const Net = { knopen: [], banden: [], klaar: false, gekozen: null };
+
+function netSleutel(a, b){ return a < b ? a + "|" + b : b + "|" + a; }
+
+async function bouwNetwerk(){
+  const st = $("#net-status");
+  st.innerHTML = '<span class="spin"></span> ophalen';
+
+  const [ref, exp, routes, chats, surv, acc] = await Promise.all([
+    haalAlles("ReferralRecord", { max: 3000 }).catch(()=>[]),
+    haalAlles("Expeditie",      { max: 3000 }).catch(()=>[]),
+    haalAlles("SharedRoute",    { max: 3000 }).catch(()=>[]),
+    haalAlles("Chatbericht",    { max: 3000 }).catch(()=>[]),
+    haalAlles("SurvivalStatus", { max: 5000 }).catch(()=>[]),
+    haalAlles("GebruikersAccount", { max: 5000 }).catch(()=>[]),
+  ]);
+
+  /* namen en plaatsen bij de codes zoeken */
+  const info = new Map();
+  const zet = (code, naam, plaats) => {
+    if (!code) return;
+    const c = String(code).toUpperCase();
+    const b = info.get(c) || {};
+    if (naam && !b.naam) b.naam = naam;
+    if (plaats && !b.plaats) b.plaats = plaats;
+    info.set(c, b);
+  };
+  surv.forEach(r => zet(v(r,"uitnodigingsCode"), v(r,"naam"), [v(r,"stad"), v(r,"land")].filter(Boolean).join(", ")));
+  acc.forEach(r => zet(v(r,"gebruikerCode"), v(r,"displayNaam"), ""));
+
+  /* banden verzamelen */
+  const banden = new Map();
+  const verbind = (a, b, soort) => {
+    if (!a || !b) return;
+    a = String(a).toUpperCase(); b = String(b).toUpperCase();
+    if (a === b) return;
+    const k = netSleutel(a, b);
+    const bestaand = banden.get(k) || { a, b, soorten: new Set(), n: 0 };
+    bestaand.soorten.add(soort); bestaand.n++;
+    banden.set(k, bestaand);
+  };
+
+  ref.forEach(r => verbind(v(r,"afzenderCode"), v(r,"ontvangerCode"), "uitnodiging"));
+  routes.forEach(r => (v(r,"gedeeldMet") || []).forEach(c => verbind(v(r,"eigenaarCode"), c, "route")));
+  exp.forEach(r => {
+    const leden = [v(r,"eigenaarCode")].concat(v(r,"deelnemersCodes") || []).filter(Boolean);
+    for (let i = 0; i < leden.length; i++) for (let j = i+1; j < leden.length; j++) verbind(leden[i], leden[j], "expeditie");
+  });
+  chats.forEach(r => verbind(v(r,"afzenderCode"), v(r,"ontvangerCode"), "chat"));
+
+  /* knopen */
+  const codes = new Set();
+  banden.forEach(b => { codes.add(b.a); codes.add(b.b); });
+  const losse = [];
+  surv.forEach(r => { const c = String(v(r,"uitnodigingsCode")||"").toUpperCase(); if (c && !codes.has(c)) losse.push(c); });
+
+  const knoopVan = new Map();
+  const knopen = Array.from(codes).map(c => {
+    const k = { code: c, naam: (info.get(c)||{}).naam || "", plaats: (info.get(c)||{}).plaats || "", graad: 0, x:0, y:0, vx:0, vy:0 };
+    knoopVan.set(c, k); return k;
+  });
+  const bandenLijst = Array.from(banden.values()).map(b => {
+    const A = knoopVan.get(b.a), B = knoopVan.get(b.b);
+    A.graad++; B.graad++;
+    return { a: A, b: B, soorten: Array.from(b.soorten), w: b.n };
+  });
+
+  Net.knopen = knopen; Net.banden = bandenLijst; Net.losse = losse;
+
+  /* groepjes zoeken */
+  const gezien = new Set(); const groepen = [];
+  const buren = new Map();
+  bandenLijst.forEach(e => {
+    (buren.get(e.a.code) || buren.set(e.a.code, []).get(e.a.code)).push(e.b.code);
+    (buren.get(e.b.code) || buren.set(e.b.code, []).get(e.b.code)).push(e.a.code);
+  });
+  knopen.forEach(k => {
+    if (gezien.has(k.code)) return;
+    const rij = [k.code]; const groep = [];
+    gezien.add(k.code);
+    while (rij.length){
+      const c = rij.pop(); groep.push(c);
+      (buren.get(c) || []).forEach(n => { if (!gezien.has(n)){ gezien.add(n); rij.push(n); } });
+    }
+    groepen.push(groep);
+  });
+  groepen.sort((a,b) => b.length - a.length);
+  Net.groepen = groepen;
+  Net.info = info;
+
+  st.textContent = knopen.length + " mensen verbonden, " + bandenLijst.length + " verbindingen" +
+                   (losse.length ? ", " + losse.length + " zonder contact" : "");
+  netLayout(); netTeken(); netLijsten();
+}
+
+function netLayout(){
+  const doek = $("#netdoek");
+  const W = doek.clientWidth || 800, H = doek.clientHeight || 500;
+  const N = Net.knopen, E = Net.banden;
+  if (!N.length) return;
+  N.forEach((n,i) => { const a = i / N.length * Math.PI * 2;
+    n.x = W/2 + Math.cos(a) * W/3.2; n.y = H/2 + Math.sin(a) * H/3.2; n.vx = 0; n.vy = 0; });
+  const k = Math.sqrt((W*H) / N.length) * 0.75;
+  const rondes = N.length > 200 ? 120 : 300;
+  for (let it = 0; it < rondes; it++){
+    const koel = 1 - it/rondes;
+    for (let i = 0; i < N.length; i++) for (let j = i+1; j < N.length; j++){
+      let dx = N[i].x - N[j].x, dy = N[i].y - N[j].y;
+      let d2 = dx*dx + dy*dy;
+      if (d2 < 0.5){ dx = Math.random()-0.5; dy = Math.random()-0.5; d2 = 0.5; }
+      const d = Math.sqrt(d2), f = (k*k)/d2;
+      N[i].vx += dx/d*f; N[i].vy += dy/d*f;
+      N[j].vx -= dx/d*f; N[j].vy -= dy/d*f;
+    }
+    E.forEach(e => {
+      let dx = e.a.x - e.b.x, dy = e.a.y - e.b.y;
+      const d = Math.sqrt(dx*dx + dy*dy) || 0.5;
+      const f = (d*d)/k * Math.min(2.5, e.w);
+      e.a.vx -= dx/d*f; e.a.vy -= dy/d*f;
+      e.b.vx += dx/d*f; e.b.vy += dy/d*f;
+    });
+    const maxStap = k * koel * 0.45;
+    N.forEach(n => {
+      const sp = Math.sqrt(n.vx*n.vx + n.vy*n.vy) || 1;
+      n.x += n.vx/sp * Math.min(sp, maxStap);
+      n.y += n.vy/sp * Math.min(sp, maxStap);
+      n.x = Math.max(24, Math.min(W-24, n.x));
+      n.y = Math.max(24, Math.min(H-24, n.y));
+      n.vx *= 0.82; n.vy *= 0.82;
+    });
+  }
+
+  /* uitrekken tot het doek goed gevuld is */
+  const xs = N.map(n => n.x), ys = N.map(n => n.y);
+  const minX = Math.min(...xs), maxX = Math.max(...xs);
+  const minY = Math.min(...ys), maxY = Math.max(...ys);
+  const bw = Math.max(1, maxX - minX), bh = Math.max(1, maxY - minY);
+  const rand = 46;
+  const f = Math.min((W - rand*2) / bw, (H - rand*2) / bh, 3);
+  N.forEach(n => {
+    n.x = rand + (n.x - minX) * f + ((W - rand*2) - bw*f)/2;
+    n.y = rand + (n.y - minY) * f + ((H - rand*2) - bh*f)/2;
+  });
+}
+
+function netTeken(){
+  const doek = $("#netdoek");
+  const W = doek.clientWidth, H = doek.clientHeight;
+  const dpr = Math.min(2, window.devicePixelRatio || 1);
+  doek.width = W * dpr; doek.height = H * dpr;
+  const g = doek.getContext("2d");
+  g.setTransform(dpr, 0, 0, dpr, 0, 0);
+  g.clearRect(0, 0, W, H);
+  if (!Net.knopen.length){
+    g.fillStyle = "#7F8899"; g.font = '14px "Public Sans",sans-serif'; g.textAlign = "center";
+    g.fillText("Nog geen netwerk opgebouwd.", W/2, H/2);
+    return;
+  }
+  Net.banden.forEach(e => {
+    const actief = !Net.gekozen || e.a === Net.gekozen || e.b === Net.gekozen;
+    g.strokeStyle = BAND_KLEUR[e.soorten[0]] || "#5E636E";
+    g.globalAlpha = actief ? 0.75 : 0.12;
+    g.lineWidth = Math.min(4, 1 + e.w * 0.4);
+    g.beginPath(); g.moveTo(e.a.x, e.a.y); g.lineTo(e.b.x, e.b.y); g.stroke();
+  });
+  g.globalAlpha = 1;
+  Net.knopen.forEach(n => {
+    const r = 4 + Math.min(9, n.graad * 1.6);
+    const actief = !Net.gekozen || n === Net.gekozen ||
+      Net.banden.some(e => (e.a === Net.gekozen && e.b === n) || (e.b === Net.gekozen && e.a === n));
+    g.globalAlpha = actief ? 1 : 0.2;
+    g.beginPath(); g.arc(n.x, n.y, r, 0, Math.PI*2);
+    g.fillStyle = n === Net.gekozen ? "#F0B429" : "#E7EAF0";
+    g.fill();
+    g.lineWidth = 2; g.strokeStyle = "#0B0E13"; g.stroke();
+    if (n.graad >= 2 || n === Net.gekozen){
+      g.fillStyle = "#B4BCCB"; g.font = '11px "Public Sans",sans-serif'; g.textAlign = "center";
+      g.fillText(n.naam || codeWeergave(n.code), n.x, n.y + r + 12);
+    }
+  });
+  g.globalAlpha = 1;
+}
+
+function netLijsten(){
+  const gn = $("#net-groepen"); gn.innerHTML = "";
+  if (!Net.groepen || !Net.groepen.length) gn.innerHTML = leeg("Nog niemand met een verbinding.", "Leeg");
+  else Net.groepen.slice(0, 25).forEach((groep, i) => {
+    const r = el("div","row"); const body = el("div","body");
+    body.appendChild(el("div","title", groep.length + " mensen" + (i === 0 ? " — grootste groep" : "")));
+    body.innerHTML += '<div class="meta">' + groep.slice(0,12).map(c => {
+      const n = Net.knopen.find(k => k.code === c);
+      return '<span class="mono">' + esc((n && n.naam) || codeWeergave(c)) + "</span>";
+    }).join("") + (groep.length > 12 ? "<span>en " + (groep.length-12) + " meer</span>" : "") + "</div>";
+    const acts = el("div","acts");
+    groep.slice(0,6).forEach(c => {
+      const b = el("button","btn sm", esc(codeWeergave(c)));
+      b.onclick = () => { dossierData = null; opendossier(c); };
+      acts.appendChild(b);
+    });
+    body.appendChild(acts); r.appendChild(body); gn.appendChild(r);
+  });
+  if (Net.losse && Net.losse.length){
+    const r = el("div","row");
+    r.innerHTML = '<div class="body"><div class="title">' + Net.losse.length +
+      ' mensen zonder enige verbinding</div><div class="meta">gebruiken de app alleen — geen uitnodiging, route, expeditie of chat</div></div>';
+    gn.appendChild(r);
+  }
+
+  const tn = $("#net-top"); tn.innerHTML = "";
+  const top = Net.knopen.slice().sort((a,b) => b.graad - a.graad).slice(0, 15);
+  if (!top.length) tn.innerHTML = leeg("Leeg.");
+  else top.forEach(n => {
+    const r = el("div","row"); const body = el("div","body");
+    body.appendChild(el("div","title", esc(n.naam || codeWeergave(n.code))));
+    body.innerHTML += '<div class="meta"><span class="mono">' + esc(codeWeergave(n.code)) + "</span>" +
+      "<span>" + n.graad + " verbinding" + (n.graad===1?"":"en") + "</span>" +
+      (n.plaats ? "<span>" + esc(n.plaats) + "</span>" : "") + "</div>";
+    const acts = el("div","acts");
+    const b1 = el("button","btn sm","Dossier"); b1.onclick = () => { dossierData = null; opendossier(n.code); };
+    const b2 = el("button","btn sm","Toon in netwerk"); b2.onclick = () => { Net.gekozen = n; netTeken(); $("#netdoek").scrollIntoView({block:"center"}); };
+    acts.appendChild(b1); acts.appendChild(b2);
+    body.appendChild(acts); r.appendChild(body); tn.appendChild(r);
+  });
+}
+
+function laadNetwerkTab(){
+  if (!$("#net-legenda").dataset.klaar){
+    $("#net-legenda").innerHTML = Object.keys(BAND_KLEUR).map(k =>
+      '<span><i style="border-color:' + BAND_KLEUR[k] + '"></i>' + esc(BAND_LABEL[k]) + "</span>").join("") +
+      '<span style="margin-left:auto">grotere stip = meer verbindingen</span>';
+    $("#net-legenda").dataset.klaar = "1";
+    const doek = $("#netdoek");
+    doek.addEventListener("click", e => {
+      const r = doek.getBoundingClientRect();
+      const x = e.clientX - r.left, y = e.clientY - r.top;
+      let dichtst = null, best = 400;
+      Net.knopen.forEach(n => { const d = (n.x-x)**2 + (n.y-y)**2; if (d < best){ best = d; dichtst = n; } });
+      Net.gekozen = (dichtst === Net.gekozen) ? null : dichtst;
+      netTeken();
+      if (Net.gekozen) toast((Net.gekozen.naam || codeWeergave(Net.gekozen.code)) + " — " + Net.gekozen.graad + " verbindingen. Nogmaals klikken opent het dossier.");
+    });
+    doek.addEventListener("dblclick", () => { if (Net.gekozen){ dossierData = null; opendossier(Net.gekozen.code); } });
+  }
+  if (Net.knopen.length) netTeken();
+}
+$("#net-laad").onclick = () => bouwNetwerk();
 
 /* =====================================================================
    Uitleg / verbinding
