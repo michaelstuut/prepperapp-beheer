@@ -326,6 +326,7 @@ label.f>span.hint{font-weight:400;font-size:.74rem;color:#6B7486}
       <option value="300">elke 5 min</option>
       <option value="900">elke 15 min</option>
     </select>
+    <button class="iconbtn" id="alarm" title="Waarschuw me bij nieuwe meldingen">Waarschuwen: uit</button>
     <button class="iconbtn" id="pair" title="Open deze tool op je telefoon">Telefoon</button>
     <button class="iconbtn" id="refresh-all" title="Alles opnieuw laden">Verversen</button>
     <button class="iconbtn" id="signout">Uitloggen</button>
@@ -713,6 +714,48 @@ label.f>span.hint{font-weight:400;font-size:.74rem;color:#6B7486}
     </div>
   </section>
 
+  <!-- ---------- Inzichten ---------- -->
+  <section class="view" id="v-inzicht" role="tabpanel">
+    <div class="card">
+      <div class="card-h"><h2>Wat de cijfers zeggen</h2><span style="flex:1"></span>
+        <span class="sub" id="iz-status"></span>
+        <button class="btn sm" id="iz-laad">Analyseren</button>
+      </div>
+      <div class="card-b" style="font-size:.84rem;color:var(--muted)">
+        Geen giswerk: bij elke uitspraak staat het getal waar hij op berust.
+        Bedoeld om te zien waar je app mensen nog niet helpt.
+      </div>
+      <div class="card-b tight" id="iz-lijst"><div class="empty">Nog niet geanalyseerd.</div></div>
+    </div>
+
+    <div class="grid c2">
+      <div class="card">
+        <div class="card-h"><h2>Hoe ver mensen komen</h2><span style="flex:1"></span><span class="sub">dagen voorraad</span></div>
+        <div class="card-b" id="iz-voorraad"><div class="empty">Nog niet geanalyseerd.</div></div>
+      </div>
+      <div class="card">
+        <div class="card-h"><h2>Water tegenover eten</h2></div>
+        <div class="card-b" id="iz-water"><div class="empty">Nog niet geanalyseerd.</div></div>
+      </div>
+    </div>
+
+    <div class="grid c2">
+      <div class="card">
+        <div class="card-h"><h2>Hoe vol is de inventaris</h2></div>
+        <div class="card-b" id="iz-items"><div class="empty">Nog niet geanalyseerd.</div></div>
+      </div>
+      <div class="card">
+        <div class="card-h"><h2>Noodplannen</h2><span style="flex:1"></span><span class="sub">welke scenario's</span></div>
+        <div class="card-b" id="iz-noodplan"><div class="empty">Nog niet geanalyseerd.</div></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-h"><h2>Blijven mensen hangen</h2><span style="flex:1"></span><span class="sub">per week van aanmelden</span></div>
+      <div class="card-b" id="iz-retentie"><div class="empty">Nog niet geanalyseerd.</div></div>
+    </div>
+  </section>
+
   <!-- ---------- Records ---------- -->
   <section class="view" id="v-records" role="tabpanel">
     <div class="card">
@@ -825,7 +868,7 @@ label.f>span.hint{font-weight:400;font-size:.74rem;color:#6B7486}
    ===================================================================== */
 
 const CONTAINER = "iCloud.com.stuut.PrepperApp";
-const BUILD = 11;
+const BUILD = 12;
 const LS = { token: "pa.token", env: "pa.env" };
 
 /* ---------------------------------------------------------------------
@@ -1587,6 +1630,7 @@ const TABS = [
   { id:"config",    label:"Instellingen", laad: laadConfig },
   { id:"feedback",  label:"Feedback",  laad: laadFeedback },
   { id:"stats",     label:"Statistieken", laad: laadStats },
+  { id:"inzicht",   label:"Inzichten", laad: laadInzichtTab },
   { id:"records",   label:"Alle records", laad: laadRecordsTab },
   { id:"toegang",   label:"Toegang",   laad: laadToegang },
   { id:"info",      label:"Uitleg",    laad: laadInfo },
@@ -3454,6 +3498,235 @@ function laadNetwerkTab(){
 $("#net-laad").onclick = () => bouwNetwerk();
 
 /* =====================================================================
+   Waarschuwen bij nieuwe meldingen
+   ===================================================================== */
+const Alarm = {
+  aan: localStorage.getItem("pa.alarm") === "1",
+  timer: null,
+  gezien: new Set(JSON.parse(localStorage.getItem("pa.alarmgezien") || "[]")),
+
+  async zetAan(){
+    if (!("Notification" in window)){
+      toast("Deze browser kan geen meldingen tonen. Op je telefoon werkt dit alleen als de pagina open staat.", "err");
+      return false;
+    }
+    let toestemming = Notification.permission;
+    if (toestemming === "default") toestemming = await Notification.requestPermission();
+    if (toestemming !== "granted"){
+      toast("Je hebt meldingen geweigerd. Dat kun je in je browserinstellingen terugdraaien.", "err");
+      return false;
+    }
+    return true;
+  },
+
+  async wissel(){
+    if (this.aan){ this.uit(); return; }
+    if (!(await this.zetAan())) return;
+    this.aan = true;
+    localStorage.setItem("pa.alarm", "1");
+    this.knop();
+    this.start();
+    toast("Ik waarschuw je zolang deze pagina open staat.", "ok");
+    this.kijk(true);
+  },
+
+  uit(){
+    this.aan = false;
+    localStorage.setItem("pa.alarm", "0");
+    if (this.timer) { clearInterval(this.timer); this.timer = null; }
+    document.title = "PrepperApp Beheer";
+    this.knop();
+  },
+
+  knop(){
+    const b = $("#alarm");
+    if (b) { b.textContent = "Waarschuwen: " + (this.aan ? "aan" : "uit"); b.style.borderColor = this.aan ? "var(--amber-dim)" : ""; }
+  },
+
+  start(){
+    if (this.timer) clearInterval(this.timer);
+    this.timer = setInterval(() => this.kijk(false), 120000);   /* elke twee minuten */
+  },
+
+  async kijk(stil){
+    if (!this.aan || !State.db) return;
+    try {
+      const [mis, oud] = await Promise.all([
+        query("MisbruikMelding", { filters:[{fieldName:"behandeld",comparator:"EQUALS",fieldValue:{value:0}}], limit:100 }).catch(()=>({records:[]})),
+        query("ForumMelding", { limit:100 }).catch(()=>({records:[]})),
+      ]);
+      const alles = (mis.records||[]).concat(oud.records||[]);
+      const nieuw = alles.filter(r => !this.gezien.has(r.recordName));
+      document.title = alles.length ? "(" + alles.length + ") PrepperApp Beheer" : "PrepperApp Beheer";
+      zetBadge("meldingen", alles.length);
+      if (!nieuw.length) return;
+      nieuw.forEach(r => this.gezien.add(r.recordName));
+      localStorage.setItem("pa.alarmgezien", JSON.stringify(Array.from(this.gezien).slice(-500)));
+      if (stil) return;                       /* eerste keer niet meteen piepen */
+      const tekst = nieuw.length === 1
+        ? (v(nieuw[0],"reden") || "Er is een bericht gemeld.")
+        : nieuw.length + " nieuwe meldingen.";
+      try {
+        const m = new Notification("PrepperApp — moderatie", { body: tekst, icon: "icoon.png", tag: "pa-melding", renotify: true });
+        m.onclick = () => { window.focus(); gaNaar("meldingen"); m.close(); };
+      } catch(e){ toast(tekst, "err"); }
+    } catch(e){ /* netwerk even weg — volgende ronde weer */ }
+  },
+};
+$("#alarm").onclick = () => Alarm.wissel();
+
+/* =====================================================================
+   Inzichten — wat zeggen de cijfers over wat je moet bouwen
+   ===================================================================== */
+function verdeling(waarden, grenzen, labels, kleur){
+  const emmers = new Array(grenzen.length + 1).fill(0);
+  waarden.forEach(w => {
+    let i = grenzen.findIndex(g => w < g);
+    if (i === -1) i = grenzen.length;
+    emmers[i]++;
+  });
+  return emmers.map((n, i) => [labels[i], n, kleur]);
+}
+
+function laadInzichtTab(){}
+
+$("#iz-laad").onclick = async (e) => {
+  const b = e.target, st = $("#iz-status");
+  b.disabled = true; st.innerHTML = '<span class="spin"></span> ophalen';
+  try {
+    const surv = await haalAlles("SurvivalStatus", { max: 5000, onVoortgang: n => st.textContent = "survival-status… " + n });
+    st.textContent = "noodplannen…";
+    const activaties = await haalAlles("NoodplanActivatie", { max: 3000 }).catch(()=>[]);
+    const feedback   = await haalAlles("AppFeedback", { max: 2000 }).catch(()=>[]);
+    const posts      = await haalAlles("OutdoorPost", { max: 2000 }).catch(()=>[]);
+    const chats      = await haalAlles("Chatbericht", { max: 3000 }).catch(()=>[]);
+
+    const n = surv.length;
+    const getal = (r, k) => { const w = v(r,k); return typeof w === "number" ? w : 0; };
+    const water   = surv.map(r => getal(r,"waterDagen"));
+    const voedsel = surv.map(r => getal(r,"voedselDagen"));
+    const totaal  = surv.map(r => getal(r,"overlevingsDagen"));
+    const items   = surv.map(r => getal(r,"aantalItems"));
+    const gem = a => a.length ? a.reduce((x,y)=>x+y,0)/a.length : 0;
+    const mediaan = a => { if (!a.length) return 0; const s2 = a.slice().sort((x,y)=>x-y); const m = Math.floor(s2.length/2);
+      return s2.length % 2 ? s2[m] : (s2[m-1]+s2[m])/2; };
+
+    /* --- grafieken --- */
+    const grenzen = [1, 3, 7, 14, 30];
+    const labels  = ["minder dan 1 dag","1 tot 3 dagen","3 tot 7 dagen","1 tot 2 weken","2 tot 4 weken","meer dan een maand"];
+    $("#iz-voorraad").innerHTML = "";
+    $("#iz-voorraad").appendChild(balken(verdeling(totaal, grenzen, labels, "var(--green)"),
+      { voet: "mediaan " + mediaan(totaal).toFixed(1) + " dagen, gemiddeld " + gem(totaal).toFixed(1) }));
+
+    $("#iz-water").innerHTML = "";
+    $("#iz-water").appendChild(balken([
+      ["water gemiddeld", Math.round(gem(water)*10)/10, "var(--blue)"],
+      ["eten gemiddeld",  Math.round(gem(voedsel)*10)/10, "var(--amber)"],
+      ["water mediaan",   Math.round(mediaan(water)*10)/10, "var(--blue)"],
+      ["eten mediaan",    Math.round(mediaan(voedsel)*10)/10, "var(--amber)"],
+    ], { voet: "in dagen" }));
+
+    $("#iz-items").innerHTML = "";
+    $("#iz-items").appendChild(balken(verdeling(items, [1, 5, 15, 40], 
+      ["helemaal leeg","1 tot 5 items","5 tot 15 items","15 tot 40 items","meer dan 40"], "var(--violet)"),
+      { voet: "mediaan " + mediaan(items) + " items" }));
+
+    const scen = {};
+    surv.forEach(r => { const w = (v(r,"actiefNoodplan")||"").trim(); if (w) scen[w] = (scen[w]||0)+1; });
+    activaties.forEach(r => { const w = (v(r,"scenario")||"").trim(); if (w) scen[w] = (scen[w]||0)+1; });
+    const scenRij = Object.entries(scen).sort((a,b)=>b[1]-a[1]).slice(0,10).map(([l,c]) => [l,c,"var(--red)"]);
+    $("#iz-noodplan").innerHTML = "";
+    $("#iz-noodplan").appendChild(scenRij.length ? balken(scenRij)
+      : el("div","empty","Niemand heeft op dit moment een noodplan actief staan."));
+
+    /* --- retentie: per week van aanmelden, hoeveel nog actief --- */
+    const nu = Date.now(), dag = 864e5;
+    const cohorten = [];
+    for (let w = 7; w >= 0; w--){
+      const van = nu - (w+1)*7*dag, tot = nu - w*7*dag;
+      const groep = surv.filter(r => { const t = v(r,"bijgewerktOp"); return typeof t === "number" && t > van && t <= tot; });
+      cohorten.push([w === 0 ? "deze week" : w + " wk terug", groep.length, "var(--green)"]);
+    }
+    $("#iz-retentie").innerHTML = "";
+    $("#iz-retentie").appendChild(balken(cohorten,
+      { voet: "aantal mensen dat in die week de app nog geopend heeft (aan hun bijgewerkte status te zien)" }));
+
+    /* --- uitspraken --- */
+    const uit = [];
+    const zeg = (kop, tekst, ernst) => uit.push({ kop, tekst, ernst });
+
+    const magerWater = water.filter(w => w > 0 && w < 3).length;
+    const geenWater  = water.filter(w => w <= 0).length;
+    if (n){
+      if (geenWater / n > 0.5) zeg("Water is de grootste blinde vlek",
+        geenWater + " van de " + n + " mensen hebben nul dagen water ingevuld. Of ze slaan het over, of ze weten niet hoeveel ze nodig hebben. Een simpele waterrekenhulp — liters per persoon per dag, direct omgerekend naar dagen — raakt hier de meeste mensen.", "hoog");
+      else if (gem(water) < gem(voedsel) * 0.7) zeg("Mensen hebben meer eten dan water",
+        "Gemiddeld " + gem(voedsel).toFixed(1) + " dagen eten tegenover " + gem(water).toFixed(1) + " dagen water. Water is zwaarder en wordt onderschat; een herinnering of rekenhulp bij water zou het meest opleveren.", "hoog");
+
+      const leeg = items.filter(i => i === 0).length;
+      if (leeg / n > 0.4) zeg("De inventaris blijft bij de meesten leeg",
+        leeg + " van de " + n + " mensen hebben geen enkel item ingevoerd. Dat is meestal geen desinteresse maar drempel: begin met een kant-en-klare startlijst die ze afvinken in plaats van een leeg scherm.", "hoog");
+      else if (mediaan(items) < 5) zeg("Weinig items per persoon",
+        "De helft heeft " + mediaan(items) + " items of minder. Een voorgestelde basislijst of streepjescode-invoer verlaagt de drempel.", "midden");
+
+      const klaar = totaal.filter(t => t >= 3).length;
+      zeg("Voorbereidingsgraad",
+        klaar + " van de " + n + " mensen komen drie dagen of langer door. " +
+        (klaar / n < 0.3 ? "Dat is laag: de meeste mensen zitten nog in het begin. Alles wat de eerste 72 uur makkelijker maakt, helpt de grootste groep."
+                         : "Een flink deel is echt voorbereid. Voor hen wordt de volgende stap interessant: langere termijn, roulatie van voorraad, houdbaarheidsdatums."),
+        klaar / n < 0.3 ? "midden" : "laag");
+
+      const actief30 = surv.filter(r => (v(r,"bijgewerktOp")||0) > nu - 30*dag).length;
+      zeg("Terugkomen",
+        actief30 + " van de " + n + " mensen hebben de app in de laatste dertig dagen nog geopend. " +
+        (actief30 / n < 0.4 ? "Meer dan de helft is afgehaakt. Een reden om terug te komen ontbreekt: denk aan een seizoenscheck, een houdbaarheidsherinnering of iets dat vanzelf verandert."
+                            : "Dat is een gezonde verhouding voor een app die je niet dagelijks nodig hebt."),
+        actief30 / n < 0.4 ? "hoog" : "laag");
+    }
+
+    if (chats.length) zeg("Mensen chatten wel degelijk",
+      chats.length + " chatberichten in de database. Van alle sociale functies is dit de enige die nu al gebruikt wordt — dat is een sterk signaal dat samen voorbereiden aanslaat. De rest van de sociale functies zit pas in 2.2 en kan dit versterken.", "laag");
+
+    if (!posts.length) zeg("Het forum is nog niet aan",
+      "Nul outdoor posts in Production. Dat komt doordat 1.3.1 dat recordtype niet kent — niet doordat mensen niets plaatsen. Beoordeel het forum pas een paar weken nadat 2.2 buiten is.", "laag");
+
+    if (feedback.length){
+      const gemBeoordeling = gem(feedback.map(r => getal(r,"beoordeling")));
+      zeg("Wat mensen zelf zeggen", feedback.length + " keer feedback, gemiddeld " + gemBeoordeling.toFixed(1) + " van de 5. Lees ze bij Feedback — vrije tekst zegt vaak meer dan alle grafieken hierboven.", "laag");
+    }
+
+    const steden = {};
+    surv.forEach(r => { const w = (v(r,"land")||"").trim(); if (w) steden[w] = (steden[w]||0)+1; });
+    const landen = Object.entries(steden).sort((a,b)=>b[1]-a[1]);
+    if (landen.length > 1){
+      const buiten = landen.slice(1).reduce((a,x)=>a+x[1],0);
+      zeg("Er zitten buitenlandse gebruikers tussen",
+        buiten + " van de " + n + " mensen zitten buiten " + landen[0][0] + " (" + landen.slice(1,4).map(x=>x[0]+": "+x[1]).join(", ") + "). " +
+        "De alarmbronnen en noodnummers in de app zijn op Nederland gericht; per land de juiste nummers tonen is een kleine ingreep met veel effect.", "midden");
+    }
+
+    const lijst = $("#iz-lijst"); lijst.innerHTML = "";
+    if (!uit.length) lijst.innerHTML = leeg("Nog te weinig gegevens om iets zinnigs te zeggen.");
+    uit.sort((a,b) => ({hoog:0,midden:1,laag:2}[a.ernst] - {hoog:0,midden:1,laag:2}[b.ernst]));
+    uit.forEach(u => {
+      const r = el("div","row"); const body = el("div","body");
+      body.appendChild(el("div","title", esc(u.kop)));
+      body.innerHTML += '<div class="meta"><span class="pill ' +
+        (u.ernst === "hoog" ? "red" : u.ernst === "midden" ? "amber" : "plain") + '">' +
+        (u.ernst === "hoog" ? "grootste kans" : u.ernst === "midden" ? "de moeite waard" : "ter informatie") + "</span></div>";
+      body.appendChild(el("div","text", esc(u.tekst)));
+      r.appendChild(body); lijst.appendChild(r);
+    });
+
+    st.textContent = "geanalyseerd over " + n + " mensen";
+  } catch(err){
+    st.textContent = "";
+    toast(String(err.message||err), "err");
+  }
+  b.disabled = false;
+};
+
+/* =====================================================================
    Uitleg / verbinding
    ===================================================================== */
 function laadInfo(){
@@ -3694,6 +3967,9 @@ function startApp(gebruiker){
 
   bouwTabs();
   zetAuto(parseInt(localStorage.getItem("pa.auto") || "0", 10));
+  Alarm.knop();
+  if (Alarm.aan && "Notification" in window && Notification.permission === "granted"){ Alarm.start(); Alarm.kijk(true); }
+  else if (Alarm.aan) Alarm.uit();
   const uitHash = (location.hash || "").replace("#","");
   gaNaar(TABS.some(t => t.id === uitHash) ? uitHash : "dashboard");
 
