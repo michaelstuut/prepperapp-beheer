@@ -868,7 +868,7 @@ label.f>span.hint{font-weight:400;font-size:.74rem;color:#6B7486}
    ===================================================================== */
 
 const CONTAINER = "iCloud.com.stuut.PrepperApp";
-const BUILD = 12;
+const BUILD = 13;
 const LS = { token: "pa.token", env: "pa.env" };
 
 /* ---------------------------------------------------------------------
@@ -3618,13 +3618,17 @@ $("#iz-laad").onclick = async (e) => {
     $("#iz-voorraad").appendChild(balken(verdeling(totaal, grenzen, labels, "var(--green)"),
       { voet: "mediaan " + mediaan(totaal).toFixed(1) + " dagen, gemiddeld " + gem(totaal).toFixed(1) }));
 
+    const nulWater = water.filter(w => w <= 0).length;
+    const nulEten  = voedsel.filter(w => w <= 0).length;
     $("#iz-water").innerHTML = "";
     $("#iz-water").appendChild(balken([
-      ["water gemiddeld", Math.round(gem(water)*10)/10, "var(--blue)"],
-      ["eten gemiddeld",  Math.round(gem(voedsel)*10)/10, "var(--amber)"],
-      ["water mediaan",   Math.round(mediaan(water)*10)/10, "var(--blue)"],
-      ["eten mediaan",    Math.round(mediaan(voedsel)*10)/10, "var(--amber)"],
-    ], { voet: "in dagen" }));
+      ["niets bij water", nulWater, "var(--red)"],
+      ["niets bij eten",  nulEten,  "var(--red)"],
+      ["wél water",       n - nulWater, "var(--blue)"],
+      ["wél eten",        n - nulEten,  "var(--amber)"],
+    ], { voet: "aantal mensen. Gemiddeld " + gem(water).toFixed(1) + " dagen water en " +
+               gem(voedsel).toFixed(1) + " dagen eten, maar de mediaan is " + mediaan(water) + " en " +
+               mediaan(voedsel) + " — een paar goed voorbereide mensen trekken het gemiddelde omhoog." }));
 
     $("#iz-items").innerHTML = "";
     $("#iz-items").appendChild(balken(verdeling(items, [1, 5, 15, 40], 
@@ -3671,7 +3675,8 @@ $("#iz-laad").onclick = async (e) => {
 
       const klaar = totaal.filter(t => t >= 3).length;
       zeg("Voorbereidingsgraad",
-        klaar + " van de " + n + " mensen komen drie dagen of langer door. " +
+        klaar + " van de " + n + " mensen komen drie dagen of langer door; de mediaan staat op " +
+        mediaan(totaal).toFixed(1) + " dagen. " +
         (klaar / n < 0.3 ? "Dat is laag: de meeste mensen zitten nog in het begin. Alles wat de eerste 72 uur makkelijker maakt, helpt de grootste groep."
                          : "Een flink deel is echt voorbereid. Voor hen wordt de volgende stap interessant: langere termijn, roulatie van voorraad, houdbaarheidsdatums."),
         klaar / n < 0.3 ? "midden" : "laag");
@@ -3699,10 +3704,19 @@ $("#iz-laad").onclick = async (e) => {
     surv.forEach(r => { const w = (v(r,"land")||"").trim(); if (w) steden[w] = (steden[w]||0)+1; });
     const landen = Object.entries(steden).sort((a,b)=>b[1]-a[1]);
     if (landen.length > 1){
-      const buiten = landen.slice(1).reduce((a,x)=>a+x[1],0);
-      zeg("Er zitten buitenlandse gebruikers tussen",
-        buiten + " van de " + n + " mensen zitten buiten " + landen[0][0] + " (" + landen.slice(1,4).map(x=>x[0]+": "+x[1]).join(", ") + "). " +
-        "De alarmbronnen en noodnummers in de app zijn op Nederland gericht; per land de juiste nummers tonen is een kleine ingreep met veel effect.", "midden");
+      const grootste = landen[0];
+      const nl = landen.find(x => /nederland|netherlands/i.test(x[0]));
+      const nlAantal = nl ? nl[1] : 0;
+      const rest = landen.slice(0, 5).map(x => x[0] + ": " + x[1]).join(", ");
+      const nederlandsGericht = !/nederland|netherlands/i.test(grootste[0]);
+      zeg(nederlandsGericht ? "Je grootste land is niet Nederland" : "Er zitten buitenlandse gebruikers tussen",
+        "Verdeling: " + rest + ". " +
+        (nederlandsGericht
+          ? "De meeste gebruikers zitten in " + grootste[0] + ", terwijl maar " + nlAantal + " mensen in Nederland zitten. " +
+            "De noodnummers, alarmbronnen en nieuwsfeeds in de app zijn op Nederland gericht — voor de grootste groep klopt dat dus niet. " +
+            "Per land de juiste alarmnummers en bronnen tonen is een kleine ingreep die meteen de meerderheid raakt, en het maakt een Engelse versie pas echt zinvol."
+          : "Voor de mensen buiten Nederland kloppen de noodnummers en alarmbronnen in de app niet. Per land de juiste tonen is een kleine ingreep."),
+        "hoog");
     }
 
     const lijst = $("#iz-lijst"); lijst.innerHTML = "";
