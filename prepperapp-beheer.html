@@ -473,6 +473,31 @@ label.f>span.hint{font-weight:400;font-size:.74rem;color:#6B7486}
     </div>
   </section>
 
+  <!-- ---------- Logboek ---------- -->
+  <section class="view" id="v-logboek" role="tabpanel">
+    <div class="card">
+      <div class="card-b">
+        <div class="toolbar">
+          <label class="f narrow" style="flex:1 1 10rem">Handeling
+            <select id="lg-handeling"><option value="">alles</option></select>
+          </label>
+          <label class="f narrow" style="flex:1 1 10rem">Wie
+            <select id="lg-wie"><option value="">iedereen</option></select>
+          </label>
+          <button class="btn narrow" id="lg-laad">Laden</button>
+        </div>
+      </div>
+      <div class="card-b tight" id="lg-lijst"><div class="empty">Laden…</div></div>
+    </div>
+    <div class="card">
+      <div class="card-b" style="font-size:.82rem;color:var(--muted)" id="lg-uitleg">
+        Elke handeling die iemand hier doet — verbergen, blokkeren, verwijderen, instellingen wijzigen —
+        wordt hier vastgelegd met naam, tijdstip en reden. Handig zodra je met meer mensen modereert:
+        je kunt altijd terugzien wie wat deed.
+      </div>
+    </div>
+  </section>
+
   <!-- ---------- Toegang ---------- -->
   <section class="view" id="v-toegang" role="tabpanel">
     <div class="card">
@@ -910,7 +935,7 @@ label.f>span.hint{font-weight:400;font-size:.74rem;color:#6B7486}
    ===================================================================== */
 
 const CONTAINER = "iCloud.com.stuut.PrepperApp";
-const BUILD = 14;
+const BUILD = 15;
 const LS = { token: "pa.token", env: "pa.env" };
 
 /* ---------------------------------------------------------------------
@@ -999,6 +1024,9 @@ const SCHEMA = {
   AppFeedback: { label:"Feedback", groep:"Overig", sort:"ingediendOp", tekst:"tekst", auteur:"gebruikerCode", datum:"ingediendOp",
     f:{ tekst:[T.STR], beoordeling:[T.INT,"qs"], gebruikerCode:[T.STR,"q"], appVersie:[T.STR],
         gelezen:[T.INT,"q"], ingediendOp:[T.TS,"qs"] } },
+  AdminLogboek: { label:"Logboek", groep:"Beheer", sort:"tijdstip", titel:"handeling", tekst:"reden", datum:"tijdstip",
+    f:{ handeling:[T.STR,"q"], doelType:[T.STR,"q"], doelRecordName:[T.STR,"q"], doelCode:[T.STR,"q"],
+        doorNaam:[T.STR,"q"], doorID:[T.STR,"q"], reden:[T.STR], details:[T.STR], tijdstip:[T.TS,"qs"] } },
   AdminAankondiging: { label:"Aankondigingen", groep:"Beheer", sort:"datum", titel:"titel", tekst:"inhoud", datum:"datum",
     f:{ titel:[T.STR], inhoud:[T.STR], prioriteit:[T.INT,"qs"], datum:[T.TS,"qs"] } },
   AdminPushBericht: { label:"Pushberichten (nog niet actief)", groep:"Beheer", sort:"gepubliceerdOp", titel:"titel", tekst:"inhoud", datum:"gepubliceerdOp",
@@ -1015,6 +1043,15 @@ const ZOEKVELD = {
   PlaatsAlert:    ["beschrijving", "stad", "land", "type"],
   PublicSafeSpot: ["naam", "beschrijving", "scenario", "type"],
   SurvivalStatus: ["naam", "stad", "land", "actiefNoodplan"],
+  /* Deze krijgen hun index pas bij de schemaronde van 2.3. Tot die tijd valt de
+     zoekopdracht vanzelf terug op filteren in wat geladen is — de pagina zegt
+     dat er dan bij. Zodra de index er staat werkt het zonder wijziging hier. */
+  OutdoorPost:    ["titel", "inhoud"],
+  ErvaringPost:   ["titel", "beschrijving"],
+  BuurtPost:      ["titel", "beschrijving"],
+  ForumReactie:   ["tekst"],
+  TrailConditie:  ["beschrijving"],
+  WaterBron:      ["naam", "notities"],
 };
 
 const VERBERGBAAR = ["OutdoorPost","ErvaringPost","BuurtPost","ForumReactie","TrailConditie","PlaatsAlert","PublicSafeSpot","WaterBron"];
@@ -1396,6 +1433,37 @@ function v(rec, naam){
 }
 
 /* =====================================================================
+   Logboek — wie deed wat, wanneer
+   ---------------------------------------------------------------------
+   Schrijft naar het recordtype AdminLogboek. Bestaat dat nog niet, dan
+   mislukt het stil: de handeling zelf mag hier nooit op stuklopen. Zodra
+   het type in CloudKit staat begint dit vanzelf te werken.
+   ===================================================================== */
+const Logboek = {
+  beschikbaar: null,      /* null = nog niet geprobeerd */
+
+  async schrijf(gegevens){
+    if (this.beschikbaar === false) return;
+    try {
+      await saveRecord({ recordType: "AdminLogboek", fields: {
+        handeling:      { value: gegevens.handeling || "" },
+        doelType:       { value: gegevens.doelType || "" },
+        doelRecordName: { value: gegevens.doelRecordName || "" },
+        doelCode:       { value: gegevens.doelCode || "" },
+        reden:          { value: gegevens.reden || "" },
+        details:        { value: gegevens.details ? String(gegevens.details).slice(0, 2000) : "" },
+        doorNaam:       { value: moderatorNaam() },
+        doorID:         { value: (State.user && State.user.userRecordName) || "" },
+        tijdstip:       { value: Date.now() },
+      }});
+      this.beschikbaar = true;
+    } catch(e){
+      if (/unknown|not found|type/i.test(String(e.message))) this.beschikbaar = false;
+    }
+  },
+};
+
+/* =====================================================================
    Moderatie-acties. Elke actie hier komt overeen met wat de app leest.
    ===================================================================== */
 const Acties = {
@@ -1410,12 +1478,14 @@ const Acties = {
       datum:{ value: Date.now() },
     }});
     toast("Verborgen. Zichtbaar effect zodra de app opnieuw laadt.", "ok");
+    Logboek.schrijf({ handeling:"verborgen", doelType, doelRecordName: recordName, reden });
     Cache.wis("AdminVerborgen");
   },
 
   async herstel(adminVerborgenRecordName){
     await deleteRecord(adminVerborgenRecordName);
     toast("Weer zichtbaar gemaakt.", "ok");
+    Logboek.schrijf({ handeling:"weer zichtbaar", doelRecordName: adminVerborgenRecordName });
     Cache.wis("AdminVerborgen");
   },
 
@@ -1426,6 +1496,7 @@ const Acties = {
     if (rec) {
       await patch(rec.recordName, { isBanned: 1, banReden: stempel(reden) });
       toast("Geblokkeerd.", "ok");
+      Logboek.schrijf({ handeling:"geblokkeerd", doelType:"GebruikersAccount", doelRecordName: rec.recordName, doelCode: gebruikerCode, reden });
     } else {
       /* Nog geen account: die bestaat pas vanaf versie 2.0. We maken hem alvast
          aan met de blokkade erin. Zodra de app opstart vindt hij dit record op
@@ -1442,6 +1513,7 @@ const Acties = {
         reactieTelling:{ value: 0 },
       }});
       toast("Geblokkeerd — account vooraf aangemaakt, blokkade geldt zodra ze updaten.", "ok");
+      Logboek.schrijf({ handeling:"geblokkeerd (account aangemaakt)", doelType:"GebruikersAccount", doelCode: gebruikerCode, reden });
     }
     Cache.wis("GebruikersAccount");
   },
@@ -1449,17 +1521,20 @@ const Acties = {
   async deblokkeer(recordName){
     await patch(recordName, { isBanned: 0, banReden: "" });
     toast("Blokkade opgeheven.", "ok");
+    Logboek.schrijf({ handeling:"blokkade opgeheven", doelType:"GebruikersAccount", doelRecordName: recordName });
     Cache.wis("GebruikersAccount");
   },
 
   async setPro(recordName, aan){
     await patch(recordName, { isPro: aan ? 1 : 0 });
     toast(aan ? "Pro toegekend." : "Pro ingetrokken.", "ok");
+    Logboek.schrijf({ handeling: aan ? "pro gegeven" : "pro ingetrokken", doelType:"GebruikersAccount", doelRecordName: recordName });
     Cache.wis("GebruikersAccount");
   },
 
   async behandeld(recordName, aan){
     await patch(recordName, { behandeld: aan ? 1 : 0 });
+    Logboek.schrijf({ handeling: aan ? "melding afgehandeld" : "melding heropend", doelType:"MisbruikMelding", doelRecordName: recordName });
     Cache.wis("MisbruikMelding");
   },
 
@@ -1477,6 +1552,7 @@ const Acties = {
     } catch(e){ /* al weg, of geen leesrecht — dan maar zonder kopie */ }
     await deleteRecord(recordName);
     toast("Verwijderd. Er staat een kopie in de prullenbak bij Toegang.", "ok");
+    Logboek.schrijf({ handeling:"verwijderd", doelRecordName: recordName });
   },
 };
 
@@ -1808,6 +1884,7 @@ const TABS = [
   { id:"stats",     label:"Statistieken", laad: laadStats },
   { id:"inzicht",   label:"Inzichten", laad: laadInzichtTab },
   { id:"records",   label:"Alle records", laad: laadRecordsTab },
+  { id:"logboek",   label:"Logboek",   laad: laadLogboek },
   { id:"toegang",   label:"Toegang",   laad: laadToegang },
   { id:"info",      label:"Uitleg",    laad: laadInfo },
 ];
@@ -2061,8 +2138,21 @@ async function laadForumTab(eerste){
   }
   const oplopend = $("#forum-volgorde").value === "oud";
 
+  let r;
   try {
-    const r = await query(type, { limit: 50, filters, asc: oplopend, continuationMarker: forumCont });
+    try {
+      r = await query(type, { limit: 50, filters, asc: oplopend, continuationMarker: forumCont });
+    } catch (zoekFout) {
+      /* Geen SEARCHABLE-index op dit veld? Dan zonder de zoekopdracht opnieuw,
+         en gewoon eerlijk melden dat er lokaal gefilterd wordt. */
+      if (echtGezocht && /searchable|not marked|index/i.test(String(zoekFout.message))){
+        echtGezocht = false;
+        hint.textContent = "Dit veld heeft nog geen zoekindex in CloudKit, dus ik filter alleen wat geladen is. " +
+          "Na de schemaronde van 2.3 zoekt hij hier wél in alles.";
+        r = await query(type, { limit: 50, filters: filters.filter(f => f.comparator !== "CONTAINS_ALL_TOKENS"),
+                                asc: oplopend, continuationMarker: forumCont });
+      } else throw zoekFout;
+    }
     if (!forumCont) n.innerHTML = "";
     let recs = r.records || [];
     if (q && !echtGezocht) {
@@ -2491,6 +2581,7 @@ $("#ank-save").onclick = async (e) => {
       titel:{value:titel}, inhoud:{value:$("#ank-inhoud").value.trim()},
       prioriteit:{value: parseInt($("#ank-prio").value,10)}, datum:{value: Date.now()} }});
     $("#ank-titel").value = ""; $("#ank-inhoud").value = "";
+    Logboek.schrijf({ handeling:"aankondiging geplaatst", doelType:"AdminAankondiging", reden: titel });
     toast("Geplaatst.","ok"); laadAankondigingen();
   } catch(err){ toast(String(err.message||err),"err"); }
   b.disabled = false; b.textContent = "Plaatsen";
@@ -2555,6 +2646,9 @@ $("#cfg-save").onclick = async (e) => {
       await saveRecord({ recordType:"AppConfig", fields });
     }
     toast("Opgeslagen. De app pikt dit op bij de volgende start.","ok");
+    Logboek.schrijf({ handeling:"instellingen gewijzigd", doelType:"AppConfig",
+      details: JSON.stringify({ banner: $("#cfg-banner-actief").checked, tekst: $("#cfg-banner-tekst").value,
+                                minVersie: $("#cfg-minversie").value, uit }) });
     laadConfig();
   } catch(err){ toast(String(err.message||err),"err"); }
   b.disabled = false; b.textContent = "Opslaan";
@@ -3945,6 +4039,71 @@ $("#iz-laad").onclick = async (e) => {
   }
   b.disabled = false;
 };
+
+/* =====================================================================
+   Logboek bekijken
+   ===================================================================== */
+async function laadLogboek(){
+  const n = $("#lg-lijst"); bezig(n);
+  const filters = [];
+  const h = $("#lg-handeling").value, w = $("#lg-wie").value;
+  if (h) filters.push({ fieldName:"handeling", comparator:"EQUALS", fieldValue:{ value: h } });
+  if (w) filters.push({ fieldName:"doorNaam",  comparator:"EQUALS", fieldValue:{ value: w } });
+  try {
+    const r = await query("AdminLogboek", { limit: 300, filters });
+    const recs = r.records || [];
+    n.innerHTML = "";
+    if (!recs.length){
+      n.innerHTML = leeg(h || w ? "Niets gevonden met deze filters." : "Nog niets vastgelegd.", "Leeg");
+    }
+    /* keuzelijsten vullen met wat er echt in staat */
+    if (!h && !w){
+      const vul = (sel, veld) => {
+        const bestaand = $(sel).value;
+        const waarden = Array.from(new Set(recs.map(x => v(x,veld)).filter(Boolean))).sort();
+        $(sel).innerHTML = '<option value="">' + (veld === "handeling" ? "alles" : "iedereen") + "</option>" +
+          waarden.map(x => '<option value="' + esc(x) + '">' + esc(x) + "</option>").join("");
+        $(sel).value = bestaand;
+      };
+      vul("#lg-handeling","handeling"); vul("#lg-wie","doorNaam");
+    }
+    recs.forEach(rec => {
+      const r2 = el("div","row"); const body = el("div","body");
+      body.appendChild(el("div","title", esc(v(rec,"handeling") || "handeling")));
+      body.appendChild(el("div","meta",
+        "<span>door <b>" + esc(v(rec,"doorNaam") || "onbekend") + "</b></span>" +
+        "<span>" + esc(fmtGeleden(v(rec,"tijdstip"))) + "</span>" +
+        (v(rec,"doelType") ? '<span class="pill plain">' + esc((SCHEMA[v(rec,"doelType")]||{}).label || v(rec,"doelType")) + "</span>" : "") +
+        (v(rec,"doelCode") ? '<span class="mono">' + esc(codeWeergave(v(rec,"doelCode"))) + "</span>" : "") +
+        (v(rec,"doelRecordName") ? '<span class="mono" style="opacity:.55">' + esc(knip(v(rec,"doelRecordName"),14)) + "</span>" : "")));
+      if (v(rec,"reden")) body.appendChild(el("div","text", esc(v(rec,"reden"))));
+      const acts = el("div","acts");
+      if (v(rec,"doelCode")){
+        const b1 = el("button","btn sm","Dossier"); b1.onclick = () => { dossierData = null; opendossier(v(rec,"doelCode")); };
+        acts.appendChild(b1);
+      }
+      if (v(rec,"doelRecordName")){
+        const b2 = el("button","btn sm","Record zoeken");
+        b2.onclick = async () => {
+          try { const p2 = await fetchRecord(v(rec,"doelRecordName")); if (p2) toonRecord(p2, p2.recordType); else toast("Dat record bestaat niet meer.","err"); }
+          catch(e){ toast("Dat record bestaat niet meer.","err"); }
+        };
+        acts.appendChild(b2);
+      }
+      body.appendChild(acts); r2.appendChild(body); n.appendChild(r2);
+    });
+    $("#lg-uitleg").innerHTML = "Elke handeling wordt hier vastgelegd met naam, tijdstip en reden. " +
+      recs.length + " regels geladen.";
+  } catch(e){
+    const nogNiet = /unknown|not found|type/i.test(String(e.message));
+    n.innerHTML = leeg(nogNiet
+      ? "Het recordtype AdminLogboek staat nog niet in CloudKit. Zodra je de schemaronde van 2.3 hebt gedaan, vult dit zich vanzelf — de tool schrijft er nu al naartoe zodra het bestaat."
+      : String(e.message||e), nogNiet ? "Nog niet aangezet" : "Fout bij laden");
+  }
+}
+$("#lg-laad").onclick = () => laadLogboek();
+$("#lg-handeling").onchange = () => laadLogboek();
+$("#lg-wie").onchange = () => laadLogboek();
 
 /* =====================================================================
    Uitleg / verbinding
