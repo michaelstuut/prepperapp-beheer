@@ -447,6 +447,19 @@ label.f>span.hint{font-weight:400;font-size:.74rem;color:#6B7486}
       <div class="card-h"><h2>Mensen in de huidige App Store-versie</h2><span style="flex:1"></span>
         <span class="sub" id="surv-count"></span>
       </div>
+      <div class="card-b" style="padding-bottom:0">
+        <div class="toolbar">
+          <label class="f narrow" style="flex:1 1 12rem">Tonen
+            <select id="surv-filter">
+              <option value="alle">iedereen</option>
+              <option value="combo">alleen wie ook PrepAlert heeft</option>
+              <option value="combopro">alleen wie PrepAlert Pro heeft</option>
+              <option value="solo">alleen wie PrepAlert niet heeft</option>
+              <option value="noodplan">alleen met noodplan actief</option>
+            </select>
+          </label>
+        </div>
+      </div>
       <div class="card-b" style="font-size:.82rem;color:var(--muted);padding-bottom:0">
         Versie 1.3.1 kent nog geen gebruikersaccounts. Wie de app gebruikt zie je wél aan hun
         survival-status: elke gebruiker schrijft er één. Blokkeren kan hier ook — er wordt dan alvast
@@ -964,7 +977,7 @@ label.f>span.hint{font-weight:400;font-size:.74rem;color:#6B7486}
    ===================================================================== */
 
 const CONTAINER = "iCloud.com.stuut.PrepperApp";
-const BUILD = 16;
+const BUILD = 17;
 const LS = { token: "pa.token", env: "pa.env" };
 
 /* ---------------------------------------------------------------------
@@ -1006,7 +1019,9 @@ const SCHEMA = {
   SurvivalStatus: { label:"Survival-status", groep:"Mensen", sort:"bijgewerktOp", datum:"bijgewerktOp", titel:"naam",
     f:{ naam:[T.STR,"q"], stad:[T.STR,"q"], land:[T.STR,"q"], uitnodigingsCode:[T.STR,"q"], aantalItems:[T.INT,"qs"],
         overlevingsDagen:[T.DBL,"qs"], voedselDagen:[T.DBL,"qs"], waterDagen:[T.DBL,"qs"],
-        actiefNoodplan:[T.STR,"q"], noodplanTijd:[T.TS,"qs"], bijgewerktOp:[T.TS,"qs"] } },
+        actiefNoodplan:[T.STR,"q"], noodplanTijd:[T.TS,"qs"], bijgewerktOp:[T.TS,"qs"],
+        appVersie:[T.STR,"q"], taal:[T.STR,"q"], platform:[T.STR,"q"],
+        heeftPrepAlert:[T.INT,"q"], prepAlertPro:[T.INT,"q"], prepAlertGezien:[T.TS,"qs"] } },
   PrepFamilyGebruiker: { label:"PrepFamily-gebruikers", groep:"Mensen", sort:"tijdstip", datum:"tijdstip",
     f:{ stad:[T.STR,"q"], land:[T.STR,"q"], tijdstip:[T.TS,"qs"] } },
   ReferralRecord: { label:"Uitnodigingen", groep:"Mensen", sort:"datum", datum:"datum",
@@ -2293,6 +2308,9 @@ function survivalRij(rec){
     "<span>eten " + esc(dag(v(rec,"voedselDagen"))) + "</span>" +
     "<span>water " + esc(dag(v(rec,"waterDagen"))) + "</span>" +
     "<span>" + (v(rec,"aantalItems")||0) + " items</span>" +
+    (v(rec,"heeftPrepAlert") === 1
+      ? '<span class="pill blue">PrepAlert' + (v(rec,"prepAlertPro") === 1 ? " Pro" : "") + "</span>"
+      : "") +
     "<span>bijgewerkt " + esc(fmtGeleden(v(rec,"bijgewerktOp"))) + "</span>";
   body.appendChild(meta);
   if (v(rec,"actiefNoodplan")) body.appendChild(el("div","text",
@@ -2313,8 +2331,16 @@ async function laadSurvival(){
   const n = $("#surv-list"); bezig(n);
   try {
     const r = await query("SurvivalStatus", { limit: 400 });
-    const recs = r.records || [];
-    $("#surv-count").textContent = recs.length + (r.moreComing ? "+" : "") + " mensen";
+    let recs = r.records || [];
+    const totaal = recs.length;
+    const keuze = $("#surv-filter").value;
+    if (keuze === "combo")    recs = recs.filter(x => v(x,"heeftPrepAlert") === 1);
+    if (keuze === "combopro") recs = recs.filter(x => v(x,"prepAlertPro") === 1);
+    if (keuze === "solo")     recs = recs.filter(x => v(x,"heeftPrepAlert") !== 1);
+    if (keuze === "noodplan") recs = recs.filter(x => (v(x,"actiefNoodplan")||"") !== "");
+    const metAlert = (r.records||[]).filter(x => v(x,"heeftPrepAlert") === 1).length;
+    $("#surv-count").textContent = recs.length + (r.moreComing ? "+" : "") + " van " + totaal +
+      (metAlert ? " · " + metAlert + " met PrepAlert" : "");
     n.innerHTML = "";
     if (!recs.length) { n.innerHTML = leeg("Nog niemand.", "Leeg"); return; }
     recs.forEach(rec => n.appendChild(survivalRij(rec)));
@@ -2322,6 +2348,7 @@ async function laadSurvival(){
 }
 
 $("#usr-load").onclick = () => { laadGebruikers(); laadSurvival(); };
+$("#surv-filter").onchange = () => laadSurvival();
 $("#usr-filter").onchange = laadGebruikers;
 $("#usr-q").addEventListener("keydown", e => { if (e.key === "Enter") laadGebruikers(); });
 
@@ -2918,6 +2945,7 @@ $("#st-load").onclick = async (e) => {
       ["Bijgewerkt deze maand", survActief(30), ""],
       ["Noodplan actief", metNoodplan, metNoodplan ? "alert" : ""],
       ["Gem. voorraad", (Math.round(gemVoorraad*10)/10) + " d", "warm"],
+      ["Ook PrepAlert", surv.filter(r => v(r,"heeftPrepAlert") === 1).length, "warm"],
       ["Accounts (2.2+)", users.length, ""],
       ["Pro", pro.length + (users.length ? " (" + Math.round(pro.length/users.length*100) + "%)" : ""), "warm"],
       ["Geblokkeerd", geband.length, geband.length ? "alert" : ""],
@@ -4028,6 +4056,24 @@ $("#iz-laad").onclick = async (e) => {
         (actief30 / n < 0.4 ? "Meer dan de helft is afgehaakt. Een reden om terug te komen ontbreekt: denk aan een seizoenscheck, een houdbaarheidsherinnering of iets dat vanzelf verandert."
                             : "Dat is een gezonde verhouding voor een app die je niet dagelijks nodig hebt."),
         actief30 / n < 0.4 ? "hoog" : "laag");
+    }
+
+    const metAlert = surv.filter(r => v(r,"heeftPrepAlert") === 1);
+    const alertPro = surv.filter(r => v(r,"prepAlertPro") === 1);
+    if (metAlert.length){
+      const deel = Math.round(metAlert.length / Math.max(1,n) * 100);
+      zeg("Wie beide apps heeft",
+        metAlert.length + " van de " + n + " mensen (" + deel + "%) hebben ook PrepAlert draaien, waarvan " +
+        alertPro.length + " met Pro. " +
+        (deel > 30
+          ? "Dat is een flinke groep. Die mensen hebben zelf al gekozen voor het samenspel tussen de twee apps — geef ze iets terug en je hebt meteen je trouwste gebruikers te pakken."
+          : "Nog een kleine groep. De koppeling tussen de apps is blijkbaar niet zichtbaar genoeg; wie PrepperApp heeft weet vaak niet dat PrepAlert bestaat."),
+        deel > 30 ? "midden" : "hoog");
+    } else if (surv.length) {
+      zeg("De combinatie is nog niet meetbaar",
+        "PrepperApp en PrepAlert delen op het toestel wel gegevens, maar in CloudKit weten ze niets van elkaar. " +
+        "Met de drie extra velden uit de 2.3-ronde wordt zichtbaar wie beide apps gebruikt — zonder dat er iets " +
+        "nieuws over iemand verzameld wordt.", "midden");
     }
 
     if (chats.length) zeg("Mensen chatten wel degelijk",
