@@ -392,7 +392,24 @@ label.f>span.hint{font-weight:400;font-size:.74rem;color:#6B7486}
           </label>
           <button class="btn narrow" id="forum-load">Laden</button>
         </div>
+        <div class="toolbar" style="margin-top:.6rem">
+          <label class="f narrow" style="flex:1 1 9rem">Periode
+            <select id="forum-periode">
+              <option value="0">alles</option>
+              <option value="1">laatste 24 uur</option>
+              <option value="7">laatste week</option>
+              <option value="30">laatste maand</option>
+            </select>
+          </label>
+          <label class="f narrow" style="flex:1 1 9rem">Volgorde
+            <select id="forum-volgorde">
+              <option value="nieuw">nieuwste eerst</option>
+              <option value="oud">oudste eerst</option>
+            </select>
+          </label>
+        </div>
         <label class="switch" style="margin-top:.6rem"><input type="checkbox" id="forum-verdacht"> alleen berichten waar het woordfilter op aanslaat</label>
+        <div id="forum-zoekhint" style="font-size:.78rem;color:var(--muted);margin-top:.4rem"></div>
       </div>
       <div class="card-b tight kies" id="forum-list"><div class="empty">Kies een soort en druk op laden.</div></div>
       <div class="card-b" id="forum-more" style="display:none"><button class="btn" id="forum-more-btn" style="width:100%">Meer laden</button></div>
@@ -467,6 +484,31 @@ label.f>span.hint{font-weight:400;font-size:.74rem;color:#6B7486}
           <button class="btn" id="tg-test">Schrijfrechten testen</button>
         </div>
         <div id="tg-uitslag" style="font-size:.88rem"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-h"><h2>Prullenbak</h2><span style="flex:1"></span>
+        <span class="sub" id="pb-aantal"></span>
+        <button class="btn sm" id="pb-leeg">Leegmaken</button>
+      </div>
+      <div class="card-b" style="font-size:.84rem;color:var(--muted)">
+        CloudKit kent geen ongedaan maken. Daarom bewaart deze pagina een kopie van alles wat je hier
+        weggooit, in je eigen browser. Terugzetten kan zolang de kopie er staat — behalve foto's,
+        die zijn na verwijderen echt weg.
+      </div>
+      <div class="card-b tight" id="pb-lijst"><div class="empty">Nog niets verwijderd.</div></div>
+    </div>
+
+    <div class="card">
+      <div class="card-h"><h2>Back-up</h2></div>
+      <div class="card-b" style="display:flex;flex-direction:column;gap:.7rem">
+        <p style="margin:0;font-size:.88rem;color:var(--ink-dim)">
+          Zet alles wat in de publieke database staat in één JSON-bestand. Handig voordat je iets
+          ingrijpends doet, en als losse kopie buiten Apple om.
+        </p>
+        <div><button class="btn" id="bk-maak">Alles exporteren</button></div>
+        <div id="bk-status" style="font-size:.85rem;color:var(--muted)"></div>
       </div>
     </div>
 
@@ -868,7 +910,7 @@ label.f>span.hint{font-weight:400;font-size:.74rem;color:#6B7486}
    ===================================================================== */
 
 const CONTAINER = "iCloud.com.stuut.PrepperApp";
-const BUILD = 13;
+const BUILD = 14;
 const LS = { token: "pa.token", env: "pa.env" };
 
 /* ---------------------------------------------------------------------
@@ -967,6 +1009,14 @@ const SCHEMA = {
 };
 
 /* Postsoorten waarop "verbergen" zinvol is. */
+/* Velden met een SEARCHABLE-index: hierop kan CloudKit wél op woorden zoeken.
+   Overal elders kunnen we alleen filteren in wat al geladen is. */
+const ZOEKVELD = {
+  PlaatsAlert:    ["beschrijving", "stad", "land", "type"],
+  PublicSafeSpot: ["naam", "beschrijving", "scenario", "type"],
+  SurvivalStatus: ["naam", "stad", "land", "actiefNoodplan"],
+};
+
 const VERBERGBAAR = ["OutdoorPost","ErvaringPost","BuurtPost","ForumReactie","TrailConditie","PlaatsAlert","PublicSafeSpot","WaterBron"];
 
 /* postType uit MisbruikMelding → recordtype */
@@ -1328,6 +1378,17 @@ async function patch(recordName, velden){
   return saveRecord({ recordName, recordType: huidig.recordType, recordChangeTag: huidig.recordChangeTag, fields });
 }
 
+/* Levert de downloadlink van de eerste ASSET in een record, of null. */
+function fotoURL(rec){
+  const f = rec && rec.fields;
+  if (!f) return null;
+  for (const k of Object.keys(f)){
+    const w = f[k].value;
+    if (w && typeof w === "object" && w.downloadURL) return w.downloadURL;
+  }
+  return null;
+}
+
 /* Waarde uit een CloudKit-veld halen in gewone JS. */
 function v(rec, naam){
   const f = rec && rec.fields && rec.fields[naam];
@@ -1408,9 +1469,112 @@ const Acties = {
   },
 
   async verwijder(recordName){
+    /* Eerst een kopie maken. CloudKit kent geen ongedaan maken, dus dit is
+       het enige vangnet dat er is. */
+    try {
+      const rec = await fetchRecord(recordName);
+      if (rec) Prullenbak.bewaar(rec);
+    } catch(e){ /* al weg, of geen leesrecht — dan maar zonder kopie */ }
     await deleteRecord(recordName);
-    toast("Verwijderd.", "ok");
+    toast("Verwijderd. Er staat een kopie in de prullenbak bij Toegang.", "ok");
   },
+};
+
+/* =====================================================================
+   Prullenbak — lokale kopie van alles wat je weggooit
+   ===================================================================== */
+const Prullenbak = {
+  sleutel: "pa.prullenbak",
+
+  alles(){ try { return JSON.parse(localStorage.getItem(this.sleutel) || "[]"); } catch(e){ return []; } },
+
+  bewaar(rec){
+    const lijst = this.alles();
+    lijst.unshift({
+      recordName: rec.recordName,
+      recordType: rec.recordType,
+      weg: Date.now(),
+      door: moderatorNaam(),
+      velden: rec.fields || {},
+    });
+    /* niet ongelimiteerd laten groeien — localStorage is klein */
+    let uit = lijst.slice(0, 100);
+    while (JSON.stringify(uit).length > 900000 && uit.length > 1) uit = uit.slice(0, uit.length - 1);
+    try { localStorage.setItem(this.sleutel, JSON.stringify(uit)); } catch(e){}
+  },
+
+  vergeet(recordName){
+    localStorage.setItem(this.sleutel, JSON.stringify(this.alles().filter(x => x.recordName !== recordName)));
+  },
+
+  leeg(){ localStorage.removeItem(this.sleutel); },
+
+  async herstel(item){
+    const fields = {};
+    Object.keys(item.velden).forEach(k => {
+      const w = item.velden[k].value;
+      if (w && typeof w === "object" && w.downloadURL) return;   /* foto's kunnen niet terug */
+      fields[k] = { value: w };
+    });
+    await saveRecord({ recordName: item.recordName, recordType: item.recordType, fields });
+    this.vergeet(item.recordName);
+  },
+};
+
+function laadPrullenbak(){
+  const lijst = Prullenbak.alles();
+  $("#pb-aantal").textContent = lijst.length ? lijst.length + " bewaard" : "";
+  const n = $("#pb-lijst"); n.innerHTML = "";
+  if (!lijst.length){ n.innerHTML = leeg("Nog niets verwijderd."); return; }
+  lijst.forEach(item => {
+    const def = SCHEMA[item.recordType] || {};
+    const titel = def.titel && item.velden[def.titel] ? item.velden[def.titel].value : "";
+    const tekst = def.tekst && item.velden[def.tekst] ? item.velden[def.tekst].value : "";
+    const r = el("div","row"); const body = el("div","body");
+    body.appendChild(el("div","title", esc(titel || knip(tekst,60) || def.label || item.recordType)));
+    body.appendChild(el("div","meta",
+      '<span class="mono">' + esc(item.recordName) + "</span>" +
+      "<span>" + esc(fmtGeleden(item.weg)) + "</span>" +
+      "<span>door " + esc(item.door || "onbekend") + "</span>"));
+    const acts = el("div","acts");
+    const b1 = el("button","btn sm ok","Terugzetten");
+    b1.onclick = () => bevestig("Terugzetten?",
+      "Het record komt terug met dezelfde naam. Een eventuele foto komt niet terug — die is bij CloudKit weg.",
+      "Terugzetten", async () => { await Prullenbak.herstel(item); toast("Teruggezet.","ok"); laadPrullenbak(); });
+    const b2 = el("button","btn sm","Kopie tonen");
+    b2.onclick = () => toonRecord({ recordName:item.recordName, recordType:item.recordType, fields:item.velden }, item.recordType);
+    const b3 = el("button","btn sm danger","Definitief vergeten");
+    b3.onclick = () => { Prullenbak.vergeet(item.recordName); laadPrullenbak(); };
+    acts.appendChild(b1); acts.appendChild(b2); acts.appendChild(b3);
+    body.appendChild(acts); r.appendChild(body); n.appendChild(r);
+  });
+}
+$("#pb-leeg").onclick = () => bevestig("Prullenbak leegmaken?",
+  "De kopieën verdwijnen uit deze browser. De records zelf zijn al weg bij CloudKit — terugzetten kan daarna niet meer.",
+  "Leegmaken", async () => { Prullenbak.leeg(); laadPrullenbak(); }, true);
+
+/* --- volledige back-up --- */
+$("#bk-maak").onclick = async (e) => {
+  const b = e.target, st = $("#bk-status");
+  b.disabled = true;
+  const uit = { container: CONTAINER, omgeving: State.env, gemaakt: new Date().toISOString(), door: moderatorNaam(), types: {} };
+  const types = Object.keys(SCHEMA);
+  let totaal = 0;
+  for (let i = 0; i < types.length; i++){
+    const t = types[i];
+    st.textContent = "ophalen " + (i+1) + "/" + types.length + " · " + ((SCHEMA[t]||{}).label || t);
+    try {
+      const recs = await haalAlles(t, { max: 5000 });
+      uit.types[t] = recs; totaal += recs.length;
+    } catch(err){ uit.types[t] = { fout: String(err.message||err) }; }
+  }
+  const blob = new Blob([JSON.stringify(uit, null, 1)], { type:"application/json" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "prepperapp-backup-" + State.env + "-" + new Date().toISOString().slice(0,10) + ".json";
+  a.click(); setTimeout(()=>URL.revokeObjectURL(a.href), 3000);
+  st.textContent = totaal + " records geëxporteerd over " + types.length + " recordtypes.";
+  b.disabled = false;
 };
 
 /* Heel simpele cache, zodat tabs wisselen niet elke keer opnieuw laadt. */
@@ -1463,6 +1627,18 @@ function rij(rec, type, extraActs){
   body.appendChild(meta);
 
   if (titel && tekst) body.appendChild(el("div", "text", esc(knip(tekst, 260))));
+
+  /* Een gemelde post gaat vaak juist over de foto. Die moet je dus zien. */
+  const foto = fotoURL(rec);
+  if (foto) {
+    const w = el("div"); w.style.cssText = "margin-top:.5rem";
+    const a = document.createElement("a");
+    a.href = foto; a.target = "_blank"; a.rel = "noopener";
+    const img = new Image();
+    img.src = foto; img.alt = "foto bij dit bericht"; img.loading = "lazy";
+    img.style.cssText = "max-width:min(100%,17rem);max-height:11rem;border-radius:8px;border:1px solid var(--edge);display:block";
+    a.appendChild(img); w.appendChild(a); body.appendChild(w);
+  }
 
   const acts = el("div", "acts");
   const mk = (label, cls, fn) => { const b = el("button", "btn sm " + (cls||""), esc(label)); b.onclick = fn; acts.appendChild(b); return b; };
@@ -1787,9 +1963,13 @@ function meldingRij(rec, type){
       const t = (d.titel && v(doelRec,d.titel)) || "";
       const tx = (d.tekst && v(doelRec,d.tekst)) || "";
       const au = (d.auteur && v(doelRec,d.auteur)) || "";
+      const f = fotoURL(doelRec);
       doel.innerHTML = '<b>' + esc(t || (SCHEMA[doelType]||{}).label || doelType) + "</b>" +
         (tx ? "<br>" + esc(knip(tx, 220)) : "") +
-        (au ? '<br><span class="mono" style="color:var(--muted);font-size:.8rem">door ' + esc(codeWeergave(au)) + "</span>" : "");
+        (au ? '<br><span class="mono" style="color:var(--muted);font-size:.8rem">door ' + esc(codeWeergave(au)) + "</span>" : "") +
+        (f ? '<br><a href="' + esc(f) + '" target="_blank" rel="noopener">' +
+             '<img src="' + esc(f) + '" alt="gemelde foto" loading="lazy" ' +
+             'style="margin-top:.5rem;max-width:min(100%,17rem);max-height:12rem;border-radius:8px;border:1px solid var(--edge);display:block"></a>' : "");
       mk("Post bekijken","",() => toonRecord(doelRec, doelType));
       if (VERBERGBAAR.includes(doelType)) mk("Verberg post","",() => vraagVerberg(postID, doelType));
       if (au) mk("Dossier auteur","",() => { dossierData = null; opendossier(au); });
@@ -1853,18 +2033,39 @@ async function laadForumTab(eerste){
 
   const def = SCHEMA[type] || { f:{} };
   const filters = [];
+  const hint = $("#forum-zoekhint");
+  let echtGezocht = false;
+
   if (q) {
-    /* Een code van 8 tekens is bijna zeker een gebruikerscode; anders zoeken
-       we op het begin van de titel, want CloudKit kan geen substring zoeken. */
-    if (/^[A-Za-z0-9]{8}$/.test(q.replace(/-/g,"")) && def.auteur && def.f[def.auteur] && def.f[def.auteur][1])
-      filters.push({ fieldName: def.auteur, comparator:"EQUALS", fieldValue:{ value: q.replace(/-/g,"").toUpperCase() } });
+    const code = q.replace(/-/g,"").toUpperCase();
+    if (/^[A-Za-z0-9]{8}$/.test(code) && def.auteur && def.f[def.auteur] && (def.f[def.auteur][1]||"").includes("q")) {
+      filters.push({ fieldName: def.auteur, comparator:"EQUALS", fieldValue:{ value: code } });
+      echtGezocht = true;
+      hint.textContent = "Gezocht op gebruikerscode in de hele database.";
+    } else if ((ZOEKVELD[type] || []).length) {
+      /* Deze velden hebben een SEARCHABLE-index: hierop kan CloudKit wél op
+         woorden zoeken, en dus in álles in plaats van in wat toevallig geladen is. */
+      filters.push({ fieldName: ZOEKVELD[type][0], comparator:"CONTAINS_ALL_TOKENS", fieldValue:{ value: q } });
+      echtGezocht = true;
+      hint.textContent = "Gezocht op woorden in " + ZOEKVELD[type][0] + ", in de hele database.";
+    } else {
+      hint.textContent = "Dit recordtype heeft geen zoekindex, dus ik filter alleen wat geladen is. " +
+        "Wil je hier echt op kunnen zoeken, dan moet er een SEARCHABLE-index bij in het schema.";
+    }
+  } else hint.textContent = "";
+
+  const periode = parseInt($("#forum-periode").value, 10);
+  if (periode && def.datum && (def.f[def.datum]||[])[1] && (def.f[def.datum][1]||"").includes("q")){
+    filters.push({ fieldName: def.datum, comparator:"GREATER_THAN",
+                   fieldValue:{ value: Date.now() - periode*864e5 } });
   }
+  const oplopend = $("#forum-volgorde").value === "oud";
 
   try {
-    const r = await query(type, { limit: 50, filters, continuationMarker: forumCont });
+    const r = await query(type, { limit: 50, filters, asc: oplopend, continuationMarker: forumCont });
     if (!forumCont) n.innerHTML = "";
     let recs = r.records || [];
-    if (q && !filters.length) {
+    if (q && !echtGezocht) {
       const naald = q.toLowerCase();
       recs = recs.filter(rec => JSON.stringify(rec.fields).toLowerCase().includes(naald));
     }
@@ -1883,6 +2084,8 @@ $("#forum-type").onchange = () => { forumReset(); laadForumTab(); };
 $("#forum-more-btn").onclick = () => laadForumTab();
 $("#forum-q").addEventListener("keydown", e => { if (e.key === "Enter") { forumReset(); laadForumTab(); } });
 $("#forum-verdacht").onchange = () => { forumReset(); laadForumTab(); };
+$("#forum-periode").onchange = () => { forumReset(); laadForumTab(); };
+$("#forum-volgorde").onchange = () => { forumReset(); laadForumTab(); };
 
 /* =====================================================================
    Gebruikers
@@ -2799,10 +3002,12 @@ const STANDAARD_WOORDEN = [
   "bitcoin","crypto","investering","gegarandeerd","gratis geld",
   "whatsapp +","wa.me/","t.me/","bit.ly","tinyurl",
 ];
-let _woordenCache = null, _woordenBron = null;
+/* let op: localStorage.getItem geeft null als er niets staat, dus null mag hier
+   geen "nog niet geladen" betekenen — vandaar false als beginwaarde. */
+let _woordenCache = null, _woordenBron = false;
 function filterWoorden(){
   const bron = localStorage.getItem("pa.woorden");
-  if (bron !== _woordenBron){ _woordenBron = bron;
+  if (bron !== _woordenBron || _woordenCache === null){ _woordenBron = bron;
     _woordenCache = (bron === null ? STANDAARD_WOORDEN.join("\n") : bron)
       .split(/[\n,;]/).map(w => w.trim().toLowerCase()).filter(Boolean);
   }
@@ -2863,7 +3068,7 @@ $("#balk-verberg").onclick = () => bulk("Verbergen",
   async ({rec, type}) => { if (VERBERGBAAR.includes(type)) await Acties.verberg(rec.recordName, type, "meerdere tegelijk"); });
 $("#balk-verwijder").onclick = () => bulk("Verwijderen",
   "{n} records worden definitief uit CloudKit gegooid. Dit kan niet terug.",
-  async ({rec}) => { await deleteRecord(rec.recordName); }, true);
+  async ({rec}) => { await Acties.verwijder(rec.recordName); }, true);
 $("#balk-blokkeer").onclick = () => bulk("Auteurs blokkeren",
   "De auteurs van {n} geselecteerde items worden geblokkeerd. Dezelfde persoon wordt maar één keer geblokkeerd.",
   async ({rec, type}) => {
@@ -2876,6 +3081,7 @@ $("#balk-blokkeer").onclick = () => bulk("Auteurs blokkeren",
    Toegang — jezelf en anderen
    ===================================================================== */
 function laadToegang(){
+  laadPrullenbak();
   const dl = $("#tg-kv"); dl.innerHTML = "";
   const add = (k, w) => { dl.appendChild(el("dt","",esc(k))); dl.appendChild(el("dd","",w)); };
   const u = State.user || {};
