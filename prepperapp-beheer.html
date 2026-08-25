@@ -23,6 +23,10 @@
   --amber:#F0B429; --amber-dim:#B8891C; --amber-soft:#2E2510;
   --red:#E4574C; --red-soft:#331917; --green:#4FB37A; --green-soft:#12291C;
   --blue:#5B9DD9; --blue-soft:#12212E; --violet:#9B7BD4;
+  /* Signaalkleuren staan bewust los van het goud. Goud is de huisstijl en wijst
+     aan waar je bent; deze kleuren zeggen iets over de toestand van een record. */
+  --waarschuw:#E08C33; --waarschuw-soft:#2E1F0E;
+  --pro:#B48CE0; --pro-soft:#241B33;
   --r:10px; --shadow:0 1px 0 rgba(255,255,255,.03) inset, 0 6px 24px rgba(0,0,0,.35);
 }
 *{box-sizing:border-box}
@@ -107,7 +111,8 @@ main{max-width:72rem;margin:0 auto;padding:1.1rem .9rem 5rem}
 .row{display:flex;gap:.6rem;align-items:flex-start;padding:.8rem .9rem;border-bottom:1px solid var(--edge-soft)}
 .row:last-child{border-bottom:none}
 .row .body{flex:1;min-width:0}
-.title{font-weight:600;font-size:.95rem;line-height:1.35;overflow-wrap:anywhere}
+.title{font-weight:600;font-size:.95rem;line-height:1.35;overflow-wrap:anywhere;display:flex;flex-wrap:wrap;align-items:center;gap:.4rem}
+.title .naam{font-family:"Bricolage Grotesque","Public Sans",sans-serif;font-weight:700;font-size:1.02rem;letter-spacing:-.01em}
 .meta{color:var(--muted);font-size:.78rem;margin-top:.15rem;display:flex;flex-wrap:wrap;gap:.15rem .6rem;align-items:center}
 .text{margin-top:.4rem;color:var(--ink-dim);font-size:.88rem;overflow-wrap:anywhere;white-space:pre-wrap}
 .acts{display:flex;flex-wrap:wrap;gap:.35rem;margin-top:.6rem}
@@ -115,7 +120,9 @@ main{max-width:72rem;margin:0 auto;padding:1.1rem .9rem 5rem}
 .pill{display:inline-flex;align-items:center;gap:.3rem;padding:.08rem .45rem;border-radius:999px;font-size:.7rem;font-weight:600;letter-spacing:.02em;border:1px solid var(--edge);color:var(--muted);white-space:nowrap}
 .pill.red{color:var(--red);border-color:var(--red);background:var(--red-soft)}
 .pill.green{color:var(--green);border-color:var(--green);background:var(--green-soft)}
-.pill.amber{color:var(--amber);border-color:var(--amber-dim);background:var(--amber-soft)}
+.pill.amber{color:var(--waarschuw);border-color:var(--waarschuw);background:var(--waarschuw-soft)}
+.pill.pro{color:var(--pro);border-color:var(--pro);background:var(--pro-soft)}
+.pill.waarschuw{color:var(--waarschuw);border-color:var(--waarschuw);background:var(--waarschuw-soft)}
 .pill.blue{color:var(--blue);border-color:var(--blue);background:var(--blue-soft)}
 .pill.plain{color:var(--ink-dim)}
 
@@ -130,6 +137,11 @@ main{max-width:72rem;margin:0 auto;padding:1.1rem .9rem 5rem}
 .btn.ok{color:var(--green);border-color:#204532}
 .btn.ok:hover{background:var(--green-soft);border-color:var(--green)}
 .btn.sm{padding:.24rem .55rem;font-size:.76rem}
+.btn.stil{background:transparent;border-color:transparent;color:var(--muted)}
+.btn.stil:hover{border-color:var(--edge);color:var(--ink-dim)}
+.meer-menu{display:flex;flex-direction:column;gap:.4rem}
+.meer-menu button{width:100%;text-align:left;padding:.6rem .8rem}
+.meer-menu .scheiding{border-top:1px solid var(--edge-soft);margin:.4rem 0 0;padding-top:.6rem;font-size:.75rem;color:var(--muted)}
 
 input[type=text],input[type=number],input[type=search],input[type=datetime-local],select,textarea{
   width:100%;background:var(--ground);border:1px solid var(--edge);border-radius:8px;
@@ -977,7 +989,7 @@ label.f>span.hint{font-weight:400;font-size:.74rem;color:#6B7486}
    ===================================================================== */
 
 const CONTAINER = "iCloud.com.stuut.PrepperApp";
-const BUILD = 17;
+const BUILD = 18;
 const LS = { token: "pa.token", env: "pa.env" };
 
 /* ---------------------------------------------------------------------
@@ -1713,6 +1725,41 @@ function leeg(tekst, kop){
 }
 function bezig(node){ node.innerHTML = '<div class="empty"><span class="spin"></span> Laden…</div>'; }
 
+/** Maakt een knoppenrij: de eerste paar zichtbaar, de rest achter een menuutje.
+ *  Zware handelingen komen nooit vooraan te staan. */
+function knopRij(keuzes, naam, zichtbaar){
+  const acts = el("div","acts");
+  const licht = keuzes.filter(k => !k.zwaar);
+  const zwaar = keuzes.filter(k => k.zwaar);
+  const max = zichtbaar || 3;
+  const voor = licht.slice(0, max);
+  const rest = licht.slice(max).concat(zwaar);
+
+  voor.forEach(k => {
+    const b = el("button","btn sm " + (k.cls||""), esc(k.label));
+    b.onclick = () => k.on(b);
+    acts.appendChild(b);
+  });
+  if (rest.length){
+    const b = el("button","btn sm stil","Meer …");
+    b.title = "Nog " + rest.length + " handelingen";
+    b.onclick = () => {
+      const doos = el("div","meer-menu");
+      rest.forEach((k, i) => {
+        if (k.zwaar && (i === 0 || !rest[i-1].zwaar)){
+          doos.appendChild(el("div","scheiding","Voorzichtig — dit is niet terug te draaien"));
+        }
+        const kb = el("button","btn " + (k.cls || ""), esc(k.label));
+        kb.onclick = () => { Sheet.close(); setTimeout(() => k.on(kb), 60); };
+        doos.appendChild(kb);
+      });
+      Sheet.open(knip(naam || "Handelingen", 40), doos, [{ label:"Sluiten", on: () => Sheet.close() }]);
+    };
+    acts.appendChild(b);
+  }
+  return acts;
+}
+
 /** Toont een willekeurig record als leesbare rij. */
 function rij(rec, type, extraActs){
   const def = SCHEMA[type] || { f:{} };
@@ -1760,17 +1807,19 @@ function rij(rec, type, extraActs){
     a.appendChild(img); w.appendChild(a); body.appendChild(w);
   }
 
-  const acts = el("div", "acts");
-  const mk = (label, cls, fn) => { const b = el("button", "btn sm " + (cls||""), esc(label)); b.onclick = fn; acts.appendChild(b); return b; };
-  mk("Bekijken", "", () => toonRecord(rec, type));
-  if (VERBERGBAAR.includes(type)) mk("Verbergen", "", () => vraagVerberg(rec.recordName, type));
-  if (auteur) mk("Dossier", "", () => { dossierData = null; opendossier(auteur); });
-  if (auteur) mk("Blokkeer", "danger", () => vraagBlokkeer(auteur));
-  mk("Verwijderen", "danger", () => bevestig("Definitief verwijderen?",
-      "Dit gooit het record echt weg uit CloudKit. Niet terug te draaien. Verbergen is bijna altijd de betere eerste stap.",
-      "Verwijderen", async () => { await Acties.verwijder(rec.recordName); r.remove(); }, true));
-  (extraActs||[]).forEach(a => mk(a.label, a.cls, a.on));
-  body.appendChild(acts);
+  /* Rangorde: wat je vaak doet staat er, de rest zit achter het menuutje.
+     Verwijderen hoort daar het minst opvallend te staan, niet het meest. */
+  const keuzes = [];
+  keuzes.push({ label:"Bekijken", on: () => toonRecord(rec, type) });
+  if (VERBERGBAAR.includes(type)) keuzes.push({ label:"Verbergen", on: () => vraagVerberg(rec.recordName, type) });
+  if (auteur) keuzes.push({ label:"Dossier", on: () => { dossierData = null; opendossier(auteur); } });
+  (extraActs||[]).forEach(a => keuzes.push({ label:a.label, cls:a.cls, on:a.on }));
+  if (auteur) keuzes.push({ label:"Auteur blokkeren", cls:"danger", zwaar:true, on: () => vraagBlokkeer(auteur) });
+  keuzes.push({ label:"Definitief verwijderen", cls:"danger", zwaar:true, on: () => bevestig("Definitief verwijderen?",
+      "Dit gooit het record echt weg uit CloudKit. Er komt een kopie in de prullenbak, maar een foto is dan echt weg. Verbergen is bijna altijd de betere eerste stap.",
+      "Verwijderen", async () => { await Acties.verwijder(rec.recordName); r.remove(); }, true) });
+
+  body.appendChild(knopRij(keuzes, titel || knip(tekst, 40) || type));
 
   r.appendChild(body);
   return r;
@@ -1913,40 +1962,59 @@ function vraagBlokkeer(code){
 /* =====================================================================
    Tabs
    ===================================================================== */
+/* hoofd:true staat altijd in de balk. De rest zit achter "Meer", gegroepeerd
+   op waar het over gaat — achttien even zware tabbladen was niet te doen. */
 const TABS = [
-  { id:"dashboard", label:"Overzicht", laad: laadDashboard },
-  { id:"meldingen", label:"Meldingen", laad: laadMeldingen },
-  { id:"forum",     label:"Forum",     laad: laadForumTab },
-  { id:"gebruikers",label:"Gebruikers",laad: () => { laadGebruikers(); laadSurvival(); } },
-  { id:"dossier",   label:"Dossier",   laad: laadDossierTab },
-  { id:"kaart",     label:"Kaart",     laad: laadKaartTab },
-  { id:"netwerk",   label:"Netwerk",   laad: laadNetwerkTab },
-  { id:"verborgen", label:"Verborgen", laad: laadVerborgen },
-  { id:"berichten", label:"Aankondigingen", laad: laadAankondigingen },
-  { id:"config",    label:"Instellingen", laad: laadConfig },
-  { id:"feedback",  label:"Feedback",  laad: laadFeedback },
-  { id:"stats",     label:"Statistieken", laad: laadStats },
-  { id:"inzicht",   label:"Inzichten", laad: laadInzichtTab },
-  { id:"records",   label:"Alle records", laad: laadRecordsTab },
-  { id:"logboek",   label:"Logboek",   laad: laadLogboek },
-  { id:"controle",  label:"Controle",  laad: laadControleTab },
-  { id:"toegang",   label:"Toegang",   laad: laadToegang },
-  { id:"info",      label:"Uitleg",    laad: laadInfo },
+  { id:"dashboard", label:"Overzicht", hoofd:true, groep:"Dagelijks", laad: laadDashboard },
+  { id:"meldingen", label:"Meldingen", hoofd:true, groep:"Dagelijks", laad: laadMeldingen },
+  { id:"forum",     label:"Forum",     hoofd:true, groep:"Inhoud", laad: laadForumTab },
+  { id:"gebruikers",label:"Mensen",   hoofd:true, groep:"Mensen", laad: () => { laadGebruikers(); laadSurvival(); } },
+  { id:"dossier",   label:"Dossier",   groep:"Mensen", laad: laadDossierTab },
+  { id:"kaart",     label:"Kaart",     groep:"Inhoud", laad: laadKaartTab },
+  { id:"netwerk",   label:"Netwerk",   groep:"Mensen", laad: laadNetwerkTab },
+  { id:"verborgen", label:"Verborgen", groep:"Inhoud", laad: laadVerborgen },
+  { id:"berichten", label:"Aankondigingen", groep:"De app besturen", laad: laadAankondigingen },
+  { id:"config",    label:"Instellingen", groep:"De app besturen", laad: laadConfig },
+  { id:"feedback",  label:"Feedback",  groep:"Inhoud", laad: laadFeedback },
+  { id:"stats",     label:"Cijfers",   hoofd:true, groep:"Cijfers", laad: laadStats },
+  { id:"inzicht",   label:"Inzichten", groep:"Cijfers", laad: laadInzichtTab },
+  { id:"records",   label:"Alle records", groep:"Gereedschap", laad: laadRecordsTab },
+  { id:"logboek",   label:"Logboek",   groep:"Gereedschap", laad: laadLogboek },
+  { id:"controle",  label:"Controle",  groep:"Gereedschap", laad: laadControleTab },
+  { id:"toegang",   label:"Toegang",   groep:"Gereedschap", laad: laadToegang },
+  { id:"info",      label:"Uitleg",    groep:"Gereedschap", laad: laadInfo },
 ];
 let huidigeTab = "dashboard";
 
 function bouwTabs(){
   const n = $("#tabs"); n.innerHTML = "";
-  TABS.forEach(t => {
+  const tonen = TABS.filter(t => t.hoofd || t.id === huidigeTab);
+  tonen.forEach(t => {
     const b = el("button", "tab", esc(t.label) + '<span class="badge hide" id="badge-' + t.id + '">0</span>');
     b.setAttribute("role","tab"); b.setAttribute("aria-selected", String(t.id === huidigeTab));
     b.onclick = () => gaNaar(t.id);
     n.appendChild(b);
   });
+  const meer = el("button","tab","Meer …");
+  meer.onclick = () => {
+    const doos = el("div","meer-menu");
+    const groepen = {};
+    TABS.forEach(t => { (groepen[t.groep || "Overig"] = groepen[t.groep || "Overig"] || []).push(t); });
+    Object.keys(groepen).forEach(g => {
+      doos.appendChild(el("div","scheiding", esc(g)));
+      groepen[g].forEach(t => {
+        const b = el("button","btn" + (t.id === huidigeTab ? " primary" : ""), esc(t.label));
+        b.onclick = () => { Sheet.close(); gaNaar(t.id); };
+        doos.appendChild(b);
+      });
+    });
+    Sheet.open("Waar wil je heen", doos, [{ label:"Sluiten", on: () => Sheet.close() }]);
+  };
+  n.appendChild(meer);
 }
 function gaNaar(id){
   huidigeTab = id;
-  $$(".tab").forEach((b,i) => b.setAttribute("aria-selected", String(TABS[i].id === id)));
+  bouwTabs();
   $$(".view").forEach(v => v.classList.toggle("on", v.id === "v-" + id));
   location.hash = id;
   const t = TABS.find(x => x.id === id);
@@ -2243,12 +2311,15 @@ function gebruikerRij(rec){
   const r = el("div","row");
   const body = el("div","body");
 
-  body.appendChild(el("div","title", esc(naam || codeWeergave(code))));
+  const titel = el("div","title");
+  titel.innerHTML = '<span class="naam">' + esc(naam || codeWeergave(code)) + "</span>" +
+    (banned ? '<span class="pill red">geblokkeerd</span>' : "") +
+    (pro ? '<span class="pill pro">Pro</span>' : "") +
+    (v(rec,"heeftPrepAlert") === 1 ? '<span class="pill blue">+ PrepAlert</span>' : "");
+  body.appendChild(titel);
   const meta = el("div","meta");
   meta.innerHTML =
     '<span class="mono">' + esc(codeWeergave(code)) + "</span>" +
-    (banned ? '<span class="pill red">geblokkeerd</span>' : "") +
-    (pro ? '<span class="pill amber">Pro</span>' : "") +
     "<span>" + (v(rec,"forumPostTelling")||0) + " posts</span>" +
     "<span>" + (v(rec,"reactieTelling")||0) + " reacties</span>" +
     "<span>sinds " + esc(fmtGeleden(v(rec,"aangemeldOp"))) + "</span>" +
@@ -2257,17 +2328,18 @@ function gebruikerRij(rec){
   if (banned && v(rec,"banReden")) body.appendChild(el("div","text", "Reden: " + esc(v(rec,"banReden"))));
   else if (v(rec,"profielBeschrijving")) body.appendChild(el("div","text", esc(knip(v(rec,"profielBeschrijving"),180))));
 
-  const acts = el("div","acts");
-  const mk = (label, cls, fn) => { const b = el("button","btn sm "+(cls||""), esc(label)); b.onclick = fn; acts.appendChild(b); return b; };
-  mk("Dossier","",() => { dossierData = null; opendossier(code); });
-  mk("Velden","",() => toonRecord(rec,"GebruikersAccount"));
-  if (banned) mk("Deblokkeren","ok",() => bevestig("Blokkade opheffen?","Deze gebruiker mag daarna weer plaatsen en is weer zichtbaar in de feeds.","Opheffen",
-      async () => { await Acties.deblokkeer(rec.recordName); laadGebruikers(); }));
-  else mk("Blokkeren","danger",() => vraagBlokkeer(code));
-  mk(pro ? "Pro intrekken" : "Pro geven","",() => bevestig(pro ? "Pro intrekken?" : "Pro geven?",
+  const keuzes = [
+    { label:"Dossier", on: () => { dossierData = null; opendossier(code); } },
+    { label:"Velden",  on: () => toonRecord(rec,"GebruikersAccount") },
+  ];
+  if (banned) keuzes.push({ label:"Deblokkeren", cls:"ok", on: () => bevestig("Blokkade opheffen?",
+      "Deze gebruiker mag daarna weer plaatsen en is weer zichtbaar in de feeds.","Opheffen",
+      async () => { await Acties.deblokkeer(rec.recordName); laadGebruikers(); }) });
+  keuzes.push({ label: pro ? "Pro intrekken" : "Pro geven", on: () => bevestig(pro ? "Pro intrekken?" : "Pro geven?",
       "Let op: dit zet alleen een vlaggetje in CloudKit. Pro wordt in de app bepaald door de aankoop in de App Store, en de app schrijft dat vlaggetje bij elke start terug. Het is dus een aantekening, geen sleutel.",
-      pro ? "Intrekken" : "Geven", async () => { await Acties.setPro(rec.recordName, !pro); laadGebruikers(); }));
-  body.appendChild(acts);
+      pro ? "Intrekken" : "Geven", async () => { await Acties.setPro(rec.recordName, !pro); laadGebruikers(); }) });
+  if (!banned) keuzes.push({ label:"Blokkeren", cls:"danger", zwaar:true, on: () => vraagBlokkeer(code) });
+  body.appendChild(knopRij(keuzes, naam || codeWeergave(code)));
 
   r.appendChild(body);
   return r;
@@ -2297,7 +2369,14 @@ async function laadGebruikers(){
 function survivalRij(rec){
   const code = v(rec,"uitnodigingsCode") || "";
   const r = el("div","row"); const body = el("div","body");
-  body.appendChild(el("div","title", esc(v(rec,"naam") || codeWeergave(code) || "Naamloos")));
+  /* Naam en toestand horen bij elkaar op één regel: dat is wat je scant. */
+  const titel = el("div","title");
+  titel.innerHTML = '<span class="naam">' + esc(v(rec,"naam") || codeWeergave(code) || "Naamloos") + "</span>" +
+    (v(rec,"heeftPrepAlert") === 1
+      ? '<span class="pill blue">+ PrepAlert' + (v(rec,"prepAlertPro") === 1 ? " Pro" : "") + "</span>" : "") +
+    (v(rec,"actiefNoodplan") ? '<span class="pill red">noodplan actief</span>' : "");
+  body.appendChild(titel);
+
   const plaats = [v(rec,"stad"), v(rec,"land")].filter(Boolean).join(", ");
   const dag = n => (n == null ? "—" : (Math.round(n*10)/10) + " d");
   const meta = el("div","meta");
@@ -2308,22 +2387,16 @@ function survivalRij(rec){
     "<span>eten " + esc(dag(v(rec,"voedselDagen"))) + "</span>" +
     "<span>water " + esc(dag(v(rec,"waterDagen"))) + "</span>" +
     "<span>" + (v(rec,"aantalItems")||0) + " items</span>" +
-    (v(rec,"heeftPrepAlert") === 1
-      ? '<span class="pill blue">PrepAlert' + (v(rec,"prepAlertPro") === 1 ? " Pro" : "") + "</span>"
-      : "") +
     "<span>bijgewerkt " + esc(fmtGeleden(v(rec,"bijgewerktOp"))) + "</span>";
   body.appendChild(meta);
   if (v(rec,"actiefNoodplan")) body.appendChild(el("div","text",
-    '<span class="pill red">noodplan actief</span> ' + esc(v(rec,"actiefNoodplan")) + " — " + esc(fmtDate(v(rec,"noodplanTijd")))));
-  const acts = el("div","acts");
-  if (code) { const b0 = el("button","btn sm","Dossier"); b0.onclick = () => { dossierData = null; opendossier(code); }; acts.appendChild(b0); }
-  const b1 = el("button","btn sm","Velden"); b1.onclick = () => toonRecord(rec,"SurvivalStatus");
-  acts.appendChild(b1);
-  if (code) {
-    const b2 = el("button","btn sm danger","Blokkeren"); b2.onclick = () => vraagBlokkeer(code);
-    acts.appendChild(b2);
-  }
-  body.appendChild(acts); r.appendChild(body);
+    esc(v(rec,"actiefNoodplan")) + " — " + esc(fmtDate(v(rec,"noodplanTijd")))));
+  const keuzes = [];
+  if (code) keuzes.push({ label:"Dossier", on: () => { dossierData = null; opendossier(code); } });
+  keuzes.push({ label:"Velden", on: () => toonRecord(rec,"SurvivalStatus") });
+  if (code) keuzes.push({ label:"Blokkeren", cls:"danger", zwaar:true, on: () => vraagBlokkeer(code) });
+  body.appendChild(knopRij(keuzes, v(rec,"naam") || codeWeergave(code)));
+  r.appendChild(body);
   return r;
 }
 
@@ -2514,14 +2587,15 @@ function tekenDossier(){
 
   const totaal = secties.reduce((a,s) => a + s.recs.length, 0);
   const kh = el("div","card-h");
-  kh.innerHTML = "<h2>" + esc(naam || codeWeergave(code)) + "</h2>";
+  kh.innerHTML = "<h2>" + esc(naam || codeWeergave(code)) + "</h2>" +
+    (banned ? '<span class="pill red">geblokkeerd</span>' : "") +
+    (pro ? '<span class="pill pro">Pro</span>' : "") +
+    (surv && v(surv,"heeftPrepAlert") === 1 ? '<span class="pill blue">+ PrepAlert</span>' : "");
   kop.appendChild(kh);
   const kb = el("div","card-b"); kb.style.cssText = "display:flex;flex-direction:column;gap:.7rem";
   const pills = el("div","meta");
   pills.innerHTML =
     '<span class="mono">' + esc(codeWeergave(code)) + "</span>" +
-    (banned ? '<span class="pill red">geblokkeerd</span>' : "") +
-    (pro ? '<span class="pill amber">Pro</span>' : "") +
     (account ? '<span class="pill green">heeft account</span>' : '<span class="pill plain">nog geen account (pre-2.2)</span>') +
     (plaats ? "<span>" + esc(plaats) + "</span>" : "") +
     "<span>" + totaal + " records</span>" +
@@ -2738,7 +2812,7 @@ async function laadFeedback(){
       const row = el("div","row"); const body = el("div","body");
       body.appendChild(el("div","title", "★".repeat(ster) + "☆".repeat(Math.max(0,5-ster))));
       body.appendChild(el("div","meta",
-        (gelezen ? '<span class="pill plain">gelezen</span>' : '<span class="pill amber">nieuw</span>') +
+        (gelezen ? '<span class="pill plain">gelezen</span>' : '<span class="pill waarschuw">nieuw</span>') +
         '<span class="mono">' + esc(codeWeergave(v(rec,"gebruikerCode"))) + "</span>" +
         (v(rec,"appVersie") ? '<span class="mono">v' + esc(v(rec,"appVersie")) + "</span>" : "") +
         "<span>" + esc(fmtGeleden(v(rec,"ingediendOp"))) + "</span>"));
