@@ -799,11 +799,12 @@ label.f>span.hint{font-weight:400;font-size:.74rem;color:#6B7486}
 
     <div class="grid c2">
       <div class="card">
-        <div class="card-h"><h2>Nieuwe gebruikers per week</h2></div>
+        <div class="card-h"><h2>Nieuw per week</h2><span style="flex:1"></span>
+          <span class="sub">eerste keer status gedeeld</span></div>
         <div class="card-b" id="st-groei"><div class="empty">Nog niet geteld.</div></div>
       </div>
       <div class="card">
-        <div class="card-h"><h2>Laatst actief</h2><span style="flex:1"></span><span class="sub">app geopend</span></div>
+        <div class="card-h"><h2>Laatst actief</h2><span style="flex:1"></span><span class="sub">status bijgewerkt</span></div>
         <div class="card-b" id="st-actief"><div class="empty">Nog niet geteld.</div></div>
       </div>
     </div>
@@ -814,7 +815,8 @@ label.f>span.hint{font-weight:400;font-size:.74rem;color:#6B7486}
         <div class="card-b" id="st-versies"><div class="empty">Nog niet geteld.</div></div>
       </div>
       <div class="card">
-        <div class="card-h"><h2>Toestellen</h2></div>
+        <div class="card-h"><h2>Toestellen</h2><span style="flex:1"></span>
+          <span class="sub">alleen van wie een account heeft</span></div>
         <div class="card-b" id="st-toestellen"><div class="empty">Nog niet geteld.</div></div>
       </div>
     </div>
@@ -827,7 +829,7 @@ label.f>span.hint{font-weight:400;font-size:.74rem;color:#6B7486}
     </div>
 
     <div class="card">
-      <div class="card-h"><h2>Meest actieve leden</h2><span style="flex:1"></span><span class="sub">posts + reacties</span></div>
+      <div class="card-h"><h2>Meest actieve leden</h2><span style="flex:1"></span><span class="sub">posts + reacties · alleen van wie een account heeft</span></div>
       <div class="card-b tight" id="st-top"><div class="empty">Nog niet geteld.</div></div>
     </div>
 
@@ -922,7 +924,7 @@ label.f>span.hint{font-weight:400;font-size:.74rem;color:#6B7486}
     </div>
 
     <div class="card">
-      <div class="card-h"><h2>Blijven mensen hangen</h2><span style="flex:1"></span><span class="sub">per week van aanmelden</span></div>
+      <div class="card-h"><h2>Wanneer waren mensen voor het laatst actief</h2><span style="flex:1"></span><span class="sub">per week</span></div>
       <div class="card-b" id="iz-retentie"><div class="empty">Nog niet geanalyseerd.</div></div>
     </div>
   </section>
@@ -1047,7 +1049,7 @@ label.f>span.hint{font-weight:400;font-size:.74rem;color:#6B7486}
    ===================================================================== */
 
 const CONTAINER = "iCloud.com.stuut.PrepperApp";
-const BUILD = 26;
+const BUILD = 27;
 const LS = { token: "pa.token", token2: "pa.token2", env: "pa.env" };
 const CONTAINER_ALERT = "iCloud.com.stuut.PrepAlert";
 
@@ -2086,6 +2088,14 @@ function gaNaar(id){
   if (t) t.laad();
 }
 function herlaadHuidigeTab(){ const t = TABS.find(x => x.id === huidigeTab); if (t) { Cache.wis(); t.laad(); } }
+
+/* De terugknop van de browser en een geplakte #link moeten ook binnen de pagina
+   werken. Zonder dit deed "terug" niets zichtbaars: het adres veranderde wel,
+   het scherm niet. */
+window.addEventListener("hashchange", () => {
+  const id = (location.hash || "").replace("#","");
+  if (id && id !== huidigeTab && TABS.some(t => t.id === id)) gaNaar(id);
+});
 function zetBadge(tabId, n){
   const b = $("#badge-" + tabId); if (!b) return;
   if (n > 0) { b.textContent = n > 99 ? "99+" : n; b.classList.remove("hide"); } else b.classList.add("hide");
@@ -3254,29 +3264,36 @@ $("#st-load").onclick = async (e) => {
     const pro = users.filter(u => v(u,"isPro") === 1);
     const geband = users.filter(u => v(u,"isBanned") === 1);
     const nu = Date.now(), dag = 864e5;
-    const actiefSinds = d => users.filter(u => u.modified && (nu - u.modified.timestamp) < d*dag).length;
-    const nieuwSinds  = d => users.filter(u => (v(u,"aangemeldOp") || 0) > nu - d*dag).length;
     const metPost = users.filter(u => (v(u,"forumPostTelling")||0) + (v(u,"reactieTelling")||0) > 0);
 
     const metNoodplan = surv.filter(r => (v(r,"actiefNoodplan") || "") !== "").length;
     const survActief = d => surv.filter(r => (v(r,"bijgewerktOp") || 0) > nu - d*dag).length;
+    /* Wanneer het statusrecord voor het eerst is aangemaakt — in de praktijk het
+       moment waarop iemand zijn eerste vriend kreeg. CloudKit levert dat mee. */
+    const survGemaakt = r => (r.created && r.created.timestamp) || 0;
+    const survNieuw = d => surv.filter(r => survGemaakt(r) > nu - d*dag).length;
     const voorraden = surv.map(r => v(r,"overlevingsDagen")).filter(x => typeof x === "number" && x > 0);
     const gemVoorraad = voorraden.length ? (voorraden.reduce((a,b)=>a+b,0) / voorraden.length) : 0;
 
+    /* Actief en nieuw worden geteld over SurvivalStatus, niet over
+       GebruikersAccount. Een account bestaat pas als iemand "Mijn account"
+       opent; daar zijn er nu een handvol van, dus die tellers stonden altijd op
+       hetzelfde getal en zeiden niets. Wat wél meebeweegt is wanneer iemands
+       status voor het laatst is weggeschreven. De vier onderste tellers gaan
+       expliciet over accounts en heten nu ook zo. */
     const kern = [
       ["Delen hun status", surv.length, "good"],
-      ["Bijgewerkt deze maand", survActief(30), ""],
+      ["Actief deze week", survActief(7), "good"],
+      ["Actief deze maand", survActief(30), ""],
+      ["Nieuw deze week", survNieuw(7), "good"],
       ["Noodplan actief", metNoodplan, metNoodplan ? "alert" : ""],
       ["Gem. voorraad", (Math.round(gemVoorraad*10)/10) + " d", "warm"],
       ["Ook PrepAlert", surv.filter(r => v(r,"heeftPrepAlert") === 1).length, "warm"],
-      ["Accounts aangemaakt", users.length, ""],
-      ["Pro", pro.length + (users.length ? " (" + Math.round(pro.length/users.length*100) + "%)" : ""), "warm"],
-      ["Geblokkeerd", geband.length, geband.length ? "alert" : ""],
-      ["Actief deze week", actiefSinds(7), "good"],
-      ["Actief deze maand", actiefSinds(30), ""],
-      ["Nieuw deze week", nieuwSinds(7), "good"],
-      ["Heeft ooit geplaatst", metPost.length, ""],
       ["Feedback totaal", fb.length, ""],
+      ["Accounts aangemaakt", users.length, ""],
+      ["Pro-accounts", pro.length, "warm"],
+      ["Geblokkeerd", geband.length, geband.length ? "alert" : ""],
+      ["Accounts die ooit plaatsten", metPost.length, ""],
     ];
     const kn = $("#st-kerncijfers"); kn.innerHTML = "";
     kern.forEach(([label, n, cls]) => {
@@ -3289,17 +3306,21 @@ $("#st-load").onclick = async (e) => {
     const weken = [];
     for (let i = 7; i >= 0; i--) {
       const van = nu - (i+1)*7*dag, tot = nu - i*7*dag;
-      const n = users.filter(u => { const d = v(u,"aangemeldOp"); return d > van && d <= tot; }).length;
+      const n = surv.filter(r => { const d = survGemaakt(r); return d > van && d <= tot; }).length;
       weken.push([i === 0 ? "deze week" : i + " wk terug", n]);
     }
-    $("#st-groei").innerHTML = ""; $("#st-groei").appendChild(balken(weken));
+    $("#st-groei").innerHTML = "";
+    $("#st-groei").appendChild(balken(weken,
+      { voet: "Geteld vanaf het moment dat iemands status voor het eerst is weggeschreven." }));
 
     /* --- laatst actief --- */
     const buckets = [["vandaag",1],["deze week",7],["deze maand",30],["3 maanden",90]];
-    const actiefRij = buckets.map(([l,d]) => [l, actiefSinds(d), "var(--green)"]);
-    const nooit = users.filter(u => !u.modified).length;
+    const actiefRij = buckets.map(([l,d]) => [l, survActief(d), "var(--green)"]);
+    const nooit = surv.filter(r => !v(r,"bijgewerktOp")).length;
     $("#st-actief").innerHTML = "";
-    $("#st-actief").appendChild(balken(actiefRij, { voet: nooit ? nooit + " zonder bekende datum" : "Gemeten aan wanneer de app hun account bijwerkte." }));
+    $("#st-actief").appendChild(balken(actiefRij, { voet: nooit
+      ? nooit + " zonder bekende datum"
+      : "Gemeten aan wanneer iemands status voor het laatst is bijgewerkt." }));
 
     /* --- versies en toestellen ---
        De versie komt uit SurvivalStatus, niet uit GebruikersAccount. Een status
