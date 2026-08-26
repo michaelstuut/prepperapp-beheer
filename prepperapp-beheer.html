@@ -1049,7 +1049,7 @@ label.f>span.hint{font-weight:400;font-size:.74rem;color:#6B7486}
    ===================================================================== */
 
 const CONTAINER = "iCloud.com.stuut.PrepperApp";
-const BUILD = 27;
+const BUILD = 28;
 const LS = { token: "pa.token", token2: "pa.token2", env: "pa.env" };
 const CONTAINER_ALERT = "iCloud.com.stuut.PrepAlert";
 
@@ -4441,7 +4441,7 @@ $("#iz-laad").onclick = async (e) => {
 
       const actief30 = surv.filter(r => (v(r,"bijgewerktOp")||0) > nu - 30*dag).length;
       zeg("Terugkomen",
-        actief30 + " van de " + n + " mensen hebben de app in de laatste dertig dagen nog geopend. " +
+        actief30 + " van de " + n + " mensen hebben in de laatste dertig dagen hun status nog bijgewerkt. " +
         (actief30 / n < 0.4 ? "Meer dan de helft is afgehaakt. Een reden om terug te komen ontbreekt: denk aan een seizoenscheck, een houdbaarheidsherinnering of iets dat vanzelf verandert."
                             : "Dat is een gezonde verhouding voor een app die je niet dagelijks nodig hebt."),
         actief30 / n < 0.4 ? "hoog" : "laag");
@@ -4453,7 +4453,7 @@ $("#iz-laad").onclick = async (e) => {
       const deel = Math.round(metAlert.length / Math.max(1,n) * 100);
       zeg("Wie beide apps heeft",
         metAlert.length + " van de " + n + " mensen (" + deel + "%) hebben ook PrepAlert draaien, waarvan " +
-        alertPro.length + " met Pro. " +
+        alertPro.length + " met Pro. Dit telt alleen mee bij wie al op 2.3 zit, dus het echte aantal ligt hoger. " +
         (deel > 30
           ? "Dat is een flinke groep. Die mensen hebben zelf al gekozen voor het samenspel tussen de twee apps — geef ze iets terug en je hebt meteen je trouwste gebruikers te pakken."
           : "Nog een kleine groep. De koppeling tussen de apps is blijkbaar niet zichtbaar genoeg; wie PrepperApp heeft weet vaak niet dat PrepAlert bestaat."),
@@ -4699,6 +4699,20 @@ $("#ct-laad").onclick = async (e) => {
       "Op deze velden kan CloudKit nog niet op woorden zoeken: " + mistZoek.join(", ") +
       ". De pagina valt daar terug op filteren in wat geladen is. Zet op die velden een Searchable-index in CloudKit; hier hoeft niets voor te veranderen.", "let op");
     else meld("Alle zoekindexen staan", "Zoeken doorzoekt overal de hele database.", "goed");
+
+    /* Aparte controle: het dossier zoekt op SurvivalStatus.opvolgerCode om te
+       laten zien welke oude codes van dezelfde persoon zijn. Dat veld heeft een
+       eigen queryable index nodig. Zonder die index blijft die kaart leeg
+       zonder dat iets stukgaat — precies het soort gat dat je hier wilt zien. */
+    try {
+      await query("SurvivalStatus", { limit: 1, sort: null,
+        filters: [{ fieldName:"opvolgerCode", comparator:"EQUALS", fieldValue:{ value:"XXXXXXXX" } }] });
+      meld("Oude codes zijn opzoekbaar", "Het dossier kan laten zien welke eerdere codes bij iemand horen.", "goed");
+    } catch(err){
+      meld("Oude codes nog niet opzoekbaar",
+        "Op SurvivalStatus.opvolgerCode staat geen queryable index. Het dossier laat dan niet zien welke " +
+        "eerdere codes bij iemand horen — verder werkt alles gewoon. Zet die index aan in CloudKit.", "let op");
+    }
 
     /* 3 · logboek */
     try { await query("AdminLogboek", { limit: 1 }); meld("Logboek werkt", "Handelingen worden vastgelegd.", "goed"); }
