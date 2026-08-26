@@ -1035,7 +1035,7 @@ label.f>span.hint{font-weight:400;font-size:.74rem;color:#6B7486}
    ===================================================================== */
 
 const CONTAINER = "iCloud.com.stuut.PrepperApp";
-const BUILD = 24;
+const BUILD = 25;
 const LS = { token: "pa.token", token2: "pa.token2", env: "pa.env" };
 const CONTAINER_ALERT = "iCloud.com.stuut.PrepAlert";
 
@@ -2177,47 +2177,34 @@ async function vulLijst(sel, fn, type, renderer){
   } catch(e){ n.innerHTML = leeg(String(e.message||e), "Fout"); }
 }
 
-/** Verdeling over appversies, op het beginscherm.
+/** Wie heeft de nieuwste versie — op het beginscherm.
  *
- *  Telt app-starts uit `AppGebeurtenis`, niet mensen uit `SurvivalStatus`.
+ *  Leest `SurvivalStatus`, niet `AppGebeurtenis`.
  *
- *  Waarom: een SurvivalStatus bestaat alleen zolang iemand minstens één vriend
- *  heeft, en een GebruikersAccount wordt pas aangemaakt als iemand het scherm
- *  "Mijn account" opent. Wie de app in zijn eentje gebruikt en nooit in dat
- *  scherm komt, laat in de publieke database geen enkel spoor na — precies zoals
- *  bedoeld, maar daardoor ook niet te tellen.
+ *  Dat was eerst andersom, en dat was fout. `AppGebeurtenis` bestaat pas sinds
+ *  2.3, dus élke gebeurtenis die er is komt uit 2.3 en de kaart meldde trots
+ *  "100%" terwijl er twee van de vierenzeventig mensen waren bijgewerkt. Een
+ *  cijfer dat niets anders kán worden dan honderd procent meet niets.
  *
- *  `AppGebeurtenis` wél: sinds 2.3 legt elke start er een regel neer, met de
- *  appversie erbij en zonder gebruikerscode. Het sessie-ID wordt bij elke start
- *  opnieuw bedacht, dus dit telt starts en geen personen — maar het is het enige
- *  cijfer dat iedereen meeneemt, ook wie de app solo draait.
+ *  `SurvivalStatus` wordt door élke versie weggeschreven, ook door 2.1 en ouder,
+ *  en draagt `appVersie`. Daarmee is het het enige veld waarin je een oude en
+ *  een nieuwe versie naast elkaar ziet — precies wat "komt mijn update aan"
+ *  vraagt.
  *
- *  Onder de streep staat het aantal mensen dat wél een status deelt, want dat
- *  zijn wél personen. Twee verschillende dingen, allebei eerlijk gelabeld.
+ *  De prijs: een status bestaat alleen zolang iemand minstens één vriend heeft.
+ *  Wie de app solo draait staat er niet in. Daarom staat het aantal app-starts
+ *  eronder als apart signaal, met erbij wat het wel en niet zegt.
  */
 async function laadAdoptie(){
   const body = $("#adoptie-body"), sub = $("#adoptie-sub");
   if (!body) return;
   try {
-    const r = await query("AppGebeurtenis", {
-      filters:[{ fieldName:"gebeurtenis", comparator:"EQUALS", fieldValue:{ value:"app_gestart" } }],
-      limit: 400 });
+    const r = await query("SurvivalStatus", { limit: 400 });
     const recs = r.records || [];
-
-    if (!recs.length) {
-      body.innerHTML = leeg("Nog geen app-starts vastgelegd. Dit begint te lopen zodra mensen op 2.3 zitten.");
-      sub.textContent = ""; return;
-    }
-
-    /* Ontdubbelen op sessie-ID: één start hoort één keer te tellen. */
-    const perSessie = new Map();
-    recs.forEach(rec => {
-      const sid = v(rec,"sessieID") || rec.recordName;
-      if (!perSessie.has(sid)) perSessie.set(sid, v(rec,"appVersie") || "onbekend");
-    });
+    if (!recs.length) { body.innerHTML = leeg("Nog geen gedeelde statussen."); sub.textContent = ""; return; }
 
     const m = {};
-    perSessie.forEach(versie => { m[versie] = (m[versie]||0)+1; });
+    recs.forEach(rec => { const w = v(rec,"appVersie") || "onbekend"; m[w] = (m[w]||0)+1; });
     const paren = Object.entries(m).sort((a,b) => b[1]-a[1]);
     const bekend = paren.filter(([l]) => l !== "onbekend");
 
@@ -2232,40 +2219,40 @@ async function laadAdoptie(){
     let nieuwste = null;
     bekend.forEach(([l]) => { if (!nieuwste || nieuwerDan(l, nieuwste)) nieuwste = l; });
 
-    const totaal = perSessie.size;
+    const totaal = recs.length;
     const op     = nieuwste ? (paren.find(([l]) => l === nieuwste) || [null,0])[1] : 0;
     const pct    = totaal ? Math.round(op / totaal * 100) : 0;
+    const achter = totaal - op;
 
     body.innerHTML = "";
     const kop = el("div", "", nieuwste
-      ? "<b style=\"color:var(--ink)\">" + op + " van " + totaal + "</b> app-starts draaide v"
-        + esc(nieuwste) + " \u2014 " + pct + "%."
-      : "Nog geen versies bekend bij de app-starts.");
+      ? "<b style=\"color:var(--ink)\">" + op + " van " + totaal + "</b> zit op v" + esc(nieuwste)
+        + " \u2014 " + pct + "%." + (achter ? " " + achter + " nog niet." : " Iedereen is bij.")
+      : "Nog geen versies bekend.");
     kop.style.cssText = "font-size:.9rem;color:var(--ink-dim);margin-bottom:.8rem";
     body.appendChild(kop);
 
     body.appendChild(balken(
       paren.slice(0, 8).map(([l, n]) => [l === "onbekend" ? "onbekend" : "v" + l, n,
                                          l === nieuwste ? "var(--green)" : "var(--blue)"]),
-      { voet: "Starts van de app, niet personen \u2014 het sessie-ID wordt bij elke start opnieuw bedacht. "
-             + "Wel het enige cijfer waar ook mensen in zitten die de app alleen gebruiken." }));
+      { voet: "Mensen met een gedeelde status \u2014 dat vereist minstens \u00e9\u00e9n vriend, dus dit is niet je hele "
+             + "bestand. Iemand telt pas mee nadat de app na het bijwerken \u00e9\u00e9n keer heeft gepubliceerd." }));
 
-    /* Tweede regel: mensen die hun status delen. Dat zijn wél personen. */
+    /* App-starts als apart signaal, met de beperking er expliciet bij. */
     try {
-      const sr = await query("SurvivalStatus", { limit: 400 });
-      const sRecs = sr.records || [];
-      if (sRecs.length) {
-        const sm = {};
-        sRecs.forEach(rec => { const w = v(rec,"appVersie") || "onbekend"; sm[w] = (sm[w]||0)+1; });
-        const sOp = sm[nieuwste] || 0;
-        const regel = el("div","", sOp + " van " + sRecs.length
-          + " mensen die hun status delen zit op v" + esc(nieuwste || "?") + ".");
-        regel.style.cssText = "margin-top:.9rem;padding-top:.7rem;border-top:1px solid var(--edge-soft);font-size:.82rem;color:var(--muted)";
+      const g = await query("AppGebeurtenis", {
+        filters:[{ fieldName:"gebeurtenis", comparator:"EQUALS", fieldValue:{ value:"app_gestart" } }], limit: 400 });
+      const sessies = new Set((g.records||[]).map(x => v(x,"sessieID") || x.recordName));
+      if (sessies.size) {
+        const regel = el("div", "", sessies.size + " app-starts vastgelegd. "
+          + "Dat telt ook mensen zonder vrienden mee, maar het zegt niets over bijwerken: "
+          + "gebeurtenissen bestaan pas vanaf 2.3, dus daar is elke start per definitie de nieuwste versie.");
+        regel.style.cssText = "margin-top:.9rem;padding-top:.7rem;border-top:1px solid var(--edge-soft);font-size:.8rem;color:var(--muted);line-height:1.5";
         body.appendChild(regel);
       }
-    } catch(e){ /* bijzaak; de kaart staat er al */ }
+    } catch(e){ /* bijzaak */ }
 
-    sub.textContent = totaal + " starts";
+    sub.textContent = totaal + " met gedeelde status";
   } catch(e){
     body.innerHTML = leeg("Kon de versies niet ophalen: " + esc(String(e.message || e)));
     sub.textContent = "";
