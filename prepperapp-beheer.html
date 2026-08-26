@@ -385,8 +385,64 @@ label.f>span.hint{font-weight:400;font-size:.74rem;color:#6B7486}
 .pill{padding:.1rem .5rem;font-size:.685rem;letter-spacing:.025em}
 
 /* ---------- lege toestanden ---------- */
-.empty{padding:2.4rem 1rem;line-height:1.6}
-.empty b{font-size:1.02rem;margin-bottom:.35rem}
+.empty{padding:1.9rem 1rem;line-height:1.6}
+.empty b{font-size:1rem;margin-bottom:.3rem}
+
+/* ---------- getallen in de huisstijl, niet in terminal-mono ----------
+   Mono verdient zijn plek bij codes van acht tekens en bij tijdstippen in een
+   kolom. Een teller van drie cijfers in mono leest als een logbestand; in de
+   kopletter met tabulaire cijfers leest hij als een cijfer waar iemand over
+   nagedacht heeft. */
+.stat .n{
+  font-family:"Bricolage Grotesque","Public Sans",system-ui,sans-serif;
+  font-weight:700;font-variant-numeric:tabular-nums;letter-spacing:-.025em;
+}
+
+/* ---------- kopjes bóven een groep tegels ---------- */
+.vakkop{
+  grid-column:1/-1;display:flex;align-items:center;gap:.7rem;
+  margin:.35rem 0 -.1rem;
+}
+.vakkop::after{content:"";flex:1;height:1px;background:var(--edge-soft)}
+.vakkop:first-child{margin-top:0}
+
+/* ---------- toelichting die je kunt wegklappen ----------
+   De eerlijke voetnoot bij een cijfer hoort erbij, maar hij hoeft niet elke
+   keer even zwaar te wegen als het cijfer zelf. Dus: één regel die je kunt
+   opendoen, in plaats van drie alinea's grijs. */
+details.uitleg{border-top:1px solid var(--edge-soft);margin-top:.85rem;padding-top:.7rem}
+details.uitleg > summary{
+  cursor:pointer;list-style:none;color:var(--muted);font-size:.79rem;font-weight:500;
+  display:flex;align-items:center;gap:.4rem;
+}
+details.uitleg > summary::-webkit-details-marker{display:none}
+details.uitleg > summary::before{
+  content:"";width:.4rem;height:.4rem;border-right:1.5px solid currentColor;border-bottom:1.5px solid currentColor;
+  transform:rotate(-45deg);transition:transform .15s;flex:none;margin-left:.1rem;
+}
+details.uitleg[open] > summary::before{transform:rotate(45deg)}
+details.uitleg > summary:hover{color:var(--ink-dim)}
+details.uitleg .inhoud{
+  margin-top:.55rem;font-size:.8rem;color:var(--muted);line-height:1.6;max-width:70ch;
+  display:flex;flex-direction:column;gap:.55rem;
+}
+@media(prefers-reduced-motion:reduce){ details.uitleg > summary::before{transition:none} }
+
+/* ---------- hero-regel: één zin waar het cijfer in uitspringt ---------- */
+.hero-regel{
+  font-size:.92rem;color:var(--ink-dim);margin-bottom:.9rem;display:flex;align-items:baseline;gap:.55rem;flex-wrap:wrap;
+}
+.hero-regel .groot{
+  font-family:"Bricolage Grotesque","Public Sans",sans-serif;font-weight:700;
+  font-size:1.7rem;line-height:1;letter-spacing:-.025em;color:var(--ink);font-variant-numeric:tabular-nums;
+}
+
+/* ---------- actieve zijbalkknop: rustiger dan een volle pil ---------- */
+.zijknop[aria-current="page"]{
+  background:var(--surface-2);border-color:var(--edge-soft);color:var(--ink);
+  box-shadow:inset 2px 0 0 var(--amber);
+}
+.zijknop[aria-current="page"] span:first-child{color:var(--amber)}
 </style>
 </head>
 <body>
@@ -619,18 +675,22 @@ label.f>span.hint{font-weight:400;font-size:.74rem;color:#6B7486}
           </label>
         </div>
       </div>
-      <div class="card-b" style="font-size:.82rem;color:var(--muted);padding-bottom:0">
-        <b style="color:var(--ink-dim)">Wie hier wél en niet in staat:</b>
-        de app schrijft alleen een survival-status voor wie mínstens één vriend heeft. Wie de app in zijn
-        eentje gebruikt staat er dus niet tussen, en wie zijn laatste vriend verwijdert verdwijnt er weer uit.
-        Dit is geen ledenlijst maar de groep die iets met anderen deelt.<br><br>
-        <b style="color:var(--ink-dim)">Over de labels:</b> <span class="pill">Pro</span> en
-        <span class="pill red">Geblokkeerd</span> komen van het gebruikersaccount, en dat maakt de app pas aan
-        zodra iemand "Mijn account" opent — bij de meesten bestaat het nog niet, dus geen label betekent hier
-        "niet bekend", niet "geen Pro". <span class="pill blue">PrepAlert</span> komt uit de drie velden die
-        sinds 2.3 meegeschreven worden; wie nog op een oudere versie zit krijgt dat label ook niet.<br><br>
-        Blokkeren kan hier wel bij iedereen — er wordt dan alvast een account aangemaakt, zodat de blokkade
-        meteen geldt zodra ze de app weer openen.
+      <div class="card-b" style="padding-top:0;padding-bottom:0">
+        <details class="uitleg" style="border-top:none;margin-top:0;padding-top:0">
+          <summary>Wie je hier wél en niet ziet, en wat de labels betekenen</summary>
+          <div class="inhoud">
+            <div><b style="color:var(--ink-dim)">Geen ledenlijst.</b> De app schrijft alleen een survival-status
+              voor wie mínstens één vriend heeft. Wie de app in zijn eentje gebruikt staat er niet tussen, en wie
+              zijn laatste vriend verwijdert verdwijnt er weer uit.</div>
+            <div><b style="color:var(--ink-dim)">De labels.</b> <span class="pill">Pro</span> en
+              <span class="pill red">Geblokkeerd</span> komen van het gebruikersaccount, en dat maakt de app pas aan
+              zodra iemand "Mijn account" opent — bij de meesten bestaat het nog niet, dus geen label betekent hier
+              "niet bekend", niet "geen Pro". <span class="pill blue">PrepAlert</span> komt uit de drie velden die
+              sinds 2.3 meegeschreven worden; wie nog op een oudere versie zit krijgt dat label ook niet.</div>
+            <div>Blokkeren kan hier wel bij iedereen — er wordt dan alvast een account aangemaakt, zodat de blokkade
+              meteen geldt zodra ze de app weer openen.</div>
+          </div>
+        </details>
       </div>
       <div class="card-b tight" id="surv-list"><div class="empty">Laden…</div></div>
     </div>
@@ -1175,7 +1235,7 @@ label.f>span.hint{font-weight:400;font-size:.74rem;color:#6B7486}
    ===================================================================== */
 
 const CONTAINER = "iCloud.com.stuut.PrepperApp";
-const BUILD = 30;
+const BUILD = 31;
 const LS = { token: "pa.token", token2: "pa.token2", env: "pa.env" };
 const CONTAINER_ALERT = "iCloud.com.stuut.PrepAlert";
 
@@ -2302,17 +2362,21 @@ async function laadDashboard(){
   const stats = $("#stats"); const att = $("#dash-attention");
   if (!stats.dataset.loaded) stats.innerHTML = '<div class="empty" style="grid-column:1/-1"><span class="spin"></span> Laden…</div>';
 
+  /* Negen tegels van gelijk gewicht laten je even hard kijken naar een nul als
+     naar het enige getal dat iets van je vraagt. Ze staan daarom in twee
+     groepen: eerst wat op je ligt te wachten, daarna hoe groot het geheel is. */
   const wil = [
-    { key:"open", type:"MisbruikMelding", filters:[{fieldName:"behandeld",comparator:"EQUALS",fieldValue:{value:0}}], label:"Open meldingen", cls:"alert", tab:"meldingen" },
-    { key:"oud",  type:"ForumMelding", label:"Forummeldingen", cls:"", tab:"meldingen" },
-    { key:"ban",  type:"GebruikersAccount", filters:[{fieldName:"isBanned",comparator:"EQUALS",fieldValue:{value:1}}], label:"Geblokkeerd", cls:"", tab:"gebruikers" },
-    { key:"hid",  type:"AdminVerborgen", label:"Verborgen", cls:"", tab:"verborgen" },
-    { key:"surv", type:"SurvivalStatus", label:"Delen hun status", cls:"good", tab:"gebruikers" },
-    { key:"usr",  type:"GebruikersAccount", label:"Accounts aangemaakt", cls:"", tab:"gebruikers" },
-    { key:"pro",  type:"GebruikersAccount", filters:[{fieldName:"isPro",comparator:"EQUALS",fieldValue:{value:1}}], label:"Pro", cls:"warm", tab:"gebruikers" },
-    { key:"post", type:"OutdoorPost", label:"Outdoor posts", cls:"", tab:"forum" },
-    { key:"fb",   type:"AppFeedback", filters:[{fieldName:"gelezen",comparator:"EQUALS",fieldValue:{value:0}}], label:"Ongelezen feedback", cls:"warm", tab:"feedback" },
+    { key:"open", type:"MisbruikMelding", filters:[{fieldName:"behandeld",comparator:"EQUALS",fieldValue:{value:0}}], label:"Open meldingen", cls:"alert", tab:"meldingen", vak:"aandacht" },
+    { key:"oud",  type:"ForumMelding", label:"Forummeldingen", cls:"alert", tab:"meldingen", vak:"aandacht" },
+    { key:"fb",   type:"AppFeedback", filters:[{fieldName:"gelezen",comparator:"EQUALS",fieldValue:{value:0}}], label:"Ongelezen feedback", cls:"warm", tab:"feedback", vak:"aandacht" },
+    { key:"ban",  type:"GebruikersAccount", filters:[{fieldName:"isBanned",comparator:"EQUALS",fieldValue:{value:1}}], label:"Geblokkeerd", cls:"", tab:"gebruikers", vak:"aandacht" },
+    { key:"surv", type:"SurvivalStatus", label:"Delen hun status", cls:"good", tab:"gebruikers", vak:"omvang" },
+    { key:"usr",  type:"GebruikersAccount", label:"Accounts aangemaakt", cls:"", tab:"gebruikers", vak:"omvang" },
+    { key:"pro",  type:"GebruikersAccount", filters:[{fieldName:"isPro",comparator:"EQUALS",fieldValue:{value:1}}], label:"Pro", cls:"warm", tab:"gebruikers", vak:"omvang" },
+    { key:"post", type:"OutdoorPost", label:"Outdoor posts", cls:"", tab:"forum", vak:"omvang" },
+    { key:"hid",  type:"AdminVerborgen", label:"Verborgen", cls:"", tab:"verborgen", vak:"omvang" },
   ];
+  const VAKKEN = [["aandacht","Vraagt aandacht"], ["omvang","Hoe groot het is"]];
 
   const uitslagen = await Promise.all(wil.map(async w => {
     try { return Object.assign({}, w, await tel(w.type, w.filters)); }
@@ -2320,12 +2384,18 @@ async function laadDashboard(){
   }));
 
   stats.innerHTML = ""; stats.dataset.loaded = "1";
-  uitslagen.forEach(u => {
-    const b = el("button", "stat " + (u.n ? u.cls : "nul"));
-    b.innerHTML = '<span class="n">' + (u.n == null ? "?" : (u.n + (u.meer ? "+" : ""))) + '</span><span class="l">' + esc(u.label) + "</span>";
-    b.title = u.fout || "";
-    b.onclick = () => gaNaar(u.tab);
-    stats.appendChild(b);
+  VAKKEN.forEach(([sleutel, kop]) => {
+    const inVak = uitslagen.filter(u => u.vak === sleutel);
+    if (!inVak.length) return;
+    const k = el("div","eyebrow vakkop", esc(kop));
+    stats.appendChild(k);
+    inVak.forEach(u => {
+      const b = el("button", "stat " + (u.n ? u.cls : "nul"));
+      b.innerHTML = '<span class="n">' + (u.n == null ? "?" : (u.n + (u.meer ? "+" : ""))) + '</span><span class="l">' + esc(u.label) + "</span>";
+      b.title = u.fout || "";
+      b.onclick = () => gaNaar(u.tab);
+      stats.appendChild(b);
+    });
   });
 
   const open = uitslagen.find(u => u.key === "open");
@@ -2446,33 +2516,30 @@ async function laadAdoptie(){
     const achter = totaal - op;
 
     body.innerHTML = "";
-    const kop = el("div", "", nieuwste
-      ? "<b style=\"color:var(--ink)\">" + op + " van " + totaal + "</b> zit op v" + esc(nieuwste)
-        + " \u2014 " + pct + "%." + (achter ? " " + achter + " nog niet." : " Iedereen is bij.")
-      : "Nog geen versies bekend.");
-    kop.style.cssText = "font-size:.9rem;color:var(--ink-dim);margin-bottom:.8rem";
+    const kop = el("div", "hero-regel", nieuwste
+      ? '<span class="groot">' + pct + '%</span><span>' + op + " van " + totaal + " zit op v" + esc(nieuwste)
+        + "." + (achter ? " " + achter + " nog niet." : " Iedereen is bij.") + "</span>"
+      : "<span>Nog geen versies bekend.</span>");
     body.appendChild(kop);
 
     body.appendChild(balken(
       paren.slice(0, 8).map(([l, n]) => [l === "onbekend" ? "onbekend" : "v" + l, n,
-                                         l === nieuwste ? "var(--green)" : "var(--blue)"]),
-      { voet: "Mensen met een gedeelde status \u2014 dat vereist minstens \u00e9\u00e9n vriend, dus dit is niet je hele "
-             + "bestand. Iemand telt pas mee nadat de app na het bijwerken \u00e9\u00e9n keer heeft gepubliceerd." }));
+                                         l === nieuwste ? "var(--green)" : "var(--blue)"])));
+
+    const voetnoten = ["Dit zijn mensen met een gedeelde status \u2014 dat vereist minstens \u00e9\u00e9n vriend, dus het is "
+      + "niet je hele bestand. Iemand telt pas mee nadat de app na het bijwerken \u00e9\u00e9n keer heeft gepubliceerd."];
 
     /* App-starts als apart signaal, met de beperking er expliciet bij. */
     try {
       const g = await query("AppGebeurtenis", {
         filters:[{ fieldName:"gebeurtenis", comparator:"EQUALS", fieldValue:{ value:"app_gestart" } }], limit: 400 });
       const sessies = new Set((g.records||[]).map(x => v(x,"sessieID") || x.recordName));
-      if (sessies.size) {
-        const regel = el("div", "", sessies.size + " app-starts vastgelegd. "
-          + "Dat telt ook mensen zonder vrienden mee, maar het zegt niets over bijwerken: "
-          + "gebeurtenissen bestaan pas vanaf 2.3, dus daar is elke start per definitie de nieuwste versie.");
-        regel.style.cssText = "margin-top:.9rem;padding-top:.7rem;border-top:1px solid var(--edge-soft);font-size:.8rem;color:var(--muted);line-height:1.5";
-        body.appendChild(regel);
-      }
+      if (sessies.size) voetnoten.push(sessies.size + " app-starts vastgelegd. "
+        + "Dat telt ook mensen zonder vrienden mee, maar het zegt niets over bijwerken: "
+        + "gebeurtenissen bestaan pas vanaf 2.3, dus daar is elke start per definitie de nieuwste versie.");
     } catch(e){ /* bijzaak */ }
 
+    body.appendChild(uitklap("Wat telt hier wel en niet mee?", voetnoten));
     sub.textContent = totaal + " met gedeelde status";
   } catch(e){
     body.innerHTML = leeg("Kon de versies niet ophalen: " + esc(String(e.message || e)));
@@ -3395,6 +3462,19 @@ async function haalAlles(recordType, opties){
 }
 
 /** Staafje-lijst zonder externe bibliotheek. */
+/** Een wegklapbare toelichting. `regels` is een lijst alinea's. */
+function uitklap(kop, regels){
+  const d = document.createElement("details");
+  d.className = "uitleg";
+  const sam = document.createElement("summary");
+  sam.textContent = kop;
+  d.appendChild(sam);
+  const doos = el("div","inhoud");
+  (Array.isArray(regels) ? regels : [regels]).forEach(t => doos.appendChild(el("div","", esc(t))));
+  d.appendChild(doos);
+  return d;
+}
+
 function balken(paren, opties){
   opties = opties || {};
   const max = Math.max(1, ...paren.map(p => p[1]));
