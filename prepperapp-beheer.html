@@ -166,7 +166,7 @@ label.f>span.hint{font-weight:400;font-size:.74rem;color:#6B7486}
 .toolbar > button.btn{flex:0 0 auto;padding:.5rem .9rem}
 
 .empty{padding:2rem 1rem;text-align:center;color:var(--muted);font-size:.88rem}
-.empty b{display:block;color:var(--ink-dim);font-family:"Bricolage Grotesque",sans-serif;font-size:1rem;margin-bottom:.25rem}
+.empty > b:first-child{display:block;color:var(--ink-dim);font-family:"Bricolage Grotesque",sans-serif;font-size:1rem;margin-bottom:.25rem}
 .spin{display:inline-block;width:.85em;height:.85em;border:2px solid var(--edge);border-top-color:var(--amber);border-radius:50%;animation:sp .7s linear infinite;vertical-align:-.1em}
 @keyframes sp{to{transform:rotate(360deg)}}
 @media(prefers-reduced-motion:reduce){.spin{animation-duration:2s}}
@@ -386,7 +386,7 @@ label.f>span.hint{font-weight:400;font-size:.74rem;color:#6B7486}
 
 /* ---------- lege toestanden ---------- */
 .empty{padding:1.9rem 1rem;line-height:1.6}
-.empty b{font-size:1rem;margin-bottom:.3rem}
+.empty > b:first-child{font-size:1rem;margin-bottom:.3rem}
 
 /* ---------- getallen in de huisstijl, niet in terminal-mono ----------
    Mono verdient zijn plek bij codes van acht tekens en bij tijdstippen in een
@@ -435,6 +435,18 @@ details.uitleg .inhoud{
 .hero-regel .groot{
   font-family:"Bricolage Grotesque","Public Sans",sans-serif;font-weight:700;
   font-size:1.7rem;line-height:1;letter-spacing:-.025em;color:var(--ink);font-variant-numeric:tabular-nums;
+}
+
+/* ---------- velden houden een leesbare maat ----------
+   Op een breed scherm rekten de flexvelden mee tot ver over de duizend pixels:
+   een versienummer in een veld van 890 breed, een zoekbalk naast een keuzelijst
+   die toevallig korter is. Alles krijgt nu een bovengrens, zodat een rij
+   bedieningselementen als een rij oogt in plaats van als toeval. */
+@media(min-width:64rem){
+  .toolbar > *{flex:1 1 12rem;max-width:28rem}
+  .toolbar > button.btn,.toolbar > .narrow{max-width:none}
+  .card-b > label.f,.card-b > form > label.f{max-width:34rem}
+  .card-b > .grid label.f{max-width:none}
 }
 
 /* ---------- één rustige regel in plaats van een half leeg scherm ---------- */
@@ -712,7 +724,7 @@ details.uitleg .inhoud{
   <!-- ---------- Kaart ---------- -->
   <section class="view" id="v-kaart" role="tabpanel">
     <div class="card">
-      <div class="card-h"><h2>Kaart</h2><span style="flex:1"></span>
+      <div class="card-h"><h2>Wereldkaart</h2><span style="flex:1"></span>
         <span class="sub" id="kaart-status"></span>
         <button class="btn sm" id="kaart-laad">Punten en routes laden</button>
         <button class="btn sm" id="kaart-steden">Woonplaatsen opzoeken</button>
@@ -792,10 +804,12 @@ details.uitleg .inhoud{
           bevat alleen een datum en een anoniem installatie-ID.
         </p>
         <label class="f">API-token van PrepAlert
-          <input type="text" id="token2-input" autocomplete="off" autocapitalize="none" spellcheck="false"
+          <input type="password" id="token2-input" autocomplete="off" autocapitalize="none" spellcheck="false"
                  placeholder="leeg laten kan ook">
+          <span class="hint">Verborgen, zodat hij niet meekijkt op een gedeeld scherm of een schermafbeelding.</span>
         </label>
         <div style="display:flex;gap:.5rem;flex-wrap:wrap">
+          <button class="btn" id="token2-toon">Tonen</button>
           <button class="btn" id="token2-plak">Plakken</button>
           <button class="btn primary" id="token2-save">Bewaren</button>
           <button class="btn" id="token2-wis">Wissen</button>
@@ -877,8 +891,12 @@ details.uitleg .inhoud{
         <span class="sub" id="net-status"></span>
         <button class="btn sm" id="net-laad">Netwerk opbouwen</button>
       </div>
-      <canvas id="netdoek"></canvas>
-      <div class="netlegenda" id="net-legenda"></div>
+      <div class="card-b" id="net-leeg">
+        <div class="empty"><b>Nog niet opgebouwd</b>Druk op <b>Netwerk opbouwen</b> om te zien wie via
+          uitnodigingen, gedeelde routes, expedities en chats met elkaar te maken heeft.</div>
+      </div>
+      <canvas id="netdoek" class="hide"></canvas>
+      <div class="netlegenda hide" id="net-legenda"></div>
     </div>
     <div class="grid c2">
       <div class="card">
@@ -936,7 +954,7 @@ details.uitleg .inhoud{
   <!-- ---------- Config ---------- -->
   <section class="view" id="v-config" role="tabpanel">
     <div class="card">
-      <div class="card-h"><h2>App-instellingen op afstand</h2><span style="flex:1"></span><span class="sub" id="cfg-state"></span></div>
+      <div class="card-h"><h2>Schakelaars</h2><span style="flex:1"></span><span class="sub" id="cfg-state"></span></div>
       <div class="card-b" style="display:flex;flex-direction:column;gap:.85rem">
         <label class="switch"><input type="checkbox" id="cfg-banner-actief"> Balk bovenin de app tonen</label>
         <label class="f">Tekst in de balk<input type="text" id="cfg-banner-tekst" maxlength="200"></label>
@@ -1248,7 +1266,7 @@ details.uitleg .inhoud{
    ===================================================================== */
 
 const CONTAINER = "iCloud.com.stuut.PrepperApp";
-const BUILD = 34;
+const BUILD = 35;
 const LS = { token: "pa.token", token2: "pa.token2", env: "pa.env" };
 const CONTAINER_ALERT = "iCloud.com.stuut.PrepAlert";
 
@@ -4241,15 +4259,22 @@ async function laadKaartTab(){
   Kaart.init();
   const leg = $("#kaart-legenda");
   if (!leg.dataset.klaar){
-    leg.innerHTML = KAART_LAGEN.map(([t,l,k]) =>
-      '<span><i style="background:' + k + '"></i>' + esc(l) + "</span>").join("") +
-      '<span style="margin-left:auto">kaartgegevens © OpenStreetMap</span>';
+    /* De chips bovenaan dragen dezelfde kleuren én zijn aanklikbaar; een tweede
+       legenda eronder herhaalt dat alleen maar. Hier blijft de bronvermelding. */
+    leg.innerHTML = '<span style="margin-left:auto">kaartgegevens © OpenStreetMap</span>';
     leg.dataset.klaar = "1";
   }
   if (!Kaart.punten.length) haalKaartPunten();
   else Kaart.teken();
 }
 $("#kaart-laad").onclick = () => haalKaartPunten();
+
+$("#token2-toon").onclick = (e) => {
+  const veld = $("#token2-input");
+  const uit = veld.type === "password";
+  veld.type = uit ? "text" : "password";
+  e.target.textContent = uit ? "Verbergen" : "Tonen";
+};
 
 async function haalKaartPunten(){
   const st = $("#kaart-status");
@@ -4548,7 +4573,14 @@ function laadNetwerkTab(){
   }
   if (Net.knopen.length) netTeken();
 }
-$("#net-laad").onclick = () => bouwNetwerk();
+$("#net-laad").onclick = () => {
+  /* Het doek is een vaste hoogte; zolang er niets in staat is dat een half
+     scherm zwart. Pas tonen als er iets te zien valt. */
+  $("#net-leeg").classList.add("hide");
+  $("#netdoek").classList.remove("hide");
+  $("#net-legenda").classList.remove("hide");
+  bouwNetwerk();
+};
 
 /* =====================================================================
    Waarschuwen bij nieuwe meldingen
