@@ -379,7 +379,8 @@ label.f>span.hint{font-weight:400;font-size:.74rem;color:#6B7486}
         <div class="card-b tight" id="dash-posts"><div class="empty">Laden…</div></div>
       </div>
       <div class="card">
-        <div class="card-h"><h2>Nieuwe gebruikers</h2></div>
+        <div class="card-h"><h2>Laatst actief</h2><span style="flex:1"></span>
+          <span class="sub">wie zijn status het laatst bijwerkte</span></div>
         <div class="card-b tight" id="dash-users"><div class="empty">Laden…</div></div>
       </div>
     </div>
@@ -468,7 +469,7 @@ label.f>span.hint{font-weight:400;font-size:.74rem;color:#6B7486}
       <div class="card-b tight" id="usr-list"><div class="empty">Laden…</div></div>
     </div>
     <div class="card">
-      <div class="card-h"><h2>Mensen in de huidige App Store-versie</h2><span style="flex:1"></span>
+      <div class="card-h"><h2>Mensen die hun status delen</h2><span style="flex:1"></span>
         <span class="sub" id="surv-count"></span>
       </div>
       <div class="card-b" style="padding-bottom:0">
@@ -485,14 +486,17 @@ label.f>span.hint{font-weight:400;font-size:.74rem;color:#6B7486}
         </div>
       </div>
       <div class="card-b" style="font-size:.82rem;color:var(--muted);padding-bottom:0">
-        <b style="color:var(--ink-dim)">Waarom je nog geen Pro- of PrepAlert-label naast de namen ziet:</b>
-        die twee gegevens bestaan nog niet in de database. Pro staat op het gebruikersaccount, en dat maakt de app
-        pas aan vanaf 2.0 — er zijn er nu nul. PrepAlert wordt pas zichtbaar als de drie velden uit de 2.3-ronde
-        erin zitten. De labels staan klaar en verschijnen vanzelf zodra de gegevens er zijn; ze worden niet
-        weggelaten omdat er iets stuk is.<br><br>
-        Versie 1.3.1 kent nog geen gebruikersaccounts. Wie de app gebruikt zie je wél aan hun
-        survival-status: elke gebruiker schrijft er één. Blokkeren kan hier ook — er wordt dan alvast
-        een account aangemaakt, zodat de blokkade meteen geldt zodra ze naar 2.2 updaten.
+        <b style="color:var(--ink-dim)">Wie hier wél en niet in staat:</b>
+        de app schrijft alleen een survival-status voor wie mínstens één vriend heeft. Wie de app in zijn
+        eentje gebruikt staat er dus niet tussen, en wie zijn laatste vriend verwijdert verdwijnt er weer uit.
+        Dit is geen ledenlijst maar de groep die iets met anderen deelt.<br><br>
+        <b style="color:var(--ink-dim)">Over de labels:</b> <span class="pill">Pro</span> en
+        <span class="pill red">Geblokkeerd</span> komen van het gebruikersaccount, en dat maakt de app pas aan
+        zodra iemand "Mijn account" opent — bij de meesten bestaat het nog niet, dus geen label betekent hier
+        "niet bekend", niet "geen Pro". <span class="pill blue">PrepAlert</span> komt uit de drie velden die
+        sinds 2.3 meegeschreven worden; wie nog op een oudere versie zit krijgt dat label ook niet.<br><br>
+        Blokkeren kan hier wel bij iedereen — er wordt dan alvast een account aangemaakt, zodat de blokkade
+        meteen geldt zodra ze de app weer openen.
       </div>
       <div class="card-b tight" id="surv-list"><div class="empty">Laden…</div></div>
     </div>
@@ -984,10 +988,18 @@ label.f>span.hint{font-weight:400;font-size:.74rem;color:#6B7486}
           daarna op je beginscherm, anders wist Safari je inlog na een week zonder gebruik.</div>
         <div><b style="color:var(--ink)">Zoeken</b> — CloudKit kan niet midden in een tekst zoeken. Een code van acht
           tekens zoekt echt in de database; een gewoon woord filtert alleen wat al geladen is.</div>
-        <div><b style="color:var(--ink)">Pushbericht</b> — <code>AdminPushBericht</code>-records worden in versie 2.2
-          door de app <b>niet</b> gelezen. Ze doen dus niets tot dat gebouwd is. Ze staan hier alleen om te bekijken.</div>
+        <div><b style="color:var(--ink)">Pushbericht</b> — <code>AdminPushBericht</code>-records worden door de app
+          <b>niet</b> gelezen. Ze doen dus niets tot dat in de app gebouwd is. Ze staan hier alleen om te bekijken.</div>
         <div><b style="color:var(--ink)">Chatberichten</b> — <code>inhoud</code> is end-to-end versleuteld. Je ziet dat
           er een bericht is, niet wat er staat. Dat is met opzet.</div>
+        <div><b style="color:var(--ink)">Wie je hier wél en niet ziet</b> — er is geen ledenlijst. Een
+          <code>SurvivalStatus</code> bestaat alleen bij wie mínstens één vriend heeft; een
+          <code>GebruikersAccount</code> pas zodra iemand "Mijn account" opent. Wie de app in zijn eentje
+          gebruikt en nooit in de instellingen komt, staat dus in geen van beide lijsten. Alle cijfers hier
+          gaan over de mensen die zichtbaar zijn, niet over iedereen die de app heeft.</div>
+        <div><b style="color:var(--ink)">Nul is vaak "nog niet bijgewerkt"</b> — nieuwe velden en recordtypen
+          vullen zich pas als iemands app de versie draait die ze wegschrijft. Kijk bij Overzicht welk deel al
+          op de nieuwste versie zit voordat je een teller van nul als een uitkomst leest.</div>
       </div>
     </div>
     <div class="card">
@@ -1035,7 +1047,7 @@ label.f>span.hint{font-weight:400;font-size:.74rem;color:#6B7486}
    ===================================================================== */
 
 const CONTAINER = "iCloud.com.stuut.PrepperApp";
-const BUILD = 25;
+const BUILD = 26;
 const LS = { token: "pa.token", token2: "pa.token2", env: "pa.env" };
 const CONTAINER_ALERT = "iCloud.com.stuut.PrepAlert";
 
@@ -1149,9 +1161,10 @@ const ZOEKVELD = {
   PlaatsAlert:    ["beschrijving", "stad", "land", "type"],
   PublicSafeSpot: ["naam", "beschrijving", "scenario", "type"],
   SurvivalStatus: ["naam", "stad", "land", "actiefNoodplan"],
-  /* Deze krijgen hun index pas bij de schemaronde van 2.3. Tot die tijd valt de
-     zoekopdracht vanzelf terug op filteren in wat geladen is — de pagina zegt
-     dat er dan bij. Zodra de index er staat werkt het zonder wijziging hier. */
+  /* Op deze velden staat de Searchable-index nog niet aan in CloudKit. Tot die
+     tijd valt de zoekopdracht vanzelf terug op filteren in wat geladen is — de
+     pagina zegt dat er dan bij. Zodra de index er staat werkt het zonder
+     wijziging hier. */
   OutdoorPost:    ["titel", "inhoud"],
   ErvaringPost:   ["titel", "beschrijving"],
   BuurtPost:      ["titel", "beschrijving"],
@@ -2091,7 +2104,7 @@ async function laadDashboard(){
     { key:"ban",  type:"GebruikersAccount", filters:[{fieldName:"isBanned",comparator:"EQUALS",fieldValue:{value:1}}], label:"Geblokkeerd", cls:"", tab:"gebruikers" },
     { key:"hid",  type:"AdminVerborgen", label:"Verborgen", cls:"", tab:"verborgen" },
     { key:"surv", type:"SurvivalStatus", label:"Delen hun status", cls:"good", tab:"gebruikers" },
-    { key:"usr",  type:"GebruikersAccount", label:"Accounts (2.2+)", cls:"", tab:"gebruikers" },
+    { key:"usr",  type:"GebruikersAccount", label:"Accounts aangemaakt", cls:"", tab:"gebruikers" },
     { key:"pro",  type:"GebruikersAccount", filters:[{fieldName:"isPro",comparator:"EQUALS",fieldValue:{value:1}}], label:"Pro", cls:"warm", tab:"gebruikers" },
     { key:"post", type:"OutdoorPost", label:"Outdoor posts", cls:"", tab:"forum" },
     { key:"fb",   type:"AppFeedback", filters:[{fieldName:"gelezen",comparator:"EQUALS",fieldValue:{value:0}}], label:"Ongelezen feedback", cls:"warm", tab:"feedback" },
@@ -2163,7 +2176,11 @@ async function laadDashboard(){
 
   /* laatste posts + nieuwe gebruikers */
   vulLijst("#dash-posts", () => query("OutdoorPost", { limit: 8 }), "OutdoorPost");
-  vulLijst("#dash-users", () => query("GebruikersAccount", { limit: 8 }), "GebruikersAccount", gebruikerRij);
+  /* Stond eerst op GebruikersAccount ("nieuwe gebruikers"). Dat record maakt de
+     app pas aan zodra iemand "Mijn account" opent, dus die kaart toonde altijd
+     dezelfde ene regel. SurvivalStatus is de lijst die wél meebeweegt: hij is
+     gesorteerd op bijgewerktOp, dus bovenaan staat wie net nog bezig was. */
+  vulLijst("#dash-users", () => query("SurvivalStatus", { limit: 8 }), "SurvivalStatus", survivalRij);
 }
 
 async function vulLijst(sel, fn, type, renderer){
@@ -2406,7 +2423,7 @@ async function laadForumTab(eerste){
       if (echtGezocht && /searchable|not marked|index/i.test(String(zoekFout.message))){
         echtGezocht = false;
         hint.textContent = "Dit veld heeft nog geen zoekindex in CloudKit, dus ik filter alleen wat geladen is. " +
-          "Na de schemaronde van 2.3 zoekt hij hier wél in alles.";
+          "Zet de index aan in CloudKit (zie Controle) en het zoeken pakt vanzelf de hele database.";
         r = await query(type, { limit: 50, filters: filters.filter(f => f.comparator !== "CONTAINS_ALL_TOKENS"),
                                 asc: oplopend, continuationMarker: forumCont });
       } else throw zoekFout;
@@ -3196,9 +3213,15 @@ function balken(paren, opties){
 
 let statsGebruikers = [];
 
+/* Bij het openen één keer vanzelf tellen. De database is klein genoeg dat dit
+   binnen een paar seconden staat, en een tab vol "nog niet geteld" is geen
+   bruikbaar scherm. Daarna blijft het geteld tot je op de knop drukt. */
+let statsAlGeteld = false;
 function laadStats(){
-  if (!statsGebruikers.length) $("#st-state").textContent = "nog niet geteld";
   tekenGeschiedenis();
+  if (statsAlGeteld) return;
+  statsAlGeteld = true;
+  $("#st-load").click();
 }
 
 $("#st-load").onclick = async (e) => {
@@ -3246,7 +3269,7 @@ $("#st-load").onclick = async (e) => {
       ["Noodplan actief", metNoodplan, metNoodplan ? "alert" : ""],
       ["Gem. voorraad", (Math.round(gemVoorraad*10)/10) + " d", "warm"],
       ["Ook PrepAlert", surv.filter(r => v(r,"heeftPrepAlert") === 1).length, "warm"],
-      ["Accounts (2.2+)", users.length, ""],
+      ["Accounts aangemaakt", users.length, ""],
       ["Pro", pro.length + (users.length ? " (" + Math.round(pro.length/users.length*100) + "%)" : ""), "warm"],
       ["Geblokkeerd", geband.length, geband.length ? "alert" : ""],
       ["Actief deze week", actiefSinds(7), "good"],
@@ -3279,11 +3302,12 @@ $("#st-load").onclick = async (e) => {
     $("#st-actief").appendChild(balken(actiefRij, { voet: nooit ? nooit + " zonder bekende datum" : "Gemeten aan wanneer de app hun account bijwerkte." }));
 
     /* --- versies en toestellen ---
-       De versie komt uit SurvivalStatus, niet uit GebruikersAccount. Elk toestel
-       met de app schrijft daar een status weg — ook wie nooit een account kreeg,
-       want accounts bestaan pas vanaf 2.2. Tellen over GebruikersAccount gaf een
-       grafiek van een handvol mensen terwijl de versie van iedereen gewoon
-       bekend is. Toestelmodel staat alleen op het account, dus dat blijft daar. */
+       De versie komt uit SurvivalStatus, niet uit GebruikersAccount. Een status
+       schrijft iedereen die minstens één vriend heeft; een account bestaat pas
+       zodra iemand "Mijn account" opent — dat zijn er veel minder. Tellen over
+       GebruikersAccount gaf dus een grafiek van een handvol mensen terwijl de
+       versie van de hele vriendengroep gewoon bekend is. Toestelmodel staat
+       alleen op het account, dus dat blijft daar. */
     const telOver = (lijst, sleutel) => {
       const m = {};
       lijst.forEach(r => { const w = (v(r,sleutel) || "onbekend"); m[w] = (m[w]||0)+1; });
@@ -4295,7 +4319,13 @@ function verdeling(waarden, grenzen, labels, kleur){
   return emmers.map((n, i) => [labels[i], n, kleur]);
 }
 
-function laadInzichtTab(){}
+/* Zelfde reden als bij Cijfers: één keer vanzelf, daarna op verzoek. */
+let inzichtAlGedaan = false;
+function laadInzichtTab(){
+  if (inzichtAlGedaan) return;
+  inzichtAlGedaan = true;
+  $("#iz-laad").click();
+}
 
 $("#iz-laad").onclick = async (e) => {
   const b = e.target, st = $("#iz-status");
@@ -4409,16 +4439,16 @@ $("#iz-laad").onclick = async (e) => {
         deel > 30 ? "midden" : "hoog");
     } else if (surv.length) {
       zeg("De combinatie is nog niet meetbaar",
-        "PrepperApp en PrepAlert delen op het toestel wel gegevens, maar in CloudKit weten ze niets van elkaar. " +
-        "Met de drie extra velden uit de 2.3-ronde wordt zichtbaar wie beide apps gebruikt — zonder dat er iets " +
-        "nieuws over iemand verzameld wordt.", "midden");
+        "Sinds 2.3 schrijft de app mee of PrepAlert op hetzelfde toestel staat, maar alleen bij wie al bijgewerkt " +
+        "heeft. Zolang de meesten nog op een oudere versie zitten blijft deze teller op nul — dat betekent niet " +
+        "dat niemand beide apps gebruikt.", "midden");
     }
 
     if (chats.length) zeg("Mensen chatten wel degelijk",
-      chats.length + " chatberichten in de database. Van alle sociale functies is dit de enige die nu al gebruikt wordt — dat is een sterk signaal dat samen voorbereiden aanslaat. De rest van de sociale functies zit pas in 2.2 en kan dit versterken.", "laag");
+      chats.length + " chatberichten in de database. Chatten is de sociale functie die het langst meegaat en die ook echt gebruikt wordt — een sterk signaal dat samen voorbereiden aanslaat. De nieuwere sociale functies (forum, expedities, delen) staan pas sinds 2.3 buiten en moeten hun tijd nog krijgen.", "laag");
 
-    if (!posts.length) zeg("Het forum is nog niet aan",
-      "Nul outdoor posts in Production. Dat komt doordat 1.3.1 dat recordtype niet kent — niet doordat mensen niets plaatsen. Beoordeel het forum pas een paar weken nadat 2.2 buiten is.", "laag");
+    if (!posts.length) zeg("Het forum moet nog op gang komen",
+      "Nul outdoor posts in Production. Het forum staat pas sinds 2.3 buiten, en de meeste mensen draaien nog een oudere versie — dit zegt dus nog niets over of het aanslaat. Kijk hier pas naar zodra een flink deel op 2.3 zit (zie de kaart Versies).", "laag");
 
     if (feedback.length){
       const gemBeoordeling = gem(feedback.map(r => getal(r,"beoordeling")));
@@ -4646,7 +4676,7 @@ $("#ct-laad").onclick = async (e) => {
     }
     if (mistZoek.length) meld("Zoekindexen ontbreken nog",
       "Op deze velden kan CloudKit nog niet op woorden zoeken: " + mistZoek.join(", ") +
-      ". De pagina valt daar terug op filteren in wat geladen is. Het schema-script voor 2.3 lost dit op.", "let op");
+      ". De pagina valt daar terug op filteren in wat geladen is. Zet op die velden een Searchable-index in CloudKit; hier hoeft niets voor te veranderen.", "let op");
     else meld("Alle zoekindexen staan", "Zoeken doorzoekt overal de hele database.", "goed");
 
     /* 3 · logboek */
@@ -4795,7 +4825,7 @@ async function telPrepAlert(){
       doos.appendChild(kop); doos.appendChild(balken(weken));
     }
     const voet = el("div","", "In de publieke container van PrepAlert zit alleen een installatiedatum en een anoniem ID — " +
-      "geen land, geen versie, geen Pro. Wie beide apps gebruikt zie je bij Mensen, zodra de velden uit de 2.3-ronde er staan.");
+      "geen land, geen versie, geen Pro. Wie beide apps gebruikt zie je bij Mensen — maar alleen bij mensen die de app al naar 2.3 hebben bijgewerkt.");
     voet.style.cssText = "font-size:.8rem;color:var(--muted);margin-top:.9rem";
     doos.appendChild(voet);
 
@@ -4866,7 +4896,7 @@ async function laadLogboek(){
   } catch(e){
     const nogNiet = /unknown|not found|type/i.test(String(e.message));
     n.innerHTML = leeg(nogNiet
-      ? "Het recordtype AdminLogboek staat nog niet in CloudKit. Zodra je de schemaronde van 2.3 hebt gedaan, vult dit zich vanzelf — de tool schrijft er nu al naartoe zodra het bestaat."
+      ? "Het recordtype AdminLogboek staat nog niet in CloudKit. Voeg het toe aan het schema en dit vult zich vanzelf — de tool schrijft er nu al naartoe zodra het bestaat."
       : String(e.message||e), nogNiet ? "Nog niet aangezet" : "Fout bij laden");
   }
 }
