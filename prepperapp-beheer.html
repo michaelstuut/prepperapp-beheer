@@ -102,8 +102,14 @@ main{max-width:72rem;margin:0 auto;padding:1.1rem .9rem 5rem}
 
 .stat{background:var(--surface);border:1px solid var(--edge);border-radius:var(--r);padding:.75rem .85rem;display:flex;flex-direction:column;gap:.15rem;text-align:left;cursor:pointer;width:100%}
 .stat:hover{border-color:var(--amber-dim)}
-.stat .n{font-family:"JetBrains Mono",monospace;font-size:1.55rem;font-weight:700;line-height:1.1;letter-spacing:-.02em}
+.stat .n{font-family:"JetBrains Mono",monospace;font-size:1.55rem;font-weight:700;line-height:1.1;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
 .stat .l{font-size:.76rem;color:var(--muted);letter-spacing:.02em}
+/* Een nul is geen nieuws. Zes tegels met nul erop trekken samen meer aandacht
+   dan het ene getal dat er wel toe doet, dus die dempen we: nog steeds leesbaar,
+   maar het oog gaat er niet meer naartoe. */
+.stat.nul{border-color:var(--edge-soft);background:transparent}
+.stat.nul .n{color:var(--muted);font-weight:600}
+.stat.nul:hover{border-color:var(--edge)}
 .stat.alert .n{color:var(--red)}
 .stat.good .n{color:var(--green)}
 .stat.warm .n{color:var(--amber)}
@@ -357,6 +363,12 @@ label.f>span.hint{font-weight:400;font-size:.74rem;color:#6B7486}
       <div class="card-b tight" id="sinds-lijst"></div>
     </div>
     <div class="grid c4" id="stats"></div>
+    <div class="card" id="adoptie-kaart">
+      <div class="card-h"><h2>Wie heeft de nieuwste versie</h2><span style="flex:1"></span>
+        <span class="sub" id="adoptie-sub"></span>
+      </div>
+      <div class="card-b" id="adoptie-body"><div class="empty">Laden…</div></div>
+    </div>
     <div class="card">
       <div class="card-h"><h2>Nu aandacht nodig</h2><span class="spacer" style="flex:1"></span><span class="sub" id="dash-when"></span></div>
       <div class="card-b tight" id="dash-attention"><div class="empty">Laden…</div></div>
@@ -1023,7 +1035,7 @@ label.f>span.hint{font-weight:400;font-size:.74rem;color:#6B7486}
    ===================================================================== */
 
 const CONTAINER = "iCloud.com.stuut.PrepperApp";
-const BUILD = 20;
+const BUILD = 24;
 const LS = { token: "pa.token", token2: "pa.token2", env: "pa.env" };
 const CONTAINER_ALERT = "iCloud.com.stuut.PrepAlert";
 
@@ -1067,8 +1079,11 @@ const SCHEMA = {
     f:{ naam:[T.STR,"q"], stad:[T.STR,"q"], land:[T.STR,"q"], uitnodigingsCode:[T.STR,"q"], aantalItems:[T.INT,"qs"],
         overlevingsDagen:[T.DBL,"qs"], voedselDagen:[T.DBL,"qs"], waterDagen:[T.DBL,"qs"],
         actiefNoodplan:[T.STR,"q"], noodplanTijd:[T.TS,"qs"], bijgewerktOp:[T.TS,"qs"],
-        appVersie:[T.STR,"q"], taal:[T.STR,"q"], platform:[T.STR,"q"],
+        appVersie:[T.STR,"q"], taal:[T.STR,"q"], platform:[T.STR,"q"], opvolgerCode:[T.STR,"q"],
         heeftPrepAlert:[T.INT,"q"], prepAlertPro:[T.INT,"q"], prepAlertGezien:[T.TS,"qs"] } },
+  AppGebeurtenis: { label:"App-gebeurtenissen", groep:"Mensen", sort:"tijdstip", datum:"tijdstip",
+    f:{ gebeurtenis:[T.STR,"q"], sessieID:[T.STR,"q"], tijdstip:[T.TS,"qs"],
+        land:[T.STR,"q"], appVersie:[T.STR,"q"], taal:[T.STR,"q"], platform:[T.STR,"q"] } },
   PrepFamilyGebruiker: { label:"PrepFamily-gebruikers", groep:"Mensen", sort:"tijdstip", datum:"tijdstip",
     f:{ stad:[T.STR,"q"], land:[T.STR,"q"], tijdstip:[T.TS,"qs"] } },
   ReferralRecord: { label:"Uitnodigingen", groep:"Mensen", sort:"datum", datum:"datum",
@@ -2075,7 +2090,7 @@ async function laadDashboard(){
     { key:"oud",  type:"ForumMelding", label:"Forummeldingen", cls:"", tab:"meldingen" },
     { key:"ban",  type:"GebruikersAccount", filters:[{fieldName:"isBanned",comparator:"EQUALS",fieldValue:{value:1}}], label:"Geblokkeerd", cls:"", tab:"gebruikers" },
     { key:"hid",  type:"AdminVerborgen", label:"Verborgen", cls:"", tab:"verborgen" },
-    { key:"surv", type:"SurvivalStatus", label:"Mensen in de app", cls:"good", tab:"gebruikers" },
+    { key:"surv", type:"SurvivalStatus", label:"Delen hun status", cls:"good", tab:"gebruikers" },
     { key:"usr",  type:"GebruikersAccount", label:"Accounts (2.2+)", cls:"", tab:"gebruikers" },
     { key:"pro",  type:"GebruikersAccount", filters:[{fieldName:"isPro",comparator:"EQUALS",fieldValue:{value:1}}], label:"Pro", cls:"warm", tab:"gebruikers" },
     { key:"post", type:"OutdoorPost", label:"Outdoor posts", cls:"", tab:"forum" },
@@ -2089,7 +2104,7 @@ async function laadDashboard(){
 
   stats.innerHTML = ""; stats.dataset.loaded = "1";
   uitslagen.forEach(u => {
-    const b = el("button", "stat " + (u.n ? u.cls : ""));
+    const b = el("button", "stat " + (u.n ? u.cls : "nul"));
     b.innerHTML = '<span class="n">' + (u.n == null ? "?" : (u.n + (u.meer ? "+" : ""))) + '</span><span class="l">' + esc(u.label) + "</span>";
     b.title = u.fout || "";
     b.onclick = () => gaNaar(u.tab);
@@ -2113,6 +2128,7 @@ async function laadDashboard(){
   });
 
   toonSinds();
+  laadAdoptie();
 
   /* aandachtslijst */
   bezig(att);
@@ -2159,6 +2175,101 @@ async function vulLijst(sel, fn, type, renderer){
     if (!recs.length) { n.innerHTML = leeg("Nog niets."); return; }
     recs.forEach(rec => n.appendChild((renderer || rij)(rec, type)));
   } catch(e){ n.innerHTML = leeg(String(e.message||e), "Fout"); }
+}
+
+/** Verdeling over appversies, op het beginscherm.
+ *
+ *  Telt app-starts uit `AppGebeurtenis`, niet mensen uit `SurvivalStatus`.
+ *
+ *  Waarom: een SurvivalStatus bestaat alleen zolang iemand minstens één vriend
+ *  heeft, en een GebruikersAccount wordt pas aangemaakt als iemand het scherm
+ *  "Mijn account" opent. Wie de app in zijn eentje gebruikt en nooit in dat
+ *  scherm komt, laat in de publieke database geen enkel spoor na — precies zoals
+ *  bedoeld, maar daardoor ook niet te tellen.
+ *
+ *  `AppGebeurtenis` wél: sinds 2.3 legt elke start er een regel neer, met de
+ *  appversie erbij en zonder gebruikerscode. Het sessie-ID wordt bij elke start
+ *  opnieuw bedacht, dus dit telt starts en geen personen — maar het is het enige
+ *  cijfer dat iedereen meeneemt, ook wie de app solo draait.
+ *
+ *  Onder de streep staat het aantal mensen dat wél een status deelt, want dat
+ *  zijn wél personen. Twee verschillende dingen, allebei eerlijk gelabeld.
+ */
+async function laadAdoptie(){
+  const body = $("#adoptie-body"), sub = $("#adoptie-sub");
+  if (!body) return;
+  try {
+    const r = await query("AppGebeurtenis", {
+      filters:[{ fieldName:"gebeurtenis", comparator:"EQUALS", fieldValue:{ value:"app_gestart" } }],
+      limit: 400 });
+    const recs = r.records || [];
+
+    if (!recs.length) {
+      body.innerHTML = leeg("Nog geen app-starts vastgelegd. Dit begint te lopen zodra mensen op 2.3 zitten.");
+      sub.textContent = ""; return;
+    }
+
+    /* Ontdubbelen op sessie-ID: één start hoort één keer te tellen. */
+    const perSessie = new Map();
+    recs.forEach(rec => {
+      const sid = v(rec,"sessieID") || rec.recordName;
+      if (!perSessie.has(sid)) perSessie.set(sid, v(rec,"appVersie") || "onbekend");
+    });
+
+    const m = {};
+    perSessie.forEach(versie => { m[versie] = (m[versie]||0)+1; });
+    const paren = Object.entries(m).sort((a,b) => b[1]-a[1]);
+    const bekend = paren.filter(([l]) => l !== "onbekend");
+
+    const nieuwerDan = (a, b) => {
+      const pa = String(a).split("."), pb = String(b).split(".");
+      for (let i = 0; i < Math.max(pa.length, pb.length); i++) {
+        const x = parseInt(pa[i], 10) || 0, y = parseInt(pb[i], 10) || 0;
+        if (x !== y) return x > y;
+      }
+      return false;
+    };
+    let nieuwste = null;
+    bekend.forEach(([l]) => { if (!nieuwste || nieuwerDan(l, nieuwste)) nieuwste = l; });
+
+    const totaal = perSessie.size;
+    const op     = nieuwste ? (paren.find(([l]) => l === nieuwste) || [null,0])[1] : 0;
+    const pct    = totaal ? Math.round(op / totaal * 100) : 0;
+
+    body.innerHTML = "";
+    const kop = el("div", "", nieuwste
+      ? "<b style=\"color:var(--ink)\">" + op + " van " + totaal + "</b> app-starts draaide v"
+        + esc(nieuwste) + " \u2014 " + pct + "%."
+      : "Nog geen versies bekend bij de app-starts.");
+    kop.style.cssText = "font-size:.9rem;color:var(--ink-dim);margin-bottom:.8rem";
+    body.appendChild(kop);
+
+    body.appendChild(balken(
+      paren.slice(0, 8).map(([l, n]) => [l === "onbekend" ? "onbekend" : "v" + l, n,
+                                         l === nieuwste ? "var(--green)" : "var(--blue)"]),
+      { voet: "Starts van de app, niet personen \u2014 het sessie-ID wordt bij elke start opnieuw bedacht. "
+             + "Wel het enige cijfer waar ook mensen in zitten die de app alleen gebruiken." }));
+
+    /* Tweede regel: mensen die hun status delen. Dat zijn wél personen. */
+    try {
+      const sr = await query("SurvivalStatus", { limit: 400 });
+      const sRecs = sr.records || [];
+      if (sRecs.length) {
+        const sm = {};
+        sRecs.forEach(rec => { const w = v(rec,"appVersie") || "onbekend"; sm[w] = (sm[w]||0)+1; });
+        const sOp = sm[nieuwste] || 0;
+        const regel = el("div","", sOp + " van " + sRecs.length
+          + " mensen die hun status delen zit op v" + esc(nieuwste || "?") + ".");
+        regel.style.cssText = "margin-top:.9rem;padding-top:.7rem;border-top:1px solid var(--edge-soft);font-size:.82rem;color:var(--muted)";
+        body.appendChild(regel);
+      }
+    } catch(e){ /* bijzaak; de kaart staat er al */ }
+
+    sub.textContent = totaal + " starts";
+  } catch(e){
+    body.innerHTML = leeg("Kon de versies niet ophalen: " + esc(String(e.message || e)));
+    sub.textContent = "";
+  }
 }
 
 /* =====================================================================
@@ -2580,9 +2691,10 @@ async function bouwDossier(code){
   wrap.innerHTML = '<div class="card"><div class="empty"><span class="spin"></span> Alles ophalen van ' + esc(codeWeergave(code)) + "…</div></div>";
 
   /* account en survival eerst, die bepalen de kop */
-  const [accR, meldingen] = await Promise.all([
+  const [accR, meldingen, voorgangers] = await Promise.all([
     query("GebruikersAccount", { filters:[{fieldName:"gebruikerCode",comparator:"EQUALS",fieldValue:{value:code}}], limit:1, sort:null }).catch(()=>({records:[]})),
     haalMeldingenOver(code),
+    haalVoorgangers(code),
   ]);
   const account = (accR.records||[])[0] || null;
 
@@ -2595,8 +2707,30 @@ async function bouwDossier(code){
     } catch(e){ return { kop, type, recs: [], fout: String(e.message||e) }; }
   }));
 
-  dossierData = { code, account, meldingen, secties };
+  dossierData = { code, account, meldingen, secties, voorgangers };
   tekenDossier();
+}
+
+/** Welke eerdere codes wijzen naar deze code?
+ *
+ *  Sinds 2.3 zet `koppelOudeCode` een `opvolgerCode` op het statusrecord van de
+ *  oude code. Wie zijn vorige code koppelt laat daarmee een spoor achter, en dat
+ *  spoor is precies wat je bij een supportvraag nodig hebt: "welke codes zijn
+ *  van deze persoon geweest".
+ *
+ *  Vereist een queryable index op `SurvivalStatus.opvolgerCode`. Staat die er
+ *  niet, dan komt hier gewoon een lege lijst uit en zegt de kaart dat erbij —
+ *  liever niets tonen dan een fout in het gezicht van wie iemand probeert te
+ *  helpen.
+ */
+async function haalVoorgangers(code){
+  try {
+    const r = await query("SurvivalStatus", {
+      filters:[{ fieldName:"opvolgerCode", comparator:"EQUALS", fieldValue:{ value: code } }], limit: 25 });
+    return { records: r.records || [], fout: null };
+  } catch(e){
+    return { records: [], fout: String(e.message || e) };
+  }
 }
 
 /** Meldingen die over deze persoon gaan: de melding wijst naar een post,
@@ -2625,7 +2759,7 @@ async function haalMeldingenOver(code){
 }
 
 function tekenDossier(){
-  const { code, account, meldingen, secties } = dossierData;
+  const { code, account, meldingen, secties, voorgangers } = dossierData;
   const wrap = $("#dos-inhoud"); wrap.innerHTML = "";
 
   /* --- kop --- */
@@ -2649,6 +2783,7 @@ function tekenDossier(){
     '<span class="mono">' + esc(codeWeergave(code)) + "</span>" +
     (account ? '<span class="pill green">heeft account</span>' : '<span class="pill plain">nog geen account (pre-2.2)</span>') +
     (plaats ? "<span>" + esc(plaats) + "</span>" : "") +
+    (surv && v(surv,"appVersie") ? '<span class="mono">v' + esc(v(surv,"appVersie")) + "</span>" : "") +
     "<span>" + totaal + " records</span>" +
     (meldingen.length ? '<span class="pill red">' + meldingen.length + " melding" + (meldingen.length===1?"":"en") + " tegen deze persoon</span>" : "");
   kb.appendChild(pills);
@@ -2682,6 +2817,59 @@ function tekenDossier(){
   kb.appendChild(acties);
   kop.appendChild(kb);
   wrap.appendChild(kop);
+
+  /* --- andere codes van deze persoon ---
+     De vraag die bij elke supportvraag als eerste opkomt en die nergens te
+     beantwoorden was: heeft deze persoon eerder een andere code gehad? Sinds
+     2.3 laat het koppelen een spoor achter via opvolgerCode. */
+  {
+    const opvolger = surv ? (v(surv,"opvolgerCode") || "") : "";
+    const eerdere  = (voorgangers && voorgangers.records) || [];
+    const indexFout = voorgangers && voorgangers.fout;
+
+    if (opvolger || eerdere.length || indexFout) {
+      const c = el("div","card");
+      c.appendChild(el("div","card-h","<h2>Andere codes van deze persoon</h2>"));
+      const b = el("div","card-b");
+      b.style.cssText = "display:flex;flex-direction:column;gap:.6rem";
+
+      if (opvolger) {
+        const r = el("div","text");
+        r.innerHTML = "Deze code is doorverwezen naar <b class=\"mono\">" + esc(codeWeergave(opvolger))
+          + "</b>. Vrienden die deze persoon nog onder <span class=\"mono\">" + esc(codeWeergave(code))
+          + "</span> kennen, verhuizen vanzelf mee zodra hun app 2.3 draait.";
+        const knop = el("button","btn sm","Dossier van " + esc(codeWeergave(opvolger)));
+        knop.onclick = () => { dossierData = null; opendossier(opvolger); };
+        b.appendChild(r); b.appendChild(knop);
+      }
+
+      if (eerdere.length) {
+        const lijst = el("div","text");
+        lijst.innerHTML = "Eerder gebruikte deze persoon "
+          + (eerdere.length === 1 ? "deze code:" : "deze codes:");
+        b.appendChild(lijst);
+        eerdere.forEach(rec => {
+          const oudeCode = v(rec,"uitnodigingsCode") || rec.recordName.replace(/^PP-/,"");
+          const rij = el("div","");
+          rij.style.cssText = "display:flex;align-items:center;gap:.6rem";
+          rij.innerHTML = '<span class="mono">' + esc(codeWeergave(oudeCode)) + "</span>";
+          const k = el("button","btn sm","Dossier");
+          k.onclick = () => { dossierData = null; opendossier(oudeCode); };
+          rij.appendChild(k);
+          b.appendChild(rij);
+        });
+      }
+
+      if (!opvolger && !eerdere.length && indexFout) {
+        b.appendChild(el("div","text",
+          "Kon niet zoeken naar eerdere codes. Meestal betekent dit dat "
+          + "<span class=\"mono\">SurvivalStatus.opvolgerCode</span> nog geen queryable index heeft. "
+          + "Toevoegen mag in Productie \u2014 indexen zijn additief."));
+      }
+      c.appendChild(b);
+      wrap.appendChild(c);
+    }
+  }
 
   /* --- meldingen tegen deze persoon --- */
   if (meldingen.length){
@@ -3066,7 +3254,7 @@ $("#st-load").onclick = async (e) => {
     const gemVoorraad = voorraden.length ? (voorraden.reduce((a,b)=>a+b,0) / voorraden.length) : 0;
 
     const kern = [
-      ["Mensen in de app", surv.length, "good"],
+      ["Delen hun status", surv.length, "good"],
       ["Bijgewerkt deze maand", survActief(30), ""],
       ["Noodplan actief", metNoodplan, metNoodplan ? "alert" : ""],
       ["Gem. voorraad", (Math.round(gemVoorraad*10)/10) + " d", "warm"],
@@ -3103,19 +3291,55 @@ $("#st-load").onclick = async (e) => {
     $("#st-actief").innerHTML = "";
     $("#st-actief").appendChild(balken(actiefRij, { voet: nooit ? nooit + " zonder bekende datum" : "Gemeten aan wanneer de app hun account bijwerkte." }));
 
-    /* --- versies en toestellen --- */
-    const tel = (sleutel) => {
+    /* --- versies en toestellen ---
+       De versie komt uit SurvivalStatus, niet uit GebruikersAccount. Elk toestel
+       met de app schrijft daar een status weg — ook wie nooit een account kreeg,
+       want accounts bestaan pas vanaf 2.2. Tellen over GebruikersAccount gaf een
+       grafiek van een handvol mensen terwijl de versie van iedereen gewoon
+       bekend is. Toestelmodel staat alleen op het account, dus dat blijft daar. */
+    const telOver = (lijst, sleutel) => {
       const m = {};
-      users.forEach(u => { const w = (v(u,sleutel) || "onbekend"); m[w] = (m[w]||0)+1; });
-      return Object.entries(m).sort((a,b) => b[1]-a[1]).slice(0,10);
+      lijst.forEach(r => { const w = (v(r,sleutel) || "onbekend"); m[w] = (m[w]||0)+1; });
+      return Object.entries(m).sort((a,b) => b[1]-a[1]).slice(0,12);
     };
+    const tel = (sleutel) => telOver(users, sleutel);
+
+    /** Is a een nieuwere versie dan b? Vergelijkt per onderdeel, zodat 2.10
+     *  hoger uitkomt dan 2.9 — wat een gewone tekstvergelijking niet doet. */
+    const versieNieuwer = (a, b) => {
+      const pa = String(a).split("."), pb = String(b).split(".");
+      for (let i = 0; i < Math.max(pa.length, pb.length); i++) {
+        const x = parseInt(pa[i], 10) || 0, y = parseInt(pb[i], 10) || 0;
+        if (x !== y) return x > y;
+      }
+      return false;
+    };
+
     $("#st-versies").innerHTML = "";
-    if (users.length) $("#st-versies").appendChild(balken(tel("appVersie").map(([l,n]) => ["v"+l, n, "var(--blue)"])));
-    else {
+    const versieTelling = telOver(surv, "appVersie");
+    const bekendeVersies = versieTelling.filter(([l]) => l !== "onbekend");
+    if (bekendeVersies.length) {
+      let nieuwste = null;
+      bekendeVersies.forEach(([l]) => { if (!nieuwste || versieNieuwer(l, nieuwste)) nieuwste = l; });
+      const totaal     = surv.length;
+      const opNieuwste = (versieTelling.find(([l]) => l === nieuwste) || [null, 0])[1];
+      const pct        = totaal ? Math.round(opNieuwste / totaal * 100) : 0;
+      const achter     = totaal - opNieuwste;
+
+      const kop = el("div", "", opNieuwste + " van " + totaal + " mensen draait <b>v" + esc(nieuwste)
+        + "</b> — " + pct + "%. " + (achter ? achter + " nog niet." : "Iedereen is bij."));
+      kop.style.cssText = "font-size:.85rem;color:var(--ink-dim);margin-bottom:.7rem";
+      $("#st-versies").appendChild(kop);
+      $("#st-versies").appendChild(balken(
+        versieTelling.map(([l, n]) => [l === "onbekend" ? "onbekend" : "v" + l, n,
+                                       l === nieuwste ? "var(--green)" : "var(--blue)"]),
+        { voet: "Uit SurvivalStatus \u2014 alleen wie minstens \u00e9\u00e9n vriend heeft deelt er een, "
+               + "en dan nog pas nadat de app na het bijwerken \u00e9\u00e9n keer heeft gepubliceerd." }));
+    } else {
       const landen = {};
       surv.concat(prepfam).forEach(r => { const w = v(r,"land") || "onbekend"; landen[w] = (landen[w]||0)+1; });
       const rijen = Object.entries(landen).sort((a,b)=>b[1]-a[1]).slice(0,10).map(([l,n]) => [l, n, "var(--blue)"]);
-      const kop = el("div","", "Appversies staan pas in de database vanaf 2.2. Zolang die niet live is, hier de landenverdeling uit de survival-statussen.");
+      const kop = el("div","", "Nog geen appversies in de database. Zolang die er niet zijn, hier de landenverdeling uit de survival-statussen.");
       kop.style.cssText = "font-size:.8rem;color:var(--muted);margin-bottom:.6rem";
       $("#st-versies").appendChild(kop);
       $("#st-versies").appendChild(balken(rijen));
@@ -4363,7 +4587,7 @@ function tekenGeschiedenis(){
   $("#gs-info").textContent = lijst.length ? lijst.length + " dagen vastgelegd" : "";
   if (!lijst.length){ doos.innerHTML = '<div class="empty">Wordt vanaf nu opgebouwd. Elke dag dat je hier kijkt komt er een punt bij.</div>'; return; }
   const reeksen = [
-    ["mensen", "Mensen in de app", "var(--green)"],
+    ["mensen", "Delen hun status", "var(--green)"],
     ["posts",  "Berichten in het forum", "var(--blue)"],
     ["pro",    "Pro", "var(--amber)"],
     ["geblokkeerd", "Geblokkeerd", "var(--red)"],
