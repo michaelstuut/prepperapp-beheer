@@ -1248,7 +1248,7 @@ details.uitleg .inhoud{
    ===================================================================== */
 
 const CONTAINER = "iCloud.com.stuut.PrepperApp";
-const BUILD = 33;
+const BUILD = 34;
 const LS = { token: "pa.token", token2: "pa.token2", env: "pa.env" };
 const CONTAINER_ALERT = "iCloud.com.stuut.PrepAlert";
 
@@ -3585,7 +3585,7 @@ $("#st-load").onclick = async (e) => {
       ["Actief deze maand", survActief(30), ""],
       ["Nieuw deze week", survNieuw(7), "good"],
       ["Noodplan actief", metNoodplan, metNoodplan ? "alert" : ""],
-      ["Gem. voorraad", (Math.round(gemVoorraad*10)/10) + " d", "warm"],
+      ["Gem. voorraad in dagen", (Math.round(gemVoorraad*10)/10), "warm"],
       ["Ook PrepAlert", surv.filter(r => v(r,"heeftPrepAlert") === 1).length, "warm"],
       ["Feedback totaal", fb.length, ""],
       ["Accounts aangemaakt", users.length, ""],
@@ -3595,7 +3595,10 @@ $("#st-load").onclick = async (e) => {
     ];
     const kn = $("#st-kerncijfers"); kn.innerHTML = "";
     kern.forEach(([label, n, cls]) => {
-      const c = el("div", "stat " + cls); c.style.cursor = "default";
+      /* Zelfde regel als op het beginscherm: een nul dempen, zodat het oog naar
+         de getallen gaat die iets zeggen. */
+      const isNul = (n === 0 || n === "0");
+      const c = el("div", "stat " + (isNul ? "nul" : cls)); c.style.cursor = "default";
       c.innerHTML = '<span class="n">' + esc(String(n)) + '</span><span class="l">' + esc(label) + "</span>";
       kn.appendChild(c);
     });
