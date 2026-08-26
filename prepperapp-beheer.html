@@ -304,13 +304,13 @@ label.f>span.hint{font-weight:400;font-size:.74rem;color:#6B7486}
 /* ---------- schil: zijbalk naast de inhoud ---------- */
 .shell{max-width:82rem;margin:0 auto}
 .zijbalk{display:none}
-.zijgroep{display:flex;flex-direction:column;gap:1px;margin-bottom:1.15rem}
-.zijgroep > .eyebrow{padding:0 .7rem .4rem}
+.zijgroep{display:flex;flex-direction:column;gap:1px;margin-bottom:.95rem}
+.zijgroep > .eyebrow{padding:0 .7rem .3rem}
 .zijknop{
   display:flex;align-items:center;gap:.55rem;width:100%;text-align:left;
   background:none;border:1px solid transparent;border-radius:8px;
-  padding:.42rem .7rem;color:var(--ink-dim);font-size:.875rem;font-weight:500;
-  cursor:pointer;line-height:1.35;
+  padding:.33rem .7rem;color:var(--ink-dim);font-size:.87rem;font-weight:500;
+  cursor:pointer;line-height:1.4;
 }
 .zijknop:hover{background:var(--surface);color:var(--ink)}
 .zijknop[aria-current="page"]{
@@ -322,23 +322,27 @@ label.f>span.hint{font-weight:400;font-size:.74rem;color:#6B7486}
 }
 .zijknop .telling.hide{display:none !important}
 .zijvoet{
-  border-top:1px solid var(--edge-soft);margin-top:.4rem;padding:.8rem .7rem 0;
-  font-size:.72rem;color:var(--faint);line-height:1.5;
+  border-top:1px solid var(--edge-soft);margin-top:.2rem;padding:.7rem .7rem 0;
+  font-size:.7rem;color:var(--faint);line-height:1.5;
 }
 
 @media(min-width:64rem){
   .topbar .tabs{display:none}
   .shell{display:grid;grid-template-columns:var(--zij) minmax(0,1fr);align-items:start;gap:0}
+  .topbar-in,.tabs{max-width:82rem}
   .zijbalk{
     display:block;position:sticky;
     top:calc(env(safe-area-inset-top) + var(--kop-h));
-    max-height:calc(100vh - var(--kop-h) - 1rem);
+    max-height:calc(100vh - var(--kop-h));
     overflow-y:auto;overscroll-behavior:contain;
-    padding:1.4rem .7rem 2rem .35rem;
+    padding:1.35rem .8rem 1.6rem .9rem;
     border-right:1px solid var(--edge-soft);
-    scrollbar-width:thin;
+    scrollbar-width:thin;scrollbar-color:var(--edge) transparent;
   }
-  main{max-width:none;padding:1.4rem 0 5rem 1.6rem}
+  .zijbalk::-webkit-scrollbar{width:6px}
+  .zijbalk::-webkit-scrollbar-thumb{background:var(--edge);border-radius:3px}
+  .zijbalk::-webkit-scrollbar-track{background:transparent}
+  main{max-width:none;padding:1.35rem .9rem 5rem 1.6rem}
   .view{gap:1.15rem}
 }
 
@@ -1171,7 +1175,7 @@ label.f>span.hint{font-weight:400;font-size:.74rem;color:#6B7486}
    ===================================================================== */
 
 const CONTAINER = "iCloud.com.stuut.PrepperApp";
-const BUILD = 29;
+const BUILD = 30;
 const LS = { token: "pa.token", token2: "pa.token2", env: "pa.env" };
 const CONTAINER_ALERT = "iCloud.com.stuut.PrepAlert";
 
