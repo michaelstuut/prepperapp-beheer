@@ -259,6 +259,130 @@ label.f>span.hint{font-weight:400;font-size:.74rem;color:#6B7486}
 #gate .step .n{font-family:"JetBrains Mono",monospace;font-size:.72rem;font-weight:700;color:var(--amber);background:var(--amber-soft);border-radius:5px;padding:.1rem .38rem;flex:none;margin-top:.15rem}
 #signin-slot{min-height:2.6rem;display:flex;align-items:center;gap:.6rem;flex-wrap:wrap}
 .hide{display:none !important}
+
+/* =====================================================================
+   Vormgeving — tweede ronde
+   ---------------------------------------------------------------------
+   Wat hieronder staat overschrijft bewust een deel van de regels erboven.
+   De aanleiding: negentien onderdelen achter één rijtje pillen en een knop
+   "Meer …" is prima op een telefoon en ronduit karig op een scherm van
+   1400 pixels. Op breed staat de navigatie nu links, gegroepeerd en
+   uitgeschreven, en krijgt elk scherm een kop die zegt waar je bent en
+   waar je naar kijkt. Op smal verandert er niets: daar blijven de pillen.
+   ===================================================================== */
+:root{
+  --faint:#5C6577;
+  --edge-strong:#3A4457;
+  --surface-2:#171E2A;
+  --zij:15.5rem;          /* breedte van de zijbalk */
+  --kop-h:3.55rem;        /* hoogte van de bovenbalk zonder pillenrij */
+}
+
+/* ---------- bovenbalk: rangorde in plaats van vijf gelijke knoppen ---------- */
+.topbar-in{gap:.5rem}
+.brand b{font-size:1.02rem}
+.topacties{display:flex;align-items:center;gap:.4rem;flex-wrap:wrap}
+.topacties .streep{width:1px;height:1.35rem;background:var(--edge);flex:none;margin:0 .15rem}
+.iconbtn{background:transparent;border-color:var(--edge-soft);color:var(--ink-dim);transition:border-color .12s,color .12s,background .12s}
+.iconbtn:hover{background:var(--raised);border-color:var(--edge-strong);color:var(--ink)}
+.iconbtn.nadruk{background:var(--raised);border-color:var(--edge);color:var(--ink)}
+.iconbtn.nadruk:hover{border-color:var(--amber-dim);color:var(--amber)}
+.iconbtn.stil{border-color:transparent;color:var(--muted)}
+.iconbtn.stil:hover{color:var(--ink-dim);background:transparent;border-color:var(--edge-soft)}
+
+/* ---------- zichtbare focus, overal ---------- */
+:where(button,a,input,select,textarea,[tabindex]):focus-visible{
+  outline:2px solid var(--amber); outline-offset:2px; border-radius:6px;
+}
+
+/* ---------- micro-labels ---------- */
+.eyebrow{
+  font-size:.68rem;font-weight:700;letter-spacing:.13em;text-transform:uppercase;
+  color:var(--faint);font-family:"Public Sans",system-ui,sans-serif;
+}
+
+/* ---------- schil: zijbalk naast de inhoud ---------- */
+.shell{max-width:82rem;margin:0 auto}
+.zijbalk{display:none}
+.zijgroep{display:flex;flex-direction:column;gap:1px;margin-bottom:1.15rem}
+.zijgroep > .eyebrow{padding:0 .7rem .4rem}
+.zijknop{
+  display:flex;align-items:center;gap:.55rem;width:100%;text-align:left;
+  background:none;border:1px solid transparent;border-radius:8px;
+  padding:.42rem .7rem;color:var(--ink-dim);font-size:.875rem;font-weight:500;
+  cursor:pointer;line-height:1.35;
+}
+.zijknop:hover{background:var(--surface);color:var(--ink)}
+.zijknop[aria-current="page"]{
+  background:var(--amber-soft);border-color:var(--amber-dim);color:var(--amber);font-weight:600;
+}
+.zijknop .telling{
+  margin-left:auto;font-family:"JetBrains Mono",monospace;font-size:.7rem;font-weight:700;
+  background:var(--red);color:#fff;border-radius:999px;padding:0 .4em;min-width:1.35em;text-align:center;
+}
+.zijknop .telling.hide{display:none !important}
+.zijvoet{
+  border-top:1px solid var(--edge-soft);margin-top:.4rem;padding:.8rem .7rem 0;
+  font-size:.72rem;color:var(--faint);line-height:1.5;
+}
+
+@media(min-width:64rem){
+  .topbar .tabs{display:none}
+  .shell{display:grid;grid-template-columns:var(--zij) minmax(0,1fr);align-items:start;gap:0}
+  .zijbalk{
+    display:block;position:sticky;
+    top:calc(env(safe-area-inset-top) + var(--kop-h));
+    max-height:calc(100vh - var(--kop-h) - 1rem);
+    overflow-y:auto;overscroll-behavior:contain;
+    padding:1.4rem .7rem 2rem .35rem;
+    border-right:1px solid var(--edge-soft);
+    scrollbar-width:thin;
+  }
+  main{max-width:none;padding:1.4rem 0 5rem 1.6rem}
+  .view{gap:1.15rem}
+}
+
+/* ---------- kop boven elk scherm ---------- */
+#paginakop{display:flex;flex-direction:column;gap:.35rem;margin:0 0 1.25rem}
+#paginakop:empty{display:none}
+#paginakop h1{
+  font-family:"Bricolage Grotesque","Public Sans",sans-serif;font-weight:700;
+  font-size:1.42rem;letter-spacing:-.02em;margin:0;line-height:1.2;
+}
+#paginakop p{margin:0;color:var(--muted);font-size:.86rem;max-width:58ch;line-height:1.55}
+@media(max-width:63.99rem){ #paginakop h1{font-size:1.2rem} }
+
+/* ---------- kaarten iets rustiger, koppen iets steviger ---------- */
+.card{border-color:var(--edge-soft);box-shadow:0 1px 0 rgba(255,255,255,.02) inset,0 1px 2px rgba(0,0,0,.25)}
+.card-h{padding:.8rem .95rem;gap:.55rem}
+.card-h h2{font-size:.97rem;letter-spacing:-.005em}
+.card-h .sub{font-size:.78rem;color:var(--faint);font-variant-numeric:tabular-nums}
+.card-b{padding:.95rem}
+
+/* ---------- tellers ---------- */
+.stat{border-color:var(--edge-soft);padding:.85rem .9rem;gap:.25rem;transition:border-color .12s}
+.stat .n{font-size:1.7rem}
+.stat .l{font-size:.75rem;color:var(--muted);letter-spacing:.01em;line-height:1.3}
+@media(min-width:64rem){ .stat .n{font-size:1.85rem} }
+
+/* ---------- balkgrafieken ---------- */
+.balk-rij{display:grid;grid-template-columns:minmax(5rem,9rem) 1fr auto;gap:.7rem;align-items:center;font-size:.83rem}
+.balk-rij .lab{color:var(--ink-dim);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.balk-rij .spoor{background:var(--edge-soft);border-radius:999px;height:.55rem;overflow:hidden}
+.balk-rij .vul{height:100%;border-radius:999px;transition:width .35s ease}
+.balk-rij .telw{color:var(--ink-dim);font-size:.78rem;min-width:2.75rem;text-align:right;font-variant-numeric:tabular-nums}
+@media(prefers-reduced-motion:reduce){ .balk-rij .vul{transition:none} }
+
+/* ---------- rijen ---------- */
+.row{padding:.85rem .95rem;transition:background .12s}
+.row:hover{background:var(--surface-2)}
+.card-b.tight .row:first-child{border-top-left-radius:var(--r);border-top-right-radius:var(--r)}
+.meta{font-size:.77rem;gap:.15rem .7rem;font-variant-numeric:tabular-nums}
+.pill{padding:.1rem .5rem;font-size:.685rem;letter-spacing:.025em}
+
+/* ---------- lege toestanden ---------- */
+.empty{padding:2.4rem 1rem;line-height:1.6}
+.empty b{font-size:1.02rem;margin-bottom:.35rem}
 </style>
 </head>
 <body>
@@ -338,21 +462,27 @@ label.f>span.hint{font-weight:400;font-size:.74rem;color:#6B7486}
       </div>
     </div>
     <span class="spacer"></span>
-    <select id="auto" class="iconbtn" title="Automatisch verversen" style="padding:.4rem .5rem">
-      <option value="0">handmatig</option>
-      <option value="60">elke minuut</option>
-      <option value="300">elke 5 min</option>
-      <option value="900">elke 15 min</option>
-    </select>
-    <button class="iconbtn" id="alarm" title="Waarschuw me bij nieuwe meldingen">Waarschuwen: uit</button>
-    <button class="iconbtn" id="pair" title="Open deze tool op je telefoon">Telefoon</button>
-    <button class="iconbtn" id="refresh-all" title="Alles opnieuw laden">Verversen</button>
-    <button class="iconbtn" id="signout">Uitloggen</button>
+    <div class="topacties">
+      <select id="auto" class="iconbtn" title="Automatisch verversen" style="padding:.4rem .5rem">
+        <option value="0">handmatig</option>
+        <option value="60">elke minuut</option>
+        <option value="300">elke 5 min</option>
+        <option value="900">elke 15 min</option>
+      </select>
+      <button class="iconbtn" id="alarm" title="Waarschuw me bij nieuwe meldingen">Waarschuwen: uit</button>
+      <button class="iconbtn nadruk" id="refresh-all" title="Alles opnieuw laden">Verversen</button>
+      <span class="streep" aria-hidden="true"></span>
+      <button class="iconbtn stil" id="pair" title="Open deze tool op je telefoon">Telefoon</button>
+      <button class="iconbtn stil" id="signout">Uitloggen</button>
+    </div>
   </div>
   <nav class="tabs" role="tablist" id="tabs"></nav>
 </header>
 
+<div class="shell">
+<nav class="zijbalk" id="zijbalk" aria-label="Onderdelen"></nav>
 <main>
+  <div id="paginakop"></div>
 
   <!-- ---------- Dashboard ---------- -->
   <section class="view" id="v-dashboard" role="tabpanel">
@@ -528,13 +658,9 @@ label.f>span.hint{font-weight:400;font-size:.74rem;color:#6B7486}
   <!-- ---------- Controle ---------- -->
   <section class="view" id="v-controle" role="tabpanel">
     <div class="card">
-      <div class="card-h"><h2>Controle</h2><span style="flex:1"></span>
+      <div class="card-h"><h2>Uitslag</h2><span style="flex:1"></span>
         <span class="sub" id="ct-status"></span>
-        <button class="btn sm" id="ct-laad">Doorlichten</button>
-      </div>
-      <div class="card-b" style="font-size:.84rem;color:var(--muted)">
-        Kijkt of alles nog klopt: haalt elk recordtype op, controleert of de indexen er zijn die deze
-        pagina nodig heeft, en zoekt naar rommel die niemand ziet maar die wel in de weg zit.
+        <button class="btn sm primary" id="ct-laad">Doorlichten</button>
       </div>
       <div class="card-b tight" id="ct-lijst"><div class="empty">Nog niet gedaan.</div></div>
     </div>
@@ -785,13 +911,12 @@ label.f>span.hint{font-weight:400;font-size:.74rem;color:#6B7486}
   <!-- ---------- Statistieken ---------- -->
   <section class="view" id="v-stats" role="tabpanel">
     <div class="card">
-      <div class="card-h"><h2>Cijfers</h2><span style="flex:1"></span>
+      <div class="card-h"><h2>Kerncijfers</h2><span style="flex:1"></span>
         <span class="sub" id="st-state"></span>
-        <button class="btn sm" id="st-load">Alles tellen</button>
+        <button class="btn sm" id="st-load">Opnieuw tellen</button>
       </div>
-      <div class="card-b" style="font-size:.84rem;color:var(--muted)">
-        Dit telt écht alles, niet de eerste paar honderd. Bij veel records duurt het even —
-        CloudKit geeft maximaal 400 records per keer, dus het haalt ze in stukjes op.
+      <div class="card-b" style="font-size:.82rem;color:var(--faint);padding-top:.7rem;padding-bottom:.7rem">
+        CloudKit geeft maximaal 400 records per keer, dus dit haalt ze in stukjes op. Bij veel records duurt het even.
       </div>
     </div>
 
@@ -890,13 +1015,9 @@ label.f>span.hint{font-weight:400;font-size:.74rem;color:#6B7486}
   <!-- ---------- Inzichten ---------- -->
   <section class="view" id="v-inzicht" role="tabpanel">
     <div class="card">
-      <div class="card-h"><h2>Wat de cijfers zeggen</h2><span style="flex:1"></span>
+      <div class="card-h"><h2>Bevindingen</h2><span style="flex:1"></span>
         <span class="sub" id="iz-status"></span>
-        <button class="btn sm" id="iz-laad">Analyseren</button>
-      </div>
-      <div class="card-b" style="font-size:.84rem;color:var(--muted)">
-        Geen giswerk: bij elke uitspraak staat het getal waar hij op berust.
-        Bedoeld om te zien waar je app mensen nog niet helpt.
+        <button class="btn sm" id="iz-laad">Opnieuw analyseren</button>
       </div>
       <div class="card-b tight" id="iz-lijst"><div class="empty">Nog niet geanalyseerd.</div></div>
     </div>
@@ -968,7 +1089,7 @@ label.f>span.hint{font-weight:400;font-size:.74rem;color:#6B7486}
   <!-- ---------- Info ---------- -->
   <section class="view" id="v-info" role="tabpanel">
     <div class="card">
-      <div class="card-h"><h2>Wat deze knoppen echt doen</h2></div>
+      <div class="card-h"><h2>Per knop</h2></div>
       <div class="card-b" style="display:flex;flex-direction:column;gap:.8rem;font-size:.88rem;color:var(--ink-dim)">
         <div><b style="color:var(--ink)">Verbergen</b> — maakt een <code>AdminVerborgen</code>-record met de recordnaam van de post.
           De app filtert die eruit in het forum en op de kaart. De lijst wordt geladen bij opstarten en bij het openen van
@@ -1012,6 +1133,7 @@ label.f>span.hint{font-weight:400;font-size:.74rem;color:#6B7486}
 
 </main>
 </div>
+</div>
 
 <div id="hs-banner" class="hide">
   <div>
@@ -1049,7 +1171,7 @@ label.f>span.hint{font-weight:400;font-size:.74rem;color:#6B7486}
    ===================================================================== */
 
 const CONTAINER = "iCloud.com.stuut.PrepperApp";
-const BUILD = 28;
+const BUILD = 29;
 const LS = { token: "pa.token", token2: "pa.token2", env: "pa.env" };
 const CONTAINER_ALERT = "iCloud.com.stuut.PrepAlert";
 
@@ -2031,29 +2153,94 @@ function vraagBlokkeer(code){
    ===================================================================== */
 /* hoofd:true staat altijd in de balk. De rest zit achter "Meer", gegroepeerd
    op waar het over gaat — achttien even zware tabbladen was niet te doen. */
+/* `titel` is de kop boven het scherm; `uitleg` de ene zin eronder die zegt
+   waar je naar kijkt en waar de cijfers vandaan komen. Beide staan hier en niet
+   in de HTML, zodat er maar één plek is waar een onderdeel beschreven wordt.
+   Waar de kop hetzelfde is als het menu-item blijft `titel` weg. */
 const TABS = [
-  { id:"dashboard", label:"Overzicht", hoofd:true, groep:"Dagelijks", laad: laadDashboard },
-  { id:"meldingen", label:"Meldingen", hoofd:true, groep:"Dagelijks", laad: laadMeldingen },
-  { id:"forum",     label:"Forum",     hoofd:true, groep:"Inhoud", laad: laadForumTab },
-  { id:"gebruikers",label:"Mensen",   hoofd:true, groep:"Mensen", laad: () => { laadGebruikers(); laadSurvival(); } },
-  { id:"dossier",   label:"Dossier",   groep:"Mensen", laad: laadDossierTab },
-  { id:"kaart",     label:"Kaart",     groep:"Inhoud", laad: laadKaartTab },
-  { id:"netwerk",   label:"Netwerk",   groep:"Mensen", laad: laadNetwerkTab },
-  { id:"verborgen", label:"Verborgen", groep:"Inhoud", laad: laadVerborgen },
-  { id:"berichten", label:"Aankondigingen", groep:"De app besturen", laad: laadAankondigingen },
-  { id:"config",    label:"Instellingen", groep:"De app besturen", laad: laadConfig },
-  { id:"feedback",  label:"Feedback",  groep:"Inhoud", laad: laadFeedback },
-  { id:"stats",     label:"Cijfers",   hoofd:true, groep:"Cijfers", laad: laadStats },
-  { id:"inzicht",   label:"Inzichten", groep:"Cijfers", laad: laadInzichtTab },
-  { id:"records",   label:"Alle records", groep:"Gereedschap", laad: laadRecordsTab },
-  { id:"logboek",   label:"Logboek",   groep:"Gereedschap", laad: laadLogboek },
-  { id:"controle",  label:"Controle",  groep:"Gereedschap", laad: laadControleTab },
-  { id:"toegang",   label:"Toegang",   groep:"Gereedschap", laad: laadToegang },
-  { id:"info",      label:"Uitleg",    groep:"Gereedschap", laad: laadInfo },
+  { id:"dashboard", label:"Overzicht", hoofd:true, groep:"Dagelijks", laad: laadDashboard,
+    titel:"Overzicht", uitleg:"Wat er vandaag op je ligt te wachten, en hoeveel mensen al op de nieuwste versie zitten." },
+  { id:"meldingen", label:"Meldingen", hoofd:true, groep:"Dagelijks", laad: laadMeldingen,
+    uitleg:"Wat gebruikers zelf hebben aangedragen met het meldknopje in de app." },
+  { id:"forum",     label:"Forum",     hoofd:true, groep:"Inhoud", laad: laadForumTab,
+    uitleg:"Alles wat mensen in de app plaatsen: posts, reacties en meldingen over de route." },
+  { id:"gebruikers",label:"Mensen",   hoofd:true, groep:"Mensen", laad: () => { laadGebruikers(); laadSurvival(); },
+    uitleg:"De accounts die de app heeft aangemaakt, en iedereen die zijn status met vrienden deelt." },
+  { id:"dossier",   label:"Dossier",   groep:"Mensen", laad: laadDossierTab,
+    uitleg:"Alles wat één persoon in de database heeft staan, opgezocht op zijn code van acht tekens." },
+  { id:"kaart",     label:"Kaart",     groep:"Inhoud", laad: laadKaartTab,
+    uitleg:"Waar de meldingen, safe spots, waterbronnen en routes op de wereldkaart staan." },
+  { id:"netwerk",   label:"Netwerk",   groep:"Mensen", laad: laadNetwerkTab,
+    uitleg:"Wie met wie verbonden is via uitnodigingen, gedeelde routes, expedities en chats." },
+  { id:"verborgen", label:"Verborgen", groep:"Inhoud", laad: laadVerborgen,
+    uitleg:"Wat je uit de app hebt weggefilterd. De posts bestaan nog; je kunt ze stuk voor stuk terugzetten." },
+  { id:"berichten", label:"Aankondigingen", groep:"De app besturen", laad: laadAankondigingen,
+    uitleg:"De banner die mensen bij het opstarten van de app te zien krijgen." },
+  { id:"config",    label:"Instellingen", groep:"De app besturen", laad: laadConfig,
+    titel:"App-instellingen op afstand", uitleg:"Knoppen die je zonder nieuwe versie kunt omzetten in de app die al op iemands telefoon staat." },
+  { id:"feedback",  label:"Feedback",  groep:"Inhoud", laad: laadFeedback,
+    uitleg:"Wat mensen zelf hebben opgeschreven vanuit de app. Vrije tekst zegt vaak meer dan alle grafieken." },
+  { id:"stats",     label:"Cijfers",   hoofd:true, groep:"Cijfers", laad: laadStats,
+    uitleg:"Geteld over de hele database, niet over de eerste paar honderd records." },
+  { id:"inzicht",   label:"Inzichten", groep:"Cijfers", laad: laadInzichtTab,
+    titel:"Wat de cijfers zeggen", uitleg:"Bij elke uitspraak staat het getal waar hij op berust. Bedoeld om te zien waar de app mensen nog niet helpt." },
+  { id:"records",   label:"Alle records", groep:"Gereedschap", laad: laadRecordsTab,
+    uitleg:"Ruwe toegang tot elk recordtype in CloudKit, met filters en velden." },
+  { id:"logboek",   label:"Logboek",   groep:"Gereedschap", laad: laadLogboek,
+    uitleg:"Elke handeling die je hier doet, met naam, tijdstip en reden." },
+  { id:"controle",  label:"Controle",  groep:"Gereedschap", laad: laadControleTab,
+    uitleg:"Kijkt of alles nog klopt: recordtypes, indexen en rommel die niemand ziet maar wel in de weg zit." },
+  { id:"toegang",   label:"Toegang",   groep:"Gereedschap", laad: laadToegang,
+    uitleg:"Prullenbak, back-up en het meegeven van toegang aan iemand anders." },
+  { id:"info",      label:"Uitleg",    groep:"Gereedschap", laad: laadInfo,
+    titel:"Wat deze knoppen echt doen", uitleg:"Per knop wat er in de database gebeurt en wanneer de app dat merkt." },
 ];
+/* Volgorde van de groepen in de zijbalk — van dagelijks werk naar gereedschap. */
+const GROEPEN = ["Dagelijks", "Mensen", "Inhoud", "De app besturen", "Cijfers", "Gereedschap"];
 let huidigeTab = "dashboard";
 
+/* De zijbalk wordt één keer gebouwd en daarna alleen bijgewerkt: hem opnieuw
+   opbouwen bij elke tabwissel zou de scrollpositie en de badges weggooien. */
+function bouwZijbalk(){
+  const n = $("#zijbalk"); if (!n || n.dataset.klaar) return;
+  const perGroep = {};
+  TABS.forEach(t => { (perGroep[t.groep] = perGroep[t.groep] || []).push(t); });
+  GROEPEN.filter(g => perGroep[g]).forEach(g => {
+    const doos = el("div","zijgroep");
+    doos.appendChild(el("div","eyebrow", esc(g)));
+    perGroep[g].forEach(t => {
+      const b = el("button","zijknop",
+        '<span>' + esc(t.label) + '</span><span class="telling hide" id="zbadge-' + t.id + '">0</span>');
+      b.onclick = () => gaNaar(t.id);
+      b.dataset.tab = t.id;
+      doos.appendChild(b);
+    });
+    n.appendChild(doos);
+  });
+  const voet = el("div","zijvoet",
+    'PrepperApp Beheer · build ' + BUILD + '<br><span id="zij-env">—</span>');
+  n.appendChild(voet);
+  n.dataset.klaar = "1";
+}
+
+function markeerZijbalk(){
+  $$("#zijbalk .zijknop").forEach(b => {
+    if (b.dataset.tab === huidigeTab) b.setAttribute("aria-current","page");
+    else b.removeAttribute("aria-current");
+  });
+}
+
+/* De kop boven het scherm. Eén zin die zegt waar je naar kijkt — zodat je bij
+   het delen van een schermafbeelding niet hoeft uit te leggen wat het is. */
+function zetPaginakop(t){
+  const n = $("#paginakop"); if (!n) return;
+  n.innerHTML = "<h1>" + esc(t.titel || t.label) + "</h1>" +
+    (t.uitleg ? "<p>" + esc(t.uitleg) + "</p>" : "");
+}
+
 function bouwTabs(){
+  bouwZijbalk();
+  markeerZijbalk();
   const n = $("#tabs"); n.innerHTML = "";
   const tonen = TABS.filter(t => t.hoofd || t.id === huidigeTab);
   tonen.forEach(t => {
@@ -2085,7 +2272,7 @@ function gaNaar(id){
   $$(".view").forEach(v => v.classList.toggle("on", v.id === "v-" + id));
   location.hash = id;
   const t = TABS.find(x => x.id === id);
-  if (t) t.laad();
+  if (t) { zetPaginakop(t); t.laad(); }
 }
 function herlaadHuidigeTab(){ const t = TABS.find(x => x.id === huidigeTab); if (t) { Cache.wis(); t.laad(); } }
 
@@ -2097,8 +2284,11 @@ window.addEventListener("hashchange", () => {
   if (id && id !== huidigeTab && TABS.some(t => t.id === id)) gaNaar(id);
 });
 function zetBadge(tabId, n){
-  const b = $("#badge-" + tabId); if (!b) return;
-  if (n > 0) { b.textContent = n > 99 ? "99+" : n; b.classList.remove("hide"); } else b.classList.add("hide");
+  [$("#badge-" + tabId), $("#zbadge-" + tabId)].forEach(b => {
+    if (!b) return;
+    if (n > 0) { b.textContent = n > 99 ? "99+" : n; b.classList.remove("hide"); }
+    else b.classList.add("hide");
+  });
 }
 
 /* =====================================================================
@@ -3207,17 +3397,22 @@ function balken(paren, opties){
   const wrap = el("div"); wrap.style.cssText = "display:flex;flex-direction:column;gap:.45rem";
   if (!paren.length) { wrap.innerHTML = leeg("Geen gegevens."); return wrap; }
   paren.forEach(([label, n, kleur]) => {
-    const r = el("div");
-    r.style.cssText = "display:grid;grid-template-columns:minmax(4.5rem,8rem) 1fr auto;gap:.6rem;align-items:center;font-size:.83rem";
-    const l = el("div","", esc(label)); l.style.cssText = "color:var(--ink-dim);overflow:hidden;text-overflow:ellipsis;white-space:nowrap";
-    const spoor = el("div"); spoor.style.cssText = "background:var(--edge-soft);border-radius:4px;height:.62rem;overflow:hidden";
-    const vul = el("div"); vul.style.cssText = "height:100%;border-radius:4px;background:" + (kleur || "var(--amber)") + ";width:" + Math.round(n/max*100) + "%";
+    const r = el("div","balk-rij");
+    const l = el("div","lab", esc(label)); l.title = String(label);
+    const spoor = el("div","spoor");
+    const vul = el("div","vul");
+    vul.style.background = kleur || "var(--amber)";
+    vul.style.width = Math.round(n/max*100) + "%";
     spoor.appendChild(vul);
-    const c = el("div","mono", String(n)); c.style.cssText = "color:var(--muted);font-size:.78rem;min-width:2.5rem;text-align:right";
+    const c = el("div","telw mono", String(n));
     r.appendChild(l); r.appendChild(spoor); r.appendChild(c);
     wrap.appendChild(r);
   });
-  if (opties.voet) { const f = el("div","", esc(opties.voet)); f.style.cssText="color:var(--muted);font-size:.76rem;margin-top:.3rem"; wrap.appendChild(f); }
+  if (opties.voet) {
+    const f = el("div","", esc(opties.voet));
+    f.style.cssText = "color:var(--faint);font-size:.76rem;margin-top:.55rem;line-height:1.5";
+    wrap.appendChild(f);
+  }
   return wrap;
 }
 
@@ -3509,7 +3704,7 @@ $("#st-load").onclick = async (e) => {
     st.textContent = "";
     toast(String(err.message||err), "err");
   }
-  b.disabled = false; b.textContent = "Alles tellen";
+  b.disabled = false; b.textContent = "Opnieuw tellen";
 };
 
 $("#st-pro-export").onclick = () => {
@@ -5190,6 +5385,8 @@ function startApp(gebruiker){
   $("#env-label").title = prod ? "De echte database met echte gebruikers" : "Testomgeving";
 
   bouwTabs();
+  { const ze = $("#zij-env");
+    if (ze) ze.textContent = (prod ? "Production" : "Development") + " · iCloud.com.stuut.PrepperApp"; }
   zetAuto(parseInt(localStorage.getItem("pa.auto") || "0", 10));
   Alarm.knop();
   if (Alarm.aan && "Notification" in window && Notification.permission === "granted"){ Alarm.start(); Alarm.kijk(true); }
