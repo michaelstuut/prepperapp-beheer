@@ -342,7 +342,7 @@ label.f>span.hint{font-weight:400;font-size:.74rem;color:#6B7486}
   .zijbalk::-webkit-scrollbar{width:6px}
   .zijbalk::-webkit-scrollbar-thumb{background:var(--edge);border-radius:3px}
   .zijbalk::-webkit-scrollbar-track{background:transparent}
-  main{max-width:none;padding:1.35rem .9rem 5rem 1.6rem}
+  main{max-width:none;margin:0;padding:1.35rem .9rem 5rem 1.6rem}
   .view{gap:1.15rem}
 }
 
@@ -1248,7 +1248,7 @@ details.uitleg .inhoud{
    ===================================================================== */
 
 const CONTAINER = "iCloud.com.stuut.PrepperApp";
-const BUILD = 32;
+const BUILD = 33;
 const LS = { token: "pa.token", token2: "pa.token2", env: "pa.env" };
 const CONTAINER_ALERT = "iCloud.com.stuut.PrepAlert";
 
@@ -2295,7 +2295,8 @@ function bouwZijbalk(){
     n.appendChild(doos);
   });
   const voet = el("div","zijvoet",
-    'PrepperApp Beheer · build ' + BUILD + '<br><span id="zij-env">—</span>');
+    '<div id="zij-env">—</div><div>build ' + BUILD + '</div>');
+  voet.title = "iCloud.com.stuut.PrepperApp";
   n.appendChild(voet);
   n.dataset.klaar = "1";
 }
@@ -5488,7 +5489,7 @@ function startApp(gebruiker){
 
   bouwTabs();
   { const ze = $("#zij-env");
-    if (ze) ze.textContent = (prod ? "Production" : "Development") + " · iCloud.com.stuut.PrepperApp"; }
+    if (ze) ze.textContent = prod ? "Production" : "Development"; }
   zetAuto(parseInt(localStorage.getItem("pa.auto") || "0", 10));
   Alarm.knop();
   if (Alarm.aan && "Notification" in window && Notification.permission === "granted"){ Alarm.start(); Alarm.kijk(true); }
