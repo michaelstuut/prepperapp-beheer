@@ -166,7 +166,7 @@ label.f>span.hint{font-weight:400;font-size:.74rem;color:#6B7486}
 .toolbar > button.btn{flex:0 0 auto;padding:.5rem .9rem}
 
 .empty{padding:2rem 1rem;text-align:center;color:var(--muted);font-size:.88rem}
-.empty > b:first-child{display:block;color:var(--ink-dim);font-family:"Bricolage Grotesque",sans-serif;font-size:1rem;margin-bottom:.25rem}
+.empty b.kop{display:block;color:var(--ink-dim);font-family:"Bricolage Grotesque",sans-serif;font-size:1rem;margin-bottom:.25rem}
 .spin{display:inline-block;width:.85em;height:.85em;border:2px solid var(--edge);border-top-color:var(--amber);border-radius:50%;animation:sp .7s linear infinite;vertical-align:-.1em}
 @keyframes sp{to{transform:rotate(360deg)}}
 @media(prefers-reduced-motion:reduce){.spin{animation-duration:2s}}
@@ -386,7 +386,7 @@ label.f>span.hint{font-weight:400;font-size:.74rem;color:#6B7486}
 
 /* ---------- lege toestanden ---------- */
 .empty{padding:1.9rem 1rem;line-height:1.6}
-.empty > b:first-child{font-size:1rem;margin-bottom:.3rem}
+.empty b.kop{font-size:1rem;margin-bottom:.3rem}
 
 /* ---------- getallen in de huisstijl, niet in terminal-mono ----------
    Mono verdient zijn plek bij codes van acht tekens en bij tijdstippen in een
@@ -892,7 +892,7 @@ details.uitleg .inhoud{
         <button class="btn sm" id="net-laad">Netwerk opbouwen</button>
       </div>
       <div class="card-b" id="net-leeg">
-        <div class="empty"><b>Nog niet opgebouwd</b>Druk op <b>Netwerk opbouwen</b> om te zien wie via
+        <div class="empty"><b class="kop">Nog niet opgebouwd</b>Druk op <b>Netwerk opbouwen</b> om te zien wie via
           uitnodigingen, gedeelde routes, expedities en chats met elkaar te maken heeft.</div>
       </div>
       <canvas id="netdoek" class="hide"></canvas>
@@ -1266,7 +1266,7 @@ details.uitleg .inhoud{
    ===================================================================== */
 
 const CONTAINER = "iCloud.com.stuut.PrepperApp";
-const BUILD = 35;
+const BUILD = 36;
 const LS = { token: "pa.token", token2: "pa.token2", env: "pa.env" };
 const CONTAINER_ALERT = "iCloud.com.stuut.PrepAlert";
 
@@ -2005,7 +2005,7 @@ const Cache = {
    Weergave-onderdelen
    ===================================================================== */
 function leeg(tekst, kop){
-  return '<div class="empty">' + (kop ? "<b>" + esc(kop) + "</b>" : "") + esc(tekst) + "</div>";
+  return '<div class="empty">' + (kop ? '<b class="kop">' + esc(kop) + "</b>" : "") + esc(tekst) + "</div>";
 }
 function bezig(node){ node.innerHTML = '<div class="empty"><span class="spin"></span> Laden…</div>'; }
 
