@@ -437,6 +437,20 @@ details.uitleg .inhoud{
   font-size:1.7rem;line-height:1;letter-spacing:-.025em;color:var(--ink);font-variant-numeric:tabular-nums;
 }
 
+/* ---------- één rustige regel in plaats van een half leeg scherm ---------- */
+.stil-regel{
+  display:flex;align-items:center;gap:.6rem;padding:.95rem;
+  font-size:.87rem;color:var(--muted);line-height:1.5;
+}
+.stil-regel b{color:var(--ink-dim);font-weight:600}
+.stil-regel .stip{
+  width:.5rem;height:.5rem;border-radius:50%;background:var(--green);
+  box-shadow:0 0 0 3px var(--green-soft);flex:none;
+}
+
+/* ---------- merk en omgeving ---------- */
+.brand .env{display:flex;align-items:center;gap:.4rem;margin-top:.1rem}
+
 /* ---------- actieve zijbalkknop: rustiger dan een volle pil ---------- */
 .zijknop[aria-current="page"]{
   background:var(--surface-2);border-color:var(--edge-soft);color:var(--ink);
@@ -515,10 +529,9 @@ details.uitleg .inhoud{
 <header class="topbar">
   <div class="topbar-in">
     <div class="brand">
-      <span class="dot" id="env-dot"></span>
       <div style="min-width:0">
-        <b>PrepperApp Beheer</b><br>
-        <span class="env" id="env-label">—</span>
+        <b>PrepperApp Beheer</b>
+        <span class="env"><span class="dot" id="env-dot"></span><span id="env-label">—</span></span>
       </div>
     </div>
     <span class="spacer"></span>
@@ -1235,7 +1248,7 @@ details.uitleg .inhoud{
    ===================================================================== */
 
 const CONTAINER = "iCloud.com.stuut.PrepperApp";
-const BUILD = 31;
+const BUILD = 32;
 const LS = { token: "pa.token", token2: "pa.token2", env: "pa.env" };
 const CONTAINER_ALERT = "iCloud.com.stuut.PrepAlert";
 
@@ -2374,7 +2387,10 @@ async function laadDashboard(){
     { key:"usr",  type:"GebruikersAccount", label:"Accounts aangemaakt", cls:"", tab:"gebruikers", vak:"omvang" },
     { key:"pro",  type:"GebruikersAccount", filters:[{fieldName:"isPro",comparator:"EQUALS",fieldValue:{value:1}}], label:"Pro", cls:"warm", tab:"gebruikers", vak:"omvang" },
     { key:"post", type:"OutdoorPost", label:"Outdoor posts", cls:"", tab:"forum", vak:"omvang" },
-    { key:"hid",  type:"AdminVerborgen", label:"Verborgen", cls:"", tab:"verborgen", vak:"omvang" },
+    /* Wordt wel geteld — de geschiedenis houdt de lijn bij — maar krijgt geen
+       tegel: een archief van verborgen posts is niets wat je 's ochtends
+       als eerste wilt zien, en acht tegels vullen twee nette rijen. */
+    { key:"hid",  type:"AdminVerborgen", label:"Verborgen", cls:"", tab:"verborgen", vak:null },
   ];
   const VAKKEN = [["aandacht","Vraagt aandacht"], ["omvang","Hoe groot het is"]];
 
@@ -2445,7 +2461,9 @@ async function laadDashboard(){
       gevlagd.slice(0,10).forEach(([rec,t]) => att.appendChild(rij(rec, t)));
     }
     zetBadge("forum", gevlagd.length);
-    if (!alles.length && !gevlagd.length) att.innerHTML = leeg("Niets open, woordfilter stil. Rustige nacht.", "Alles afgehandeld");
+    if (!alles.length && !gevlagd.length) att.innerHTML =
+      '<div class="stil-regel"><span class="stip"></span>' +
+      '<span><b>Alles afgehandeld.</b> Niets open, woordfilter stil.</span></div>';
   } catch(e){ att.innerHTML = leeg(String(e.message||e), "Kon meldingen niet laden"); }
 
   /* laatste posts + nieuwe gebruikers */
