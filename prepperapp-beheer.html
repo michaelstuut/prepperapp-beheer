@@ -1298,7 +1298,7 @@ details.uitleg .inhoud{
    ===================================================================== */
 
 const CONTAINER = "iCloud.com.stuut.PrepperApp";
-const BUILD = 39;
+const BUILD = 40;
 const LS = { token: "pa.token", token2: "pa.token2", env: "pa.env" };
 const CONTAINER_ALERT = "iCloud.com.stuut.PrepAlert";
 
@@ -1813,6 +1813,8 @@ function v(rec, naam){
    ===================================================================== */
 const Logboek = {
   beschikbaar: null,      /* null = nog niet geprobeerd */
+  laatsteFout: null,      /* tekst van de laatste mislukte schrijfpoging */
+  gemeld: false,          /* één waarschuwing per sessie is genoeg */
 
   async schrijf(gegevens){
     if (this.beschikbaar === false) return;
@@ -1829,8 +1831,21 @@ const Logboek = {
         tijdstip:       { value: Date.now() },
       }});
       this.beschikbaar = true;
+      this.laatsteFout = null;
     } catch(e){
-      if (/unknown|not found|type/i.test(String(e.message))) this.beschikbaar = false;
+      const tekst = String(e.message || e);
+      this.laatsteFout = tekst;
+      if (/unknown|not found|type/i.test(tekst)) { this.beschikbaar = false; return; }
+      /* Elke andere fout — geen schrijfrechten, een veld dat niet klopt, het
+         netwerk — werd hier volledig ingeslikt. De handeling zelf lukte, maar er
+         kwam geen regel in het logboek en niemand die het merkte. Voor een
+         logboek is dat de ergste soort stilte: je denkt dat alles vastligt.
+         De handeling mag hier nog steeds niet op stuklopen, maar je hoort het
+         wel — één keer per sessie. */
+      if (!this.gemeld) {
+        this.gemeld = true;
+        toast("De handeling is gelukt, maar kon niet in het logboek gezet worden: " + tekst, "err");
+      }
     }
   },
 };
@@ -5089,10 +5104,35 @@ $("#ct-laad").onclick = async (e) => {
         "eerdere codes bij iemand horen — verder werkt alles gewoon. Zet die index aan in CloudKit.", "let op");
     }
 
-    /* 3 · logboek */
-    try { await query("AdminLogboek", { limit: 1 }); meld("Logboek werkt", "Handelingen worden vastgelegd.", "goed"); }
-    catch(err){ meld("Logboek nog niet aangezet",
-      "Het recordtype AdminLogboek bestaat nog niet. Tot die tijd staat alleen een aantekening in de reden-velden.", "let op"); }
+    /* 3 · logboek — écht schrijven, niet alleen lezen.
+       Hiervoor stond hier een leestest die vervolgens meldde "handelingen worden
+       vastgelegd". Dat is niet hetzelfde: lezen mag terwijl schrijven geweigerd
+       wordt, en dan blijft het logboek leeg zonder dat iets het zegt. Nu wordt er
+       één regel geschreven en meteen weer weggegooid. */
+    st.textContent = "logboek…";
+    {
+      let proef = null;
+      try {
+        proef = await saveRecord({ recordType:"AdminLogboek", fields:{
+          handeling:{ value:"controle" }, doelType:{ value:"controle" },
+          reden:{ value: stempel("schrijfcontrole, wordt meteen weer weggegooid") },
+          doorNaam:{ value: moderatorNaam() }, tijdstip:{ value: Date.now() } }});
+        meld("Logboek werkt", "Er is een regel geschreven en weer weggehaald, dus handelingen komen er echt in.", "goed");
+      } catch(err){
+        const tekst = String(err.message || err);
+        if (/unknown|not found|type/i.test(tekst))
+          meld("Logboek nog niet aangezet",
+            "Het recordtype AdminLogboek bestaat nog niet in CloudKit. Tot die tijd staat alleen een aantekening in de reden-velden.", "let op");
+        else
+          meld("Logboek kan niet geschreven worden",
+            "Lezen lukt, schrijven niet: " + tekst + ". Handelingen worden dus niet vastgelegd terwijl het scherm leeg en rustig blijft.", "fout");
+      }
+      if (proef && proef.recordName){
+        try { await deleteRecord(proef.recordName); }
+        catch(err2){ meld("Proefregel bleef staan",
+          "De schrijfcontrole kon zijn eigen regel niet opruimen. Er staat nu één regel \u201econtrole\u201d in het logboek; die mag weg.", "let op"); }
+      }
+    }
 
     /* 4 · wezen in de verborgen-lijst */
     st.textContent = "verborgen lijst…";
@@ -5301,8 +5341,13 @@ async function laadLogboek(){
       }
       body.appendChild(acts); r2.appendChild(body); n.appendChild(r2);
     });
-    $("#lg-uitleg").innerHTML = "Elke handeling wordt hier vastgelegd met naam, tijdstip en reden. " +
-      recs.length + " regels geladen.";
+    $("#lg-uitleg").innerHTML = Logboek.laatsteFout
+      ? '<span style="color:var(--red)">Let op: de laatste handeling kon niet in het logboek gezet worden (' +
+        esc(Logboek.laatsteFout) + '). Wat je hieronder ziet is dus niet compleet.</span>'
+      : "Elke handeling wordt hier vastgelegd met naam, tijdstip en reden. " +
+        (recs.length ? recs.length + " regels geladen." :
+         "Nog niets gedaan sinds dit logboek aan staat — doe een handeling en kijk hier terug. " +
+         "Wil je zeker weten dat schrijven lukt: Controle → Doorlichten test dat.");
   } catch(e){
     const nogNiet = /unknown|not found|type/i.test(String(e.message));
     n.innerHTML = leeg(nogNiet
