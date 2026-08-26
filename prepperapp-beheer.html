@@ -462,7 +462,9 @@ details.uitleg .inhoud{
   .topacties .streep{display:none}
   .topacties > *{width:100%;text-align:center}
   .topbar-in select.iconbtn{max-width:none}
-  #signout{grid-column:1 / -1}
+  /* Verversen is de knop die je hier het vaakst indrukt: bovenaan en over de
+     volle breedte. Uitloggen hoort niet de grootste knop op het scherm te zijn. */
+  #refresh-all{grid-column:1 / -1;order:-1}
   .toolbar > *{flex:1 1 100%}
   .toolbar > button.btn{flex:0 0 auto}
   #paginakop{margin-bottom:1rem}
@@ -1296,7 +1298,7 @@ details.uitleg .inhoud{
    ===================================================================== */
 
 const CONTAINER = "iCloud.com.stuut.PrepperApp";
-const BUILD = 38;
+const BUILD = 39;
 const LS = { token: "pa.token", token2: "pa.token2", env: "pa.env" };
 const CONTAINER_ALERT = "iCloud.com.stuut.PrepAlert";
 
