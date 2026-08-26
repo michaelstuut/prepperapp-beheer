@@ -449,6 +449,34 @@ details.uitleg .inhoud{
   .card-b > .grid label.f{max-width:none}
 }
 
+/* ---------- op een telefoon ----------
+   De knoppenrij bovenin brak rommelig af: "Uitloggen" bleef in zijn eentje
+   gecentreerd op een tweede regel achter. Nu een net raster van twee, met
+   uitloggen over de volle breedte onderaan. En bedieningselementen onder elkaar
+   in plaats van drie geknepen kolommen naast elkaar. */
+@media(max-width:34rem){
+  .topbar-in{padding:.55rem .8rem .5rem}
+  .topacties{
+    flex:1 1 100%;display:grid;grid-template-columns:1fr 1fr;gap:.4rem;
+  }
+  .topacties .streep{display:none}
+  .topacties > *{width:100%;text-align:center}
+  .topbar-in select.iconbtn{max-width:none}
+  #signout{grid-column:1 / -1}
+  .toolbar > *{flex:1 1 100%}
+  .toolbar > button.btn{flex:0 0 auto}
+  #paginakop{margin-bottom:1rem}
+}
+
+/* Het pillenrijtje schuift horizontaal; een vervagende rand rechts laat zien
+   dat er nog meer staat, in plaats van een half afgesneden "Meer …". */
+.topbar .tabs{
+  -webkit-mask-image:linear-gradient(to right,#000 calc(100% - 2.2rem),transparent);
+  mask-image:linear-gradient(to right,#000 calc(100% - 2.2rem),transparent);
+  padding-right:2.2rem;
+}
+@media(min-width:64rem){ .topbar .tabs{-webkit-mask-image:none;mask-image:none} }
+
 /* ---------- één rustige regel in plaats van een half leeg scherm ---------- */
 .stil-regel{
   display:flex;align-items:center;gap:.6rem;padding:.95rem;
@@ -489,11 +517,13 @@ details.uitleg .inhoud{
         <code id="origin-hint" style="color:var(--amber)"></code>
       </p>
       <label class="f">Token
-        <input type="text" id="token-input" autocomplete="off" autocapitalize="none" spellcheck="false"
+        <input type="password" id="token-input" autocomplete="off" autocapitalize="none" spellcheck="false"
                placeholder="plak hier je CloudKit API-token">
-        <span class="hint">Wordt alleen in deze browser bewaard. Een API-token is aan dit adres gebonden en geeft op zichzelf geen schrijfrechten.</span>
+        <span class="hint">Wordt alleen in deze browser bewaard en staat verborgen, zodat hij niet meekijkt op een
+          gedeeld scherm. Een API-token is aan dit adres gebonden en geeft op zichzelf geen schrijfrechten.</span>
       </label>
       <div style="display:flex;gap:.5rem;flex-wrap:wrap">
+        <button class="btn" id="token-toon">Tonen</button>
         <button class="btn" id="token-plak">Plakken</button>
         <button class="btn primary" id="token-save">Bewaren en laden</button>
         <button class="btn" id="token-clear">Wissen</button>
@@ -1266,7 +1296,7 @@ details.uitleg .inhoud{
    ===================================================================== */
 
 const CONTAINER = "iCloud.com.stuut.PrepperApp";
-const BUILD = 36;
+const BUILD = 38;
 const LS = { token: "pa.token", token2: "pa.token2", env: "pa.env" };
 const CONTAINER_ALERT = "iCloud.com.stuut.PrepAlert";
 
@@ -4269,6 +4299,16 @@ async function laadKaartTab(){
 }
 $("#kaart-laad").onclick = () => haalKaartPunten();
 
+/** Eén schakelaar voor beide tokenvelden. */
+function tokenSchakel(veldSelector){
+  return (e) => {
+    const veld = $(veldSelector);
+    const uit = veld.type === "password";
+    veld.type = uit ? "text" : "password";
+    e.target.textContent = uit ? "Verbergen" : "Tonen";
+  };
+}
+$("#token-toon").onclick = tokenSchakel("#token-input");
 $("#token2-toon").onclick = (e) => {
   const veld = $("#token2-input");
   const uit = veld.type === "password";
