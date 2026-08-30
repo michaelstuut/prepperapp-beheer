@@ -27,12 +27,18 @@
      aan waar je bent; deze kleuren zeggen iets over de toestand van een record. */
   --waarschuw:#E08C33; --waarschuw-soft:#2E1F0E;
   --pro:#B48CE0; --pro-soft:#241B33;
-  --r:10px; --shadow:0 1px 0 rgba(255,255,255,.03) inset, 0 6px 24px rgba(0,0,0,.35);
+  --critical:#C6362B;
+  --r:12px; --shadow:0 1px 0 rgba(255,255,255,.04) inset, 0 8px 28px rgba(0,0,0,.4);
 }
 *{box-sizing:border-box}
 html,body{margin:0;padding:0}
 body{
-  background:var(--ground); color:var(--ink);
+  background:
+    radial-gradient(52rem 30rem at 8% -10%, rgba(240,180,41,.05), transparent 60%),
+    radial-gradient(46rem 26rem at 100% 0%, rgba(91,157,217,.04), transparent 55%),
+    var(--ground);
+  background-attachment:fixed;
+  color:var(--ink);
   font-family:"Public Sans",system-ui,-apple-system,sans-serif;
   font-size:15px; line-height:1.5; -webkit-font-smoothing:antialiased;
   padding-bottom:env(safe-area-inset-bottom);
@@ -58,7 +64,7 @@ a{color:var(--amber)}
 .topbar .spacer{flex:1}
 .iconbtn{background:var(--raised);border:1px solid var(--edge);border-radius:8px;padding:.4rem .6rem;font-size:.8rem;cursor:pointer;white-space:nowrap}
 .topbar-in select.iconbtn{width:auto;flex:0 0 auto;max-width:9.5rem}
-.iconbtn:hover{border-color:var(--amber-dim)}
+
 .iconbtn:active{transform:translateY(1px)}
 
 .tabs{
@@ -71,7 +77,11 @@ a{color:var(--amber)}
   padding:.35rem .8rem;color:var(--muted);font-size:.85rem;font-weight:500;cursor:pointer;white-space:nowrap
 }
 .tab:hover{color:var(--ink-dim)}
-.tab[aria-selected="true"]{background:var(--amber-soft);border-color:var(--amber-dim);color:var(--amber)}
+.tab[aria-selected="true"]{
+  background:linear-gradient(135deg,var(--amber-soft),rgba(240,180,41,.16));
+  border-color:var(--amber-dim);color:var(--amber);font-weight:700;
+  box-shadow:0 1px 8px rgba(240,180,41,.12);
+}
 .tab .badge{
   display:inline-block;margin-left:.35rem;min-width:1.15em;padding:0 .3em;border-radius:999px;
   background:var(--red);color:#fff;font-size:.68rem;font-weight:700;line-height:1.5;text-align:center;
@@ -91,25 +101,25 @@ main{max-width:72rem;margin:0 auto;padding:1.1rem .9rem 5rem}
 /* ---------- building blocks ---------- */
 .card{background:var(--surface);border:1px solid var(--edge);border-radius:var(--r);box-shadow:var(--shadow)}
 .card-h{display:flex;align-items:center;gap:.6rem;padding:.75rem .9rem;border-bottom:1px solid var(--edge-soft)}
-.card-h h2{font-size:1rem}
-.card-h .sub{color:var(--muted);font-size:.8rem}
-.card-b{padding:.9rem}
+
+
+
 .card-b.tight{padding:0}
 
-.grid{display:grid;gap:.7rem}
+.grid{display:grid;gap:.75rem}
 @media(min-width:40rem){ .grid.c2{grid-template-columns:1fr 1fr} .grid.c3{grid-template-columns:repeat(3,1fr)} .grid.c4{grid-template-columns:repeat(4,1fr)} }
 @media(max-width:39.99rem){ .grid.c3,.grid.c4{grid-template-columns:1fr 1fr} }
 
 .stat{background:var(--surface);border:1px solid var(--edge);border-radius:var(--r);padding:.75rem .85rem;display:flex;flex-direction:column;gap:.15rem;text-align:left;cursor:pointer;width:100%}
-.stat:hover{border-color:var(--amber-dim)}
+
 .stat .n{font-family:"JetBrains Mono",monospace;font-size:1.55rem;font-weight:700;line-height:1.1;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
-.stat .l{font-size:.76rem;color:var(--muted);letter-spacing:.02em}
+
 /* Een nul is geen nieuws. Zes tegels met nul erop trekken samen meer aandacht
    dan het ene getal dat er wel toe doet, dus die dempen we: nog steeds leesbaar,
    maar het oog gaat er niet meer naartoe. */
 .stat.nul{border-color:var(--edge-soft);background:transparent}
 .stat.nul .n{color:var(--muted);font-weight:600}
-.stat.nul:hover{border-color:var(--edge)}
+
 .stat.alert .n{color:var(--red)}
 .stat.good .n{color:var(--green)}
 .stat.warm .n{color:var(--amber)}
@@ -137,7 +147,7 @@ main{max-width:72rem;margin:0 auto;padding:1.1rem .9rem 5rem}
 .btn:active{transform:translateY(1px)}
 .btn:disabled{opacity:.45;cursor:not-allowed}
 .btn.primary{background:var(--amber);border-color:var(--amber);color:#1A1204;font-weight:600}
-.btn.primary:hover{filter:brightness(1.07)}
+
 .btn.danger{color:var(--red);border-color:#4A2420}
 .btn.danger:hover{background:var(--red-soft);border-color:var(--red)}
 .btn.ok{color:var(--green);border-color:#204532}
@@ -285,8 +295,16 @@ label.f>span.hint{font-weight:400;font-size:.74rem;color:#6B7486}
 .topacties .streep{width:1px;height:1.35rem;background:var(--edge);flex:none;margin:0 .15rem}
 .iconbtn{background:transparent;border-color:var(--edge-soft);color:var(--ink-dim);transition:border-color .12s,color .12s,background .12s}
 .iconbtn:hover{background:var(--raised);border-color:var(--edge-strong);color:var(--ink)}
-.iconbtn.nadruk{background:var(--raised);border-color:var(--edge);color:var(--ink)}
-.iconbtn.nadruk:hover{border-color:var(--amber-dim);color:var(--amber)}
+/* De knop die je hier het vaakst indrukt (Verversen) verdient echte nadruk,
+   niet alleen een andere plek in de layout — anders verdrinkt hij tussen de
+   net zo grijze "Telefoon" en "Uitloggen"-knoppen ernaast. */
+.iconbtn.nadruk{
+  background:linear-gradient(135deg,#F4C55A,var(--amber) 55%,var(--amber-dim));
+  border-color:var(--amber-dim);color:#1A1204;font-weight:700;
+  box-shadow:0 1px 0 rgba(255,255,255,.25) inset,0 4px 14px rgba(240,180,41,.22);
+}
+.iconbtn.nadruk:hover{filter:brightness(1.06);border-color:var(--amber)}
+.iconbtn.nadruk:active{transform:translateY(1px);filter:brightness(.97)}
 .iconbtn.stil{border-color:transparent;color:var(--muted)}
 .iconbtn.stil:hover{color:var(--ink-dim);background:transparent;border-color:var(--edge-soft)}
 
@@ -354,7 +372,7 @@ label.f>span.hint{font-weight:400;font-size:.74rem;color:#6B7486}
   font-size:1.42rem;letter-spacing:-.02em;margin:0;line-height:1.2;
 }
 #paginakop p{margin:0;color:var(--muted);font-size:.86rem;max-width:58ch;line-height:1.55}
-@media(max-width:63.99rem){ #paginakop h1{font-size:1.2rem} }
+@media(max-width:63.99rem){ }
 
 /* ---------- kaarten iets rustiger, koppen iets steviger ---------- */
 .card{border-color:var(--edge-soft);box-shadow:0 1px 0 rgba(255,255,255,.02) inset,0 1px 2px rgba(0,0,0,.25)}
@@ -365,7 +383,7 @@ label.f>span.hint{font-weight:400;font-size:.74rem;color:#6B7486}
 
 /* ---------- tellers ---------- */
 .stat{border-color:var(--edge-soft);padding:.85rem .9rem;gap:.25rem;transition:border-color .12s}
-.stat .n{font-size:1.7rem}
+
 .stat .l{font-size:.75rem;color:var(--muted);letter-spacing:.01em;line-height:1.3}
 @media(min-width:64rem){ .stat .n{font-size:1.85rem} }
 
@@ -398,6 +416,41 @@ label.f>span.hint{font-weight:400;font-size:.74rem;color:#6B7486}
   font-weight:700;font-variant-numeric:tabular-nums;letter-spacing:-.025em;
 }
 
+/* ---------- statistiek-tegels: echte hiërarchie i.p.v. gelijke grijze dozen ----------
+   Negen tegels die er allemaal hetzelfde uitzien vragen om afgeteld te worden;
+   ze moeten in een oogopslag laten zien wélke aandacht vraagt en welke gewoon
+   groei zijn. Een kleuraccent + zachte gloed per toestand doet dat, niet nog een
+   grijze kaart met een ander getal erin. */
+.stat{
+  position:relative; overflow:hidden;
+  padding:.95rem 1rem .85rem 1.15rem; gap:.3rem;
+  transition:transform .15s ease, box-shadow .15s ease, border-color .15s ease;
+}
+.stat::before{
+  content:""; position:absolute; inset:0 auto 0 0; width:3px;
+  background:var(--edge-soft); transition:background .15s ease;
+}
+.stat:hover{ transform:translateY(-1px); box-shadow:0 10px 22px rgba(0,0,0,.32); border-color:var(--edge-strong) }
+.stat:active{ transform:translateY(0) }
+.stat .n{ font-size:1.85rem !important }
+.stat .l{
+  font-size:.72rem; letter-spacing:.05em; text-transform:uppercase; font-weight:600;
+  color:var(--muted);
+}
+.stat.nul::before{ background:var(--edge-soft) }
+.stat.nul:hover{ transform:none; box-shadow:none; border-color:var(--edge) }
+.stat.alert{ background:linear-gradient(165deg, rgba(228,87,76,.10), var(--surface) 65%) }
+.stat.alert::before{ background:var(--red); box-shadow:0 0 10px rgba(228,87,76,.55) }
+.stat.good{ background:linear-gradient(165deg, rgba(79,179,122,.09), var(--surface) 65%) }
+.stat.good::before{ background:var(--green) }
+.stat.warm{ background:linear-gradient(165deg, rgba(240,180,41,.10), var(--surface) 65%) }
+.stat.warm::before{ background:var(--amber); box-shadow:0 0 10px rgba(240,180,41,.4) }
+
+/* kaartkoppen: iets meer gewicht, een vleugje merkkleur op de rand van de kop */
+.card{ border-radius:var(--r) }
+.card-h{ position:relative }
+.card-h h2{ font-weight:700; letter-spacing:-.01em }
+
 /* ---------- kopjes bóven een groep tegels ---------- */
 .vakkop{
   grid-column:1/-1;display:flex;align-items:center;gap:.7rem;
@@ -405,6 +458,10 @@ label.f>span.hint{font-weight:400;font-size:.74rem;color:#6B7486}
 }
 .vakkop::after{content:"";flex:1;height:1px;background:var(--edge-soft)}
 .vakkop:first-child{margin-top:0}
+.vakkop::before{
+  content:""; width:.4rem; height:.4rem; border-radius:50%; flex:none;
+  background:var(--amber-dim); box-shadow:0 0 0 3px var(--amber-soft);
+}
 
 /* ---------- toelichting die je kunt wegklappen ----------
    De eerlijke voetnoot bij een cijfer hoort erbij, maar hij hoeft niet elke
@@ -499,6 +556,313 @@ details.uitleg .inhoud{
   box-shadow:inset 2px 0 0 var(--amber);
 }
 .zijknop[aria-current="page"] span:first-child{color:var(--amber)}
+
+/* =====================================================================
+   Tweede afwerkingsronde — knoppen, velden, dialogen en kleine details
+   die door het grijze-op-grijze van de eerste versie nog vlak oogden.
+   Alles hieronder is bewust puur visueel: geen enkele klasse-naam,
+   data-attribuut of click-handler verandert van betekenis.
+   ===================================================================== */
+
+/* ---------- merkje in de kop: een plek waar het oog altijd weet waar het is ---------- */
+.brand{gap:.65rem}
+.brand::before{
+  content:"P"; order:-1; flex:none;
+  width:1.85rem; height:1.85rem; border-radius:8px;
+  background:linear-gradient(135deg,#F4C55A,var(--amber) 60%,var(--amber-dim));
+  color:#1A1204; font-family:"Bricolage Grotesque","Public Sans",sans-serif; font-weight:700; font-size:.92rem;
+  display:flex; align-items:center; justify-content:center;
+  box-shadow:0 1px 0 rgba(255,255,255,.25) inset, 0 3px 10px rgba(240,180,41,.25);
+}
+
+/* ---------- knoppen: iets meer gewicht dan een grijs vlak met tekst ---------- */
+.btn{transition:border-color .12s,box-shadow .12s,filter .12s,transform .12s}
+.btn:hover{box-shadow:0 2px 10px rgba(0,0,0,.28)}
+.btn.primary{
+  background:linear-gradient(135deg,#F4C55A,var(--amber) 60%,var(--amber-dim));
+  border-color:var(--amber-dim);
+  box-shadow:0 1px 0 rgba(255,255,255,.22) inset, 0 3px 12px rgba(240,180,41,.2);
+}
+.btn.primary:hover{filter:brightness(1.05)}
+.btn.danger:hover{box-shadow:0 2px 10px rgba(228,87,76,.18)}
+.btn.ok:hover{box-shadow:0 2px 10px rgba(79,179,122,.18)}
+.iconbtn{transition:border-color .12s,box-shadow .12s,background .12s,color .12s}
+
+/* ---------- velden: rustiger rand, duidelijker focus, geen kille systeemblauw ---------- */
+input[type=text],input[type=number],input[type=search],input[type=datetime-local],select,textarea{
+  transition:border-color .12s,box-shadow .12s;
+}
+input[type=text]:hover,input[type=number]:hover,input[type=search]:hover,
+input[type=datetime-local]:hover,select:hover,textarea:hover{border-color:var(--edge-strong)}
+label.f{gap:.35rem}
+label.f>span:first-child{color:var(--ink-dim);font-weight:600;letter-spacing:.005em}
+
+/* ---------- schuifknop i.p.v. kaal systeem-vinkje ---------- */
+.switch input{
+  appearance:none; -webkit-appearance:none; position:relative;
+  width:2.15rem; height:1.2rem; border-radius:999px;
+  background:var(--edge-soft); border:1px solid var(--edge);
+  cursor:pointer; transition:background .15s,border-color .15s;
+}
+.switch input::before{
+  content:""; position:absolute; top:1px; left:1px; width:1rem; height:1rem;
+  border-radius:50%; background:var(--muted); transition:transform .15s,background .15s;
+}
+.switch input:checked{background:var(--amber-soft);border-color:var(--amber-dim)}
+.switch input:checked::before{transform:translateX(.95rem);background:var(--amber)}
+.switch input:focus-visible{outline:2px solid var(--amber);outline-offset:2px}
+
+/* ---------- kaarten: een streepje licht bovenaan, net als een scherm dat aan staat ---------- */
+.card{position:relative}
+.card::before{
+  content:""; position:absolute; left:0; right:0; top:0; height:1px;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.07),transparent);
+  border-radius:var(--r) var(--r) 0 0; pointer-events:none;
+}
+
+/* ---------- lege / ladende inhoud als een bewuste doos, niet als toevallige witruimte ---------- */
+.empty{border:1px dashed var(--edge-soft);border-radius:calc(var(--r) - 2px);margin:.5rem}
+
+/* ---------- dialogen en meldingen: een klein zetje in plaats van abrupt verschijnen ---------- */
+.sheet-in{animation:sheet-in .18s ease}
+@keyframes sheet-in{from{transform:translateY(10px);opacity:.55}to{transform:translateY(0);opacity:1}}
+.toast{animation:toast-in .18s ease}
+@keyframes toast-in{from{transform:translateY(6px);opacity:0}to{transform:translateY(0);opacity:1}}
+@media(prefers-reduced-motion:reduce){.sheet-in,.toast{animation:none}}
+
+/* ---------- dunne scrollbalken overal, niet alleen in de zijbalk ---------- */
+*{scrollbar-color:var(--edge) transparent}
+::-webkit-scrollbar{width:8px;height:8px}
+::-webkit-scrollbar-thumb{background:var(--edge);border-radius:4px}
+::-webkit-scrollbar-thumb:hover{background:var(--edge-strong)}
+::-webkit-scrollbar-track{background:transparent}
+
+/* ---------- pagina-kop: iets meer scheiding met de inhoud eronder ---------- */
+#paginakop{padding-bottom:.15rem}
+#paginakop h1{font-size:1.5rem}
+@media(max-width:63.99rem){ #paginakop h1{font-size:1.28rem} }
+
+/* ---------- iconen bij de zijbalk en de tabbladen ----------
+   Achttien namen op een rij lees je niet, je herkent een vorm sneller dan een
+   woord. De iconen hieronder zijn met de hand getekende lijntekeningen (SVG als
+   CSS-mask, dus ze pakken gewoon de tekstkleur over) — geen icoonlettertype van
+   een ander CDN, geen emoji. Elk tabblad-item was al voorzien van data-tab. */
+.zijknop{gap:.6rem}
+.zijknop::before,.tab::before{
+  content:""; display:inline-block; flex:none;
+  -webkit-mask-position:center; mask-position:center;
+  -webkit-mask-repeat:no-repeat; mask-repeat:no-repeat;
+  -webkit-mask-size:contain; mask-size:contain;
+  background-color:currentColor;
+}
+.zijknop::before{width:1.05rem;height:1.05rem;opacity:.72}
+.zijknop[aria-current="page"]::before{opacity:1}
+.zijknop:hover::before{opacity:.9}
+.tab{display:inline-flex;align-items:center;gap:.4rem}
+.tab::before{width:.95rem;height:.95rem;opacity:.65}
+.tab[aria-selected="true"]::before{opacity:1}
+.tab:hover::before{opacity:.85}
+/* Knoppen zonder data-tab (zoals "Meer …") krijgen geen leeg vierkantje. */
+.zijknop:not([data-tab])::before,.tab:not([data-tab])::before{content:none}
+
+.zijknop[data-tab="dashboard"]::before,.tab[data-tab="dashboard"]::before{
+  -webkit-mask-image:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2020%2020%22%20fill%3D%22none%22%20stroke%3D%22black%22%20stroke-width%3D%221.55%22%20stroke-linejoin%3D%22round%22%3E%3Crect%20x%3D%222.5%22%20y%3D%222.5%22%20width%3D%226.5%22%20height%3D%226.5%22%20rx%3D%221.3%22/%3E%3Crect%20x%3D%2211%22%20y%3D%222.5%22%20width%3D%226.5%22%20height%3D%226.5%22%20rx%3D%221.3%22/%3E%3Crect%20x%3D%222.5%22%20y%3D%2211%22%20width%3D%226.5%22%20height%3D%226.5%22%20rx%3D%221.3%22/%3E%3Crect%20x%3D%2211%22%20y%3D%2211%22%20width%3D%226.5%22%20height%3D%226.5%22%20rx%3D%221.3%22/%3E%3C/svg%3E"); mask-image:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2020%2020%22%20fill%3D%22none%22%20stroke%3D%22black%22%20stroke-width%3D%221.55%22%20stroke-linejoin%3D%22round%22%3E%3Crect%20x%3D%222.5%22%20y%3D%222.5%22%20width%3D%226.5%22%20height%3D%226.5%22%20rx%3D%221.3%22/%3E%3Crect%20x%3D%2211%22%20y%3D%222.5%22%20width%3D%226.5%22%20height%3D%226.5%22%20rx%3D%221.3%22/%3E%3Crect%20x%3D%222.5%22%20y%3D%2211%22%20width%3D%226.5%22%20height%3D%226.5%22%20rx%3D%221.3%22/%3E%3Crect%20x%3D%2211%22%20y%3D%2211%22%20width%3D%226.5%22%20height%3D%226.5%22%20rx%3D%221.3%22/%3E%3C/svg%3E");
+}
+.zijknop[data-tab="meldingen"]::before,.tab[data-tab="meldingen"]::before{
+  -webkit-mask-image:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2020%2020%22%20fill%3D%22none%22%20stroke%3D%22black%22%20stroke-width%3D%221.55%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22M10%202.6%202.6%2016h14.8L10%202.6z%22/%3E%3Cpath%20d%3D%22M10%208.3v3.6%22%20stroke-linecap%3D%22round%22/%3E%3Ccircle%20cx%3D%2210%22%20cy%3D%2214.2%22%20r%3D%22.9%22%20fill%3D%22currentColor%22%20stroke%3D%22none%22/%3E%3C/svg%3E"); mask-image:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2020%2020%22%20fill%3D%22none%22%20stroke%3D%22black%22%20stroke-width%3D%221.55%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22M10%202.6%202.6%2016h14.8L10%202.6z%22/%3E%3Cpath%20d%3D%22M10%208.3v3.6%22%20stroke-linecap%3D%22round%22/%3E%3Ccircle%20cx%3D%2210%22%20cy%3D%2214.2%22%20r%3D%22.9%22%20fill%3D%22currentColor%22%20stroke%3D%22none%22/%3E%3C/svg%3E");
+}
+.zijknop[data-tab="forum"]::before,.tab[data-tab="forum"]::before{
+  -webkit-mask-image:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2020%2020%22%20fill%3D%22none%22%20stroke%3D%22black%22%20stroke-width%3D%221.55%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22M3%204h14v9H8.2L4.5%2016.2V13H3V4z%22/%3E%3C/svg%3E"); mask-image:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2020%2020%22%20fill%3D%22none%22%20stroke%3D%22black%22%20stroke-width%3D%221.55%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22M3%204h14v9H8.2L4.5%2016.2V13H3V4z%22/%3E%3C/svg%3E");
+}
+.zijknop[data-tab="gebruikers"]::before,.tab[data-tab="gebruikers"]::before{
+  -webkit-mask-image:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2020%2020%22%20fill%3D%22none%22%20stroke%3D%22black%22%20stroke-width%3D%221.55%22%20stroke-linejoin%3D%22round%22%3E%3Ccircle%20cx%3D%227.3%22%20cy%3D%227%22%20r%3D%222.6%22/%3E%3Cpath%20d%3D%22M2.5%2016c.6-3%202.4-4.6%204.8-4.6s4.2%201.6%204.8%204.6%22/%3E%3Ccircle%20cx%3D%2214.1%22%20cy%3D%227.6%22%20r%3D%222.1%22/%3E%3Cpath%20d%3D%22M12.7%2011.6c1.9.1%203.4%201.6%203.9%204%22/%3E%3C/svg%3E"); mask-image:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2020%2020%22%20fill%3D%22none%22%20stroke%3D%22black%22%20stroke-width%3D%221.55%22%20stroke-linejoin%3D%22round%22%3E%3Ccircle%20cx%3D%227.3%22%20cy%3D%227%22%20r%3D%222.6%22/%3E%3Cpath%20d%3D%22M2.5%2016c.6-3%202.4-4.6%204.8-4.6s4.2%201.6%204.8%204.6%22/%3E%3Ccircle%20cx%3D%2214.1%22%20cy%3D%227.6%22%20r%3D%222.1%22/%3E%3Cpath%20d%3D%22M12.7%2011.6c1.9.1%203.4%201.6%203.9%204%22/%3E%3C/svg%3E");
+}
+.zijknop[data-tab="dossier"]::before,.tab[data-tab="dossier"]::before{
+  -webkit-mask-image:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2020%2020%22%20fill%3D%22none%22%20stroke%3D%22black%22%20stroke-width%3D%221.55%22%20stroke-linejoin%3D%22round%22%3E%3Crect%20x%3D%222.5%22%20y%3D%224%22%20width%3D%2215%22%20height%3D%2212%22%20rx%3D%221.6%22/%3E%3Ccircle%20cx%3D%227%22%20cy%3D%229.3%22%20r%3D%221.7%22/%3E%3Cpath%20d%3D%22M4.3%2014c.5-1.8%201.5-2.6%202.7-2.6s2.2.8%202.7%202.6%22/%3E%3Cpath%20d%3D%22M11.6%208.2h4M11.6%2011h4%22%20stroke-linecap%3D%22round%22/%3E%3C/svg%3E"); mask-image:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2020%2020%22%20fill%3D%22none%22%20stroke%3D%22black%22%20stroke-width%3D%221.55%22%20stroke-linejoin%3D%22round%22%3E%3Crect%20x%3D%222.5%22%20y%3D%224%22%20width%3D%2215%22%20height%3D%2212%22%20rx%3D%221.6%22/%3E%3Ccircle%20cx%3D%227%22%20cy%3D%229.3%22%20r%3D%221.7%22/%3E%3Cpath%20d%3D%22M4.3%2014c.5-1.8%201.5-2.6%202.7-2.6s2.2.8%202.7%202.6%22/%3E%3Cpath%20d%3D%22M11.6%208.2h4M11.6%2011h4%22%20stroke-linecap%3D%22round%22/%3E%3C/svg%3E");
+}
+.zijknop[data-tab="kaart"]::before,.tab[data-tab="kaart"]::before{
+  -webkit-mask-image:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2020%2020%22%20fill%3D%22none%22%20stroke%3D%22black%22%20stroke-width%3D%221.55%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22M10%2017.3S4%2012%204%207.9a6%206%200%201%201%2012%200c0%204.1-6%209.4-6%209.4z%22/%3E%3Ccircle%20cx%3D%2210%22%20cy%3D%227.7%22%20r%3D%222.1%22/%3E%3C/svg%3E"); mask-image:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2020%2020%22%20fill%3D%22none%22%20stroke%3D%22black%22%20stroke-width%3D%221.55%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22M10%2017.3S4%2012%204%207.9a6%206%200%201%201%2012%200c0%204.1-6%209.4-6%209.4z%22/%3E%3Ccircle%20cx%3D%2210%22%20cy%3D%227.7%22%20r%3D%222.1%22/%3E%3C/svg%3E");
+}
+.zijknop[data-tab="netwerk"]::before,.tab[data-tab="netwerk"]::before{
+  -webkit-mask-image:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2020%2020%22%20fill%3D%22none%22%20stroke%3D%22black%22%20stroke-width%3D%221.55%22%20stroke-linejoin%3D%22round%22%3E%3Ccircle%20cx%3D%224.2%22%20cy%3D%225%22%20r%3D%222%22/%3E%3Ccircle%20cx%3D%2215.8%22%20cy%3D%225%22%20r%3D%222%22/%3E%3Ccircle%20cx%3D%2210%22%20cy%3D%2215.2%22%20r%3D%222%22/%3E%3Cpath%20d%3D%22M5.9%206.2%208.5%2013.6M14.1%206.2%2011.5%2013.6M6.2%205h7.6%22/%3E%3C/svg%3E"); mask-image:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2020%2020%22%20fill%3D%22none%22%20stroke%3D%22black%22%20stroke-width%3D%221.55%22%20stroke-linejoin%3D%22round%22%3E%3Ccircle%20cx%3D%224.2%22%20cy%3D%225%22%20r%3D%222%22/%3E%3Ccircle%20cx%3D%2215.8%22%20cy%3D%225%22%20r%3D%222%22/%3E%3Ccircle%20cx%3D%2210%22%20cy%3D%2215.2%22%20r%3D%222%22/%3E%3Cpath%20d%3D%22M5.9%206.2%208.5%2013.6M14.1%206.2%2011.5%2013.6M6.2%205h7.6%22/%3E%3C/svg%3E");
+}
+.zijknop[data-tab="verborgen"]::before,.tab[data-tab="verborgen"]::before{
+  -webkit-mask-image:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2020%2020%22%20fill%3D%22none%22%20stroke%3D%22black%22%20stroke-width%3D%221.55%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22M2.6%2010S5.6%204.4%2010%204.4%2017.4%2010%2017.4%2010%2014.4%2015.6%2010%2015.6%202.6%2010%202.6%2010z%22/%3E%3Ccircle%20cx%3D%2210%22%20cy%3D%2210%22%20r%3D%222.4%22/%3E%3Cpath%20d%3D%22M3%203l14%2014%22%20stroke-linecap%3D%22round%22/%3E%3C/svg%3E"); mask-image:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2020%2020%22%20fill%3D%22none%22%20stroke%3D%22black%22%20stroke-width%3D%221.55%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22M2.6%2010S5.6%204.4%2010%204.4%2017.4%2010%2017.4%2010%2014.4%2015.6%2010%2015.6%202.6%2010%202.6%2010z%22/%3E%3Ccircle%20cx%3D%2210%22%20cy%3D%2210%22%20r%3D%222.4%22/%3E%3Cpath%20d%3D%22M3%203l14%2014%22%20stroke-linecap%3D%22round%22/%3E%3C/svg%3E");
+}
+.zijknop[data-tab="berichten"]::before,.tab[data-tab="berichten"]::before{
+  -webkit-mask-image:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2020%2020%22%20fill%3D%22none%22%20stroke%3D%22black%22%20stroke-width%3D%221.55%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22M3%208.6v2.8l3%20.6v-4l-3%20.6z%22/%3E%3Cpath%20d%3D%22M6%207.5%2015%204v12l-9-3.5v-5z%22/%3E%3Cpath%20d%3D%22M6.3%2012v2.8a1.4%201.4%200%200%200%202.7.5l.5-1.4%22/%3E%3C/svg%3E"); mask-image:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2020%2020%22%20fill%3D%22none%22%20stroke%3D%22black%22%20stroke-width%3D%221.55%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22M3%208.6v2.8l3%20.6v-4l-3%20.6z%22/%3E%3Cpath%20d%3D%22M6%207.5%2015%204v12l-9-3.5v-5z%22/%3E%3Cpath%20d%3D%22M6.3%2012v2.8a1.4%201.4%200%200%200%202.7.5l.5-1.4%22/%3E%3C/svg%3E");
+}
+.zijknop[data-tab="config"]::before,.tab[data-tab="config"]::before{
+  -webkit-mask-image:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2020%2020%22%20fill%3D%22none%22%20stroke%3D%22black%22%20stroke-width%3D%221.55%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22M3%206h9M15.5%206H17M3%2014h5.5M11%2014H17%22%20stroke-linecap%3D%22round%22/%3E%3Ccircle%20cx%3D%2211.5%22%20cy%3D%226%22%20r%3D%222%22/%3E%3Ccircle%20cx%3D%228.5%22%20cy%3D%2214%22%20r%3D%222%22/%3E%3C/svg%3E"); mask-image:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2020%2020%22%20fill%3D%22none%22%20stroke%3D%22black%22%20stroke-width%3D%221.55%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22M3%206h9M15.5%206H17M3%2014h5.5M11%2014H17%22%20stroke-linecap%3D%22round%22/%3E%3Ccircle%20cx%3D%2211.5%22%20cy%3D%226%22%20r%3D%222%22/%3E%3Ccircle%20cx%3D%228.5%22%20cy%3D%2214%22%20r%3D%222%22/%3E%3C/svg%3E");
+}
+.zijknop[data-tab="feedback"]::before,.tab[data-tab="feedback"]::before{
+  -webkit-mask-image:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2020%2020%22%20fill%3D%22none%22%20stroke%3D%22black%22%20stroke-width%3D%221.55%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22M3%204h14v9H8.2L4.5%2016.2V13H3V4z%22/%3E%3Cpath%20d%3D%22M6%207h8M6%209.6h5%22%20stroke-linecap%3D%22round%22/%3E%3C/svg%3E"); mask-image:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2020%2020%22%20fill%3D%22none%22%20stroke%3D%22black%22%20stroke-width%3D%221.55%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22M3%204h14v9H8.2L4.5%2016.2V13H3V4z%22/%3E%3Cpath%20d%3D%22M6%207h8M6%209.6h5%22%20stroke-linecap%3D%22round%22/%3E%3C/svg%3E");
+}
+.zijknop[data-tab="stats"]::before,.tab[data-tab="stats"]::before{
+  -webkit-mask-image:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2020%2020%22%20fill%3D%22none%22%20stroke%3D%22black%22%20stroke-width%3D%221.55%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22M3%2017V9M9%2017V3M15%2017v-6%22%20stroke-linecap%3D%22round%22/%3E%3Cpath%20d%3D%22M2.5%2017h15%22%20stroke-linecap%3D%22round%22/%3E%3C/svg%3E"); mask-image:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2020%2020%22%20fill%3D%22none%22%20stroke%3D%22black%22%20stroke-width%3D%221.55%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22M3%2017V9M9%2017V3M15%2017v-6%22%20stroke-linecap%3D%22round%22/%3E%3Cpath%20d%3D%22M2.5%2017h15%22%20stroke-linecap%3D%22round%22/%3E%3C/svg%3E");
+}
+.zijknop[data-tab="inzicht"]::before,.tab[data-tab="inzicht"]::before{
+  -webkit-mask-image:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2020%2020%22%20fill%3D%22none%22%20stroke%3D%22black%22%20stroke-width%3D%221.55%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22M10%203.2a5%205%200%200%201%202.7%209.2c-.6.4-1%201-1%201.7v.4H8.3v-.4c0-.7-.4-1.3-1-1.7A5%205%200%200%201%2010%203.2z%22/%3E%3Cpath%20d%3D%22M8.3%2016.8h3.4M8.7%2018.4h2.6%22%20stroke-linecap%3D%22round%22/%3E%3C/svg%3E"); mask-image:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2020%2020%22%20fill%3D%22none%22%20stroke%3D%22black%22%20stroke-width%3D%221.55%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22M10%203.2a5%205%200%200%201%202.7%209.2c-.6.4-1%201-1%201.7v.4H8.3v-.4c0-.7-.4-1.3-1-1.7A5%205%200%200%201%2010%203.2z%22/%3E%3Cpath%20d%3D%22M8.3%2016.8h3.4M8.7%2018.4h2.6%22%20stroke-linecap%3D%22round%22/%3E%3C/svg%3E");
+}
+.zijknop[data-tab="records"]::before,.tab[data-tab="records"]::before{
+  -webkit-mask-image:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2020%2020%22%20fill%3D%22none%22%20stroke%3D%22black%22%20stroke-width%3D%221.55%22%20stroke-linejoin%3D%22round%22%3E%3Cellipse%20cx%3D%2210%22%20cy%3D%225%22%20rx%3D%226.5%22%20ry%3D%222.3%22/%3E%3Cpath%20d%3D%22M3.5%205v10c0%201.3%202.9%202.3%206.5%202.3s6.5-1%206.5-2.3V5%22/%3E%3Cpath%20d%3D%22M3.5%2010c0%201.3%202.9%202.3%206.5%202.3s6.5-1%206.5-2.3%22/%3E%3C/svg%3E"); mask-image:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2020%2020%22%20fill%3D%22none%22%20stroke%3D%22black%22%20stroke-width%3D%221.55%22%20stroke-linejoin%3D%22round%22%3E%3Cellipse%20cx%3D%2210%22%20cy%3D%225%22%20rx%3D%226.5%22%20ry%3D%222.3%22/%3E%3Cpath%20d%3D%22M3.5%205v10c0%201.3%202.9%202.3%206.5%202.3s6.5-1%206.5-2.3V5%22/%3E%3Cpath%20d%3D%22M3.5%2010c0%201.3%202.9%202.3%206.5%202.3s6.5-1%206.5-2.3%22/%3E%3C/svg%3E");
+}
+.zijknop[data-tab="logboek"]::before,.tab[data-tab="logboek"]::before{
+  -webkit-mask-image:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2020%2020%22%20fill%3D%22none%22%20stroke%3D%22black%22%20stroke-width%3D%221.55%22%20stroke-linejoin%3D%22round%22%3E%3Ccircle%20cx%3D%2210%22%20cy%3D%2210.5%22%20r%3D%226.8%22/%3E%3Cpath%20d%3D%22M10%206.8v3.9l2.6%201.6%22%20stroke-linecap%3D%22round%22/%3E%3Cpath%20d%3D%22M7%202.6h6%22%20stroke-linecap%3D%22round%22/%3E%3C/svg%3E"); mask-image:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2020%2020%22%20fill%3D%22none%22%20stroke%3D%22black%22%20stroke-width%3D%221.55%22%20stroke-linejoin%3D%22round%22%3E%3Ccircle%20cx%3D%2210%22%20cy%3D%2210.5%22%20r%3D%226.8%22/%3E%3Cpath%20d%3D%22M10%206.8v3.9l2.6%201.6%22%20stroke-linecap%3D%22round%22/%3E%3Cpath%20d%3D%22M7%202.6h6%22%20stroke-linecap%3D%22round%22/%3E%3C/svg%3E");
+}
+.zijknop[data-tab="controle"]::before,.tab[data-tab="controle"]::before{
+  -webkit-mask-image:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2020%2020%22%20fill%3D%22none%22%20stroke%3D%22black%22%20stroke-width%3D%221.55%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22M10%202.8%2016.5%205v5.1c0%204-2.7%206.6-6.5%207.6-3.8-1-6.5-3.6-6.5-7.6V5L10%202.8z%22/%3E%3Cpath%20d%3D%22M7.2%209.8l1.9%201.9%203.7-3.9%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22/%3E%3C/svg%3E"); mask-image:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2020%2020%22%20fill%3D%22none%22%20stroke%3D%22black%22%20stroke-width%3D%221.55%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22M10%202.8%2016.5%205v5.1c0%204-2.7%206.6-6.5%207.6-3.8-1-6.5-3.6-6.5-7.6V5L10%202.8z%22/%3E%3Cpath%20d%3D%22M7.2%209.8l1.9%201.9%203.7-3.9%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22/%3E%3C/svg%3E");
+}
+.zijknop[data-tab="toegang"]::before,.tab[data-tab="toegang"]::before{
+  -webkit-mask-image:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2020%2020%22%20fill%3D%22none%22%20stroke%3D%22black%22%20stroke-width%3D%221.55%22%20stroke-linejoin%3D%22round%22%3E%3Ccircle%20cx%3D%227%22%20cy%3D%2213%22%20r%3D%223.4%22/%3E%3Cpath%20d%3D%22M9.3%2010.7%2015.5%204.5M13.4%206.6l1.9%201.9M15.7%204.3l2%202%22%20stroke-linecap%3D%22round%22/%3E%3C/svg%3E"); mask-image:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2020%2020%22%20fill%3D%22none%22%20stroke%3D%22black%22%20stroke-width%3D%221.55%22%20stroke-linejoin%3D%22round%22%3E%3Ccircle%20cx%3D%227%22%20cy%3D%2213%22%20r%3D%223.4%22/%3E%3Cpath%20d%3D%22M9.3%2010.7%2015.5%204.5M13.4%206.6l1.9%201.9M15.7%204.3l2%202%22%20stroke-linecap%3D%22round%22/%3E%3C/svg%3E");
+}
+.zijknop[data-tab="info"]::before,.tab[data-tab="info"]::before{
+  -webkit-mask-image:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2020%2020%22%20fill%3D%22none%22%20stroke%3D%22black%22%20stroke-width%3D%221.55%22%20stroke-linejoin%3D%22round%22%3E%3Ccircle%20cx%3D%2210%22%20cy%3D%2210%22%20r%3D%227.2%22/%3E%3Cpath%20d%3D%22M10%209v5%22%20stroke-linecap%3D%22round%22/%3E%3Ccircle%20cx%3D%2210%22%20cy%3D%226.3%22%20r%3D%22.95%22%20fill%3D%22currentColor%22%20stroke%3D%22none%22/%3E%3C/svg%3E"); mask-image:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2020%2020%22%20fill%3D%22none%22%20stroke%3D%22black%22%20stroke-width%3D%221.55%22%20stroke-linejoin%3D%22round%22%3E%3Ccircle%20cx%3D%2210%22%20cy%3D%2210%22%20r%3D%227.2%22/%3E%3Cpath%20d%3D%22M10%209v5%22%20stroke-linecap%3D%22round%22/%3E%3Ccircle%20cx%3D%2210%22%20cy%3D%226.3%22%20r%3D%22.95%22%20fill%3D%22currentColor%22%20stroke%3D%22none%22/%3E%3C/svg%3E");
+}
+/* =====================================================================
+   Derde afwerkingsronde — avatars, skelet-laadstaat, vloeiendere balkjes.
+   Ook hier: puur visueel, geen klasse of id die al bestond verandert van rol.
+   ===================================================================== */
+
+/* ---------- avatar: initialen in plaats van een naam die los in de ruimte staat ---------- */
+.avatar{
+  width:2.15rem; height:2.15rem; border-radius:50%; flex:none;
+  display:flex; align-items:center; justify-content:center;
+  font-family:"Bricolage Grotesque","Public Sans",sans-serif; font-weight:700; font-size:.78rem;
+  color:#151009; letter-spacing:.01em;
+}
+.avatar.c0{background:linear-gradient(135deg,#F4C55A,var(--amber))}
+.avatar.c1{background:linear-gradient(135deg,#7DD0A6,var(--green))}
+.avatar.c2{background:linear-gradient(135deg,#8CC0EE,var(--blue))}
+.avatar.c3{background:linear-gradient(135deg,#CBAAF2,var(--pro))}
+.avatar.c4{background:linear-gradient(135deg,#F0A79C,var(--red));color:#2A0E0B}
+
+/* ---------- skelet-laadstaat: de vorm van de inhoud, niet een los rondje ---------- */
+.skel-wrap{display:flex;flex-direction:column}
+.skel-row{display:flex;gap:.6rem;align-items:center;padding:.8rem .9rem;border-bottom:1px solid var(--edge-soft)}
+.skel-row:last-child{border-bottom:none}
+.skel{
+  display:block; border-radius:5px;
+  background:linear-gradient(90deg,var(--edge-soft) 25%,var(--edge) 37%,var(--edge-soft) 63%);
+  background-size:400% 100%; animation:skel-glans 1.5s ease infinite;
+}
+.skel-avatar{width:2.15rem;height:2.15rem;border-radius:50%;flex:none}
+.skel-lines{flex:1;display:flex;flex-direction:column;gap:.4rem}
+.skel-line{height:.68rem}
+.skel-line.w30{width:30%} .skel-line.w35{width:35%} .skel-line.w60{width:60%} .skel-line.w70{width:70%}
+.stat.skel-stat{gap:.5rem;cursor:default}
+.stat.skel-stat::before{background:var(--edge-soft)}
+.stat.skel-stat:hover{transform:none;box-shadow:none;border-color:var(--edge)}
+@keyframes skel-glans{0%{background-position:100% 0}100%{background-position:0 0}}
+@media(prefers-reduced-motion:reduce){.skel{animation:none;opacity:.6}}
+
+/* ---------- balkjes: een vloeiende vulling met een duidelijk eindpunt ---------- */
+.balk-rij .spoor{position:relative;overflow:visible}
+.balk-rij .vul{background-image:linear-gradient(90deg,rgba(255,255,255,0),rgba(255,255,255,.18))}
+.balk-rij .vul::after{
+  content:""; position:absolute; right:-1px; top:50%; transform:translateY(-50%);
+  width:.6rem; height:.6rem; border-radius:50%; background:inherit;
+  box-shadow:0 0 0 3px var(--surface), 0 1px 4px rgba(0,0,0,.4);
+}
+
+/* ---------- groter exemplaar voor de dossier-kop: één persoon, geen rij ---------- */
+.avatar.lg{width:2.9rem;height:2.9rem;font-size:1.02rem}
+
+/* ---------- de balk onderaan bij bulk-selectie en de harde-ververs-banner ----------
+   Deze twee kregen de eerdere rondes nooit mee — ze verschijnen alleen in
+   context (selecteer iets, of forceer een herlaad) en zijn daardoor makkelijk
+   te missen bij een visuele ronde. Zelfde taal als de rest: een lichte gloed
+   bovenaan, geen platte kleurvlek. */
+#balk{
+  background:linear-gradient(180deg,var(--raised),var(--surface));
+  box-shadow:0 1px 0 rgba(255,255,255,.05) inset, 0 -8px 30px rgba(0,0,0,.5);
+}
+#hs-banner{
+  background:linear-gradient(135deg,#F4C55A,var(--amber) 55%,var(--amber-dim));
+  box-shadow:0 1px 0 rgba(255,255,255,.3) inset, 0 -8px 30px rgba(0,0,0,.5);
+}
+
+/* ---------- utility classes (herstructurering: statische inline styles) ---------- */
+.u-flex1{flex:1}
+.u-ink{color:var(--ink)}
+.u-muted{color:var(--muted)}
+.u-red{color:var(--red)}
+.u-col7{display:flex;flex-direction:column;gap:.7rem}
+.u-row5wrap{display:flex;gap:.5rem;flex-wrap:wrap}
+.u-hidden{display:none}
+.u-ink-dim{color:var(--ink-dim)}
+
+/* ---------- utility classes batch 2 ---------- */
+.u-muted-86{color:var(--muted);font-size:.86rem}
+.u-mt6{margin-top:.6rem}
+.u-flex-9rem{flex:1 1 9rem}
+.u-w100{width:100%}
+.u-op55{opacity:.55}
+.u-mla{margin-left:auto}
+.u-flex-10rem{flex:1 1 10rem}
+.u-muted-82{font-size:.82rem;color:var(--muted)}
+.u-inkdim-88-m0{margin:0;font-size:.88rem;color:var(--ink-dim)}
+.u-muted-86-m0{font-size:.86rem;color:var(--muted);margin:0}
+.u-muted-80-m0{color:var(--muted);font-size:.8rem;margin:0}
+
+/* ---------- utility classes batch 3 (cssText cleanup) ---------- */
+.u-muted-78-m{font-size:.78rem;color:var(--muted);margin:.9rem 0 .4rem}
+.u-col6{display:flex;flex-direction:column;gap:.6rem}
+
+/* ---------- utility classes batch 5 (remaining static inline styles) ---------- */
+.u-amber{color:var(--amber)}
+.u-amber-note{font-size:.86rem;color:var(--ink-dim);border-left:2px solid var(--amber-dim);padding-left:.8rem}
+.u-minw0{min-width:0}
+.u-pad-tight{padding:.4rem .5rem}
+.u-flex0-11rem{flex:0 0 11rem}
+.u-muted-78-mt4{font-size:.78rem;color:var(--muted);margin-top:.4rem}
+.u-flex0-10rem{flex:0 0 10rem}
+.u-pb0{padding-bottom:0}
+.u-flex-12rem{flex:1 1 12rem}
+.u-pt0-pb0{padding-top:0;padding-bottom:0}
+.u-notop{border-top:none;margin-top:0;padding-top:0}
+.u-fs80{font-size:.8rem}
+.u-col8{display:flex;flex-direction:column;gap:.8rem}
+.u-fs88{font-size:.88rem}
+.u-muted-84{font-size:.84rem;color:var(--muted)}
+.u-muted-85{font-size:.85rem;color:var(--muted)}
+.u-col8-inkdim-90{display:flex;flex-direction:column;gap:.8rem;font-size:.9rem;color:var(--ink-dim)}
+.u-m0{margin:0}
+.u-link-plain{text-decoration:none;display:inline-block}
+.u-muted-84-m0{margin:0;font-size:.84rem;color:var(--muted)}
+.u-maxw12{max-width:12rem}
+.u-col85{display:flex;flex-direction:column;gap:.85rem}
+.u-muted-78-fw500-mb4{font-size:.78rem;color:var(--muted);font-weight:500;margin-bottom:.4rem}
+.u-col4{display:flex;flex-direction:column;gap:.4rem}
+.u-minh9{min-height:9rem}
+.u-faint-82-pad7{font-size:.82rem;color:var(--faint);padding-top:.7rem;padding-bottom:.7rem}
+.u-flex0-9rem{flex:0 0 9rem}
+.u-flex0-8rem{flex:0 0 8rem}
+.u-muted-80-center{color:var(--muted);font-size:.8rem;align-self:center}
+.u-col8-inkdim-88{display:flex;flex-direction:column;gap:.8rem;font-size:.88rem;color:var(--ink-dim)}
+.u-inkdim-85{color:var(--ink-dim);font-size:.85rem}
+.u-op5{opacity:.5}
+.u-h24-mb3{height:1.5rem;margin-bottom:.3rem}
+.u-muted-80{color:var(--muted);font-size:.8rem}
+.u-img-prev-b{margin-top:.5rem;max-width:min(100%,17rem);max-height:12rem;border-radius:8px;border:1px solid var(--edge);display:block}
+.u-green{color:var(--green)}
+.u-muted-80-mb3{font-size:.8rem;color:var(--muted);margin-bottom:.3rem}
+.u-w100-auto-visible{width:100%;height:auto;overflow:visible}
+.u-inkdim-88{font-size:.88rem;color:var(--ink-dim)}
+.u-red-86{color:var(--red);font-size:.86rem}
+.u-mt5{margin-top:.5rem}
+.u-img-prev-a{max-width:min(100%,17rem);max-height:11rem;border-radius:8px;border:1px solid var(--edge);display:block}
+.u-row6c{display:flex;align-items:center;gap:.6rem}
+.u-col45{display:flex;flex-direction:column;gap:.45rem}
+.u-faint-note{color:var(--faint);font-size:.76rem;margin-top:.55rem;line-height:1.5}
+.u-inkdim-85-mb7{font-size:.85rem;color:var(--ink-dim);margin-bottom:.7rem}
+.u-muted-80-mb6{font-size:.8rem;color:var(--muted);margin-bottom:.6rem}
+.u-muted-78-mb4{font-size:.78rem;color:var(--muted);margin-bottom:.4rem}
+.u-inkdim-90-mb7{margin-bottom:.7rem;color:var(--ink-dim);font-size:.9rem}
+.u-muted-80-mt9{font-size:.8rem;color:var(--muted);margin-top:.9rem}
+.u-bc-red{border-color:var(--red)}
+.u-col85-center{display:flex;flex-direction:column;gap:.85rem;align-items:center}
+.u-muted-83-lh{font-size:.83rem;color:var(--muted);line-height:1.5}
 </style>
 </head>
 <body>
@@ -512,11 +876,11 @@ details.uitleg .inhoud{
 
   <div class="card">
     <div class="card-h"><h2>1 · API-token</h2></div>
-    <div class="card-b" style="display:flex;flex-direction:column;gap:.7rem">
-      <p style="font-size:.86rem;color:var(--muted);margin:0">
+    <div class="card-b u-col7">
+      <p class="u-muted-86-m0">
         Aanmaken in CloudKit Console → je container → <b>Tokens</b> → <b>API Tokens</b>.
         Zet bij dat token dit adres als toegestane origin:
-        <code id="origin-hint" style="color:var(--amber)"></code>
+        <code id="origin-hint" class="u-amber"></code>
       </p>
       <label class="f">Token
         <input type="password" id="token-input" autocomplete="off" autocapitalize="none" spellcheck="false"
@@ -524,13 +888,13 @@ details.uitleg .inhoud{
         <span class="hint">Wordt alleen in deze browser bewaard en staat verborgen, zodat hij niet meekijkt op een
           gedeeld scherm. Een API-token is aan dit adres gebonden en geeft op zichzelf geen schrijfrechten.</span>
       </label>
-      <div style="display:flex;gap:.5rem;flex-wrap:wrap">
+      <div class="u-row5wrap">
         <button class="btn" id="token-toon">Tonen</button>
         <button class="btn" id="token-plak">Plakken</button>
         <button class="btn primary" id="token-save">Bewaren en laden</button>
         <button class="btn" id="token-clear">Wissen</button>
       </div>
-      <div id="gate-standalone" class="hide" style="font-size:.86rem;color:var(--ink-dim);border-left:2px solid var(--amber-dim);padding-left:.8rem">
+      <div id="gate-standalone" class="hide u-amber-note">
         <b>Je opent dit vanaf je beginscherm, en er zit geen token in de snelkoppeling.</b>
         Een app op het beginscherm heeft een eigen opslag, los van Safari, dus je inlog daar telt hier niet.<br><br>
         Snelste oplossing: druk hieronder op <b>Plakken</b> — je mag ook de hele koppel-link plakken, hij haalt het
@@ -544,12 +908,12 @@ details.uitleg .inhoud{
 
   <div class="card">
     <div class="card-h"><h2>2 · Inloggen</h2></div>
-    <div class="card-b" style="display:flex;flex-direction:column;gap:.7rem">
-      <p style="font-size:.86rem;color:var(--muted);margin:0">
+    <div class="card-b u-col7">
+      <p class="u-muted-86-m0">
         Log in met dezelfde Apple ID als je ontwikkelaarsaccount. Alleen die account heeft de rol
         <code>beheerder</code> en mag schrijven.
       </p>
-      <div id="signin-slot"><span style="color:var(--muted);font-size:.86rem">Eerst een token invoeren.</span></div>
+      <div id="signin-slot"><span class="u-muted-86">Eerst een token invoeren.</span></div>
     </div>
   </div>
 
@@ -573,14 +937,14 @@ details.uitleg .inhoud{
 <header class="topbar">
   <div class="topbar-in">
     <div class="brand">
-      <div style="min-width:0">
+      <div class="u-minw0">
         <b>PrepperApp Beheer</b>
         <span class="env"><span class="dot" id="env-dot"></span><span id="env-label">—</span></span>
       </div>
     </div>
     <span class="spacer"></span>
     <div class="topacties">
-      <select id="auto" class="iconbtn" title="Automatisch verversen" style="padding:.4rem .5rem">
+      <select id="auto" class="iconbtn" title="Automatisch verversen" class="u-pad-tight">
         <option value="0">handmatig</option>
         <option value="60">elke minuut</option>
         <option value="300">elke 5 min</option>
@@ -603,32 +967,37 @@ details.uitleg .inhoud{
 
   <!-- ---------- Dashboard ---------- -->
   <section class="view" id="v-dashboard" role="tabpanel">
-    <div class="card" id="sinds-kaart" style="display:none">
-      <div class="card-h"><h2>Sinds je vorige bezoek</h2><span style="flex:1"></span>
+    <div class="card" id="sinds-kaart" class="u-hidden">
+      <div class="card-h"><h2>Sinds je vorige bezoek</h2><span class="u-flex1"></span>
         <span class="sub" id="sinds-wanneer"></span>
       </div>
       <div class="card-b tight" id="sinds-lijst"></div>
     </div>
     <div class="grid c4" id="stats"></div>
     <div class="card" id="adoptie-kaart">
-      <div class="card-h"><h2>Wie heeft de nieuwste versie</h2><span style="flex:1"></span>
+      <div class="card-h"><h2>Wie heeft de nieuwste versie</h2><span class="u-flex1"></span>
         <span class="sub" id="adoptie-sub"></span>
       </div>
       <div class="card-b" id="adoptie-body"><div class="empty">Laden…</div></div>
     </div>
     <div class="card">
-      <div class="card-h"><h2>Nu aandacht nodig</h2><span class="spacer" style="flex:1"></span><span class="sub" id="dash-when"></span></div>
+      <div class="card-h"><h2>Nu aandacht nodig</h2><span class="spacer u-flex1"></span><span class="sub" id="dash-when"></span></div>
       <div class="card-b tight" id="dash-attention"><div class="empty">Laden…</div></div>
     </div>
-    <div class="grid c2">
+    <div class="grid c3">
       <div class="card">
         <div class="card-h"><h2>Laatste forumposts</h2></div>
         <div class="card-b tight" id="dash-posts"><div class="empty">Laden…</div></div>
       </div>
       <div class="card">
-        <div class="card-h"><h2>Laatst actief</h2><span style="flex:1"></span>
+        <div class="card-h"><h2>Laatst actief</h2><span class="u-flex1"></span>
           <span class="sub">wie zijn status het laatst bijwerkte</span></div>
         <div class="card-b tight" id="dash-users"><div class="empty">Laden…</div></div>
+      </div>
+      <div class="card">
+        <div class="card-h"><h2>Nieuwste accounts</h2><span class="u-flex1"></span>
+          <span class="sub">sinds wanneer iemand meedoet</span></div>
+        <div class="card-b tight" id="dash-newusers"><div class="empty">Laden…</div></div>
       </div>
     </div>
   </section>
@@ -636,14 +1005,14 @@ details.uitleg .inhoud{
   <!-- ---------- Meldingen ---------- -->
   <section class="view" id="v-meldingen" role="tabpanel">
     <div class="card">
-      <div class="card-h"><h2>Meldingen van gebruikers</h2><span style="flex:1"></span>
+      <div class="card-h"><h2>Meldingen van gebruikers</h2><span class="u-flex1"></span>
         <label class="switch"><input type="checkbox" id="mld-open-only" checked> alleen open</label>
       </div>
       <div class="card-b tight" id="mld-list"><div class="empty">Laden…</div></div>
     </div>
-    <p style="color:var(--muted);font-size:.8rem;margin:0">
-      <b style="color:var(--ink-dim)">MisbruikMelding</b> komt uit het meldknopje in de app en heeft een reden en een
-      afhandelvinkje. <b style="color:var(--ink-dim)">ForumMelding</b> is het oudere type zonder reden — daar is
+    <p class="u-muted-80-m0">
+      <b class="u-ink-dim">MisbruikMelding</b> komt uit het meldknopje in de app en heeft een reden en een
+      afhandelvinkje. <b class="u-ink-dim">ForumMelding</b> is het oudere type zonder reden — daar is
       &ldquo;afgehandeld&rdquo; simpelweg de melding weggooien.
     </p>
   </section>
@@ -653,7 +1022,7 @@ details.uitleg .inhoud{
     <div class="card">
       <div class="card-b">
         <div class="toolbar">
-          <label class="f narrow" style="flex:0 0 11rem">Soort
+          <label class="f narrow u-flex0-11rem">Soort
             <select id="forum-type">
               <option value="OutdoorPost">Outdoor posts</option>
               <option value="ErvaringPost">Ervaringen</option>
@@ -670,8 +1039,8 @@ details.uitleg .inhoud{
           </label>
           <button class="btn narrow" id="forum-load">Laden</button>
         </div>
-        <div class="toolbar" style="margin-top:.6rem">
-          <label class="f narrow" style="flex:1 1 9rem">Periode
+        <div class="toolbar u-mt6">
+          <label class="f narrow u-flex-9rem">Periode
             <select id="forum-periode">
               <option value="0">alles</option>
               <option value="1">laatste 24 uur</option>
@@ -679,18 +1048,18 @@ details.uitleg .inhoud{
               <option value="30">laatste maand</option>
             </select>
           </label>
-          <label class="f narrow" style="flex:1 1 9rem">Volgorde
+          <label class="f narrow u-flex-9rem">Volgorde
             <select id="forum-volgorde">
               <option value="nieuw">nieuwste eerst</option>
               <option value="oud">oudste eerst</option>
             </select>
           </label>
         </div>
-        <label class="switch" style="margin-top:.6rem"><input type="checkbox" id="forum-verdacht"> alleen berichten waar het woordfilter op aanslaat</label>
-        <div id="forum-zoekhint" style="font-size:.78rem;color:var(--muted);margin-top:.4rem"></div>
+        <label class="switch u-mt6"><input type="checkbox" id="forum-verdacht"> alleen berichten waar het woordfilter op aanslaat</label>
+        <div id="forum-zoekhint" class="u-muted-78-mt4"></div>
       </div>
       <div class="card-b tight kies" id="forum-list"><div class="empty">Kies een soort en druk op laden.</div></div>
-      <div class="card-b" id="forum-more" style="display:none"><button class="btn" id="forum-more-btn" style="width:100%">Meer laden</button></div>
+      <div class="card-b" id="forum-more" class="u-hidden"><button class="btn" id="forum-more-btn" class="u-w100">Meer laden</button></div>
     </div>
   </section>
 
@@ -702,7 +1071,7 @@ details.uitleg .inhoud{
           <label class="f">Zoeken op naam of code
             <input type="search" id="usr-q" placeholder="bijv. A3F9K2QP of Michael">
           </label>
-          <label class="f narrow" style="flex:0 0 10rem">Filter
+          <label class="f narrow u-flex0-10rem">Filter
             <select id="usr-filter">
               <option value="alle">Iedereen</option>
               <option value="banned">Geblokkeerd</option>
@@ -716,12 +1085,12 @@ details.uitleg .inhoud{
       <div class="card-b tight" id="usr-list"><div class="empty">Laden…</div></div>
     </div>
     <div class="card">
-      <div class="card-h"><h2>Mensen die hun status delen</h2><span style="flex:1"></span>
+      <div class="card-h"><h2>Mensen die hun status delen</h2><span class="u-flex1"></span>
         <span class="sub" id="surv-count"></span>
       </div>
-      <div class="card-b" style="padding-bottom:0">
+      <div class="card-b u-pb0">
         <div class="toolbar">
-          <label class="f narrow" style="flex:1 1 12rem">Tonen
+          <label class="f narrow u-flex-12rem">Tonen
             <select id="surv-filter">
               <option value="alle">iedereen</option>
               <option value="combo">alleen wie ook PrepAlert heeft</option>
@@ -732,14 +1101,14 @@ details.uitleg .inhoud{
           </label>
         </div>
       </div>
-      <div class="card-b" style="padding-top:0;padding-bottom:0">
-        <details class="uitleg" style="border-top:none;margin-top:0;padding-top:0">
+      <div class="card-b u-pt0-pb0">
+        <details class="uitleg u-notop">
           <summary>Wie je hier wél en niet ziet, en wat de labels betekenen</summary>
           <div class="inhoud">
-            <div><b style="color:var(--ink-dim)">Geen ledenlijst.</b> De app schrijft alleen een survival-status
+            <div><b class="u-ink-dim">Geen ledenlijst.</b> De app schrijft alleen een survival-status
               voor wie mínstens één vriend heeft. Wie de app in zijn eentje gebruikt staat er niet tussen, en wie
               zijn laatste vriend verwijdert verdwijnt er weer uit.</div>
-            <div><b style="color:var(--ink-dim)">De labels.</b> <span class="pill">Pro</span> en
+            <div><b class="u-ink-dim">De labels.</b> <span class="pill">Pro</span> en
               <span class="pill red">Geblokkeerd</span> komen van het gebruikersaccount, en dat maakt de app pas aan
               zodra iemand "Mijn account" opent — bij de meesten bestaat het nog niet, dus geen label betekent hier
               "niet bekend", niet "geen Pro". <span class="pill blue">PrepAlert</span> komt uit de drie velden die
@@ -756,7 +1125,7 @@ details.uitleg .inhoud{
   <!-- ---------- Kaart ---------- -->
   <section class="view" id="v-kaart" role="tabpanel">
     <div class="card">
-      <div class="card-h"><h2>Wereldkaart</h2><span style="flex:1"></span>
+      <div class="card-h"><h2>Wereldkaart</h2><span class="u-flex1"></span>
         <span class="sub" id="kaart-status"></span>
         <button class="btn sm" id="kaart-laad">Punten en routes laden</button>
         <button class="btn sm" id="kaart-steden">Woonplaatsen opzoeken</button>
@@ -769,7 +1138,7 @@ details.uitleg .inhoud{
         <div class="kaart-knoppen">
           <button id="kaart-in" title="Inzoomen">+</button>
           <button id="kaart-uit" title="Uitzoomen">−</button>
-          <button id="kaart-fit" title="Alles in beeld" style="font-size:.8rem">⤢</button>
+          <button id="kaart-fit" title="Alles in beeld" class="u-fs80">⤢</button>
         </div>
       </div>
       <div class="kaart-legenda" id="kaart-legenda"></div>
@@ -779,7 +1148,7 @@ details.uitleg .inhoud{
   <!-- ---------- Controle ---------- -->
   <section class="view" id="v-controle" role="tabpanel">
     <div class="card">
-      <div class="card-h"><h2>Uitslag</h2><span style="flex:1"></span>
+      <div class="card-h"><h2>Uitslag</h2><span class="u-flex1"></span>
         <span class="sub" id="ct-status"></span>
         <button class="btn sm primary" id="ct-laad">Doorlichten</button>
       </div>
@@ -792,10 +1161,10 @@ details.uitleg .inhoud{
     <div class="card">
       <div class="card-b">
         <div class="toolbar">
-          <label class="f narrow" style="flex:1 1 10rem">Handeling
+          <label class="f narrow u-flex-10rem">Handeling
             <select id="lg-handeling"><option value="">alles</option></select>
           </label>
-          <label class="f narrow" style="flex:1 1 10rem">Wie
+          <label class="f narrow u-flex-10rem">Wie
             <select id="lg-wie"><option value="">iedereen</option></select>
           </label>
           <button class="btn narrow" id="lg-laad">Laden</button>
@@ -804,7 +1173,7 @@ details.uitleg .inhoud{
       <div class="card-b tight" id="lg-lijst"><div class="empty">Laden…</div></div>
     </div>
     <div class="card">
-      <div class="card-b" style="font-size:.82rem;color:var(--muted)" id="lg-uitleg">
+      <div class="card-b u-muted-82" id="lg-uitleg">
         Elke handeling die iemand hier doet — verbergen, blokkeren, verwijderen, instellingen wijzigen —
         wordt hier vastgelegd met naam, tijdstip en reden. Handig zodra je met meer mensen modereert:
         je kunt altijd terugzien wie wat deed.
@@ -816,20 +1185,20 @@ details.uitleg .inhoud{
   <section class="view" id="v-toegang" role="tabpanel">
     <div class="card">
       <div class="card-h"><h2>Wie ben je hier</h2></div>
-      <div class="card-b" style="display:flex;flex-direction:column;gap:.8rem">
+      <div class="card-b u-col8">
         <dl class="kv" id="tg-kv"></dl>
-        <div style="display:flex;gap:.5rem;flex-wrap:wrap">
+        <div class="u-row5wrap">
           <button class="btn" id="tg-kopieer">Mijn CloudKit-ID kopiëren</button>
           <button class="btn" id="tg-test">Schrijfrechten testen</button>
         </div>
-        <div id="tg-uitslag" style="font-size:.88rem"></div>
+        <div id="tg-uitslag" class="u-fs88"></div>
       </div>
     </div>
 
     <div class="card">
-      <div class="card-h"><h2>PrepAlert erbij</h2><span style="flex:1"></span><span class="sub" id="pa2-status"></span></div>
-      <div class="card-b" style="display:flex;flex-direction:column;gap:.7rem">
-        <p style="margin:0;font-size:.88rem;color:var(--ink-dim)">
+      <div class="card-h"><h2>PrepAlert erbij</h2><span class="u-flex1"></span><span class="sub" id="pa2-status"></span></div>
+      <div class="card-b u-col7">
+        <p class="u-inkdim-88-m0">
           PrepAlert heeft een eigen CloudKit-container. Met een tweede API-token voor
           <code>iCloud.com.stuut.PrepAlert</code> — zelfde toegestane origin — laat deze pagina ook
           het aantal installaties van PrepAlert zien. Meer zit er in die container niet: de teller
@@ -840,7 +1209,7 @@ details.uitleg .inhoud{
                  placeholder="leeg laten kan ook">
           <span class="hint">Verborgen, zodat hij niet meekijkt op een gedeeld scherm of een schermafbeelding.</span>
         </label>
-        <div style="display:flex;gap:.5rem;flex-wrap:wrap">
+        <div class="u-row5wrap">
           <button class="btn" id="token2-toon">Tonen</button>
           <button class="btn" id="token2-plak">Plakken</button>
           <button class="btn primary" id="token2-save">Bewaren</button>
@@ -850,11 +1219,11 @@ details.uitleg .inhoud{
     </div>
 
     <div class="card">
-      <div class="card-h"><h2>Prullenbak</h2><span style="flex:1"></span>
+      <div class="card-h"><h2>Prullenbak</h2><span class="u-flex1"></span>
         <span class="sub" id="pb-aantal"></span>
         <button class="btn sm" id="pb-leeg">Leegmaken</button>
       </div>
-      <div class="card-b" style="font-size:.84rem;color:var(--muted)">
+      <div class="card-b u-muted-84">
         CloudKit kent geen ongedaan maken. Daarom bewaart deze pagina een kopie van alles wat je hier
         weggooit, in je eigen browser. Terugzetten kan zolang de kopie er staat — behalve foto's,
         die zijn na verwijderen echt weg.
@@ -864,35 +1233,35 @@ details.uitleg .inhoud{
 
     <div class="card">
       <div class="card-h"><h2>Back-up</h2></div>
-      <div class="card-b" style="display:flex;flex-direction:column;gap:.7rem">
-        <p style="margin:0;font-size:.88rem;color:var(--ink-dim)">
+      <div class="card-b u-col7">
+        <p class="u-inkdim-88-m0">
           Zet alles wat in de publieke database staat in één JSON-bestand. Handig voordat je iets
           ingrijpends doet, en als losse kopie buiten Apple om.
         </p>
         <div><button class="btn" id="bk-maak">Alles exporteren</button></div>
-        <div id="bk-status" style="font-size:.85rem;color:var(--muted)"></div>
+        <div id="bk-status" class="u-muted-85"></div>
       </div>
     </div>
 
     <div class="card">
       <div class="card-h"><h2>Iemand anders laten meehelpen</h2></div>
-      <div class="card-b" style="display:flex;flex-direction:column;gap:.8rem;font-size:.9rem;color:var(--ink-dim)">
-        <p style="margin:0">Twee dingen zijn nodig, en dat is met opzet: het token opent de pagina,
+      <div class="card-b u-col8-inkdim-90">
+        <p class="u-m0">Twee dingen zijn nodig, en dat is met opzet: het token opent de pagina,
           maar geeft <b>geen</b> rechten. Wijzigen mag alleen wie in de rol <code>beheerder</code> staat.</p>
-        <div class="step-lijst" style="display:flex;flex-direction:column;gap:.7rem">
-          <div><b style="color:var(--ink)">1 · Geef ze toegang tot de pagina.</b> Druk hieronder op
+        <div class="step-lijst u-col7">
+          <div><b class="u-ink">1 · Geef ze toegang tot de pagina.</b> Druk hieronder op
             <b>Uitnodiging tonen</b> en laat ze de QR scannen. Ze hebben een eigen Apple ID nodig.</div>
-          <div><b style="color:var(--ink)">2 · Ze loggen in en sturen jou hun CloudKit-ID.</b> Dat staat hierboven op
+          <div><b class="u-ink">2 · Ze loggen in en sturen jou hun CloudKit-ID.</b> Dat staat hierboven op
             hun scherm, met een kopieerknop.</div>
-          <div><b style="color:var(--ink)">3 · Jij zet ze in de rol.</b> CloudKit Console → je container →
+          <div><b class="u-ink">3 · Jij zet ze in de rol.</b> CloudKit Console → je container →
             <b>Security Roles</b> → <code>beheerder</code>. Voeg daar hun gebruikersrecord toe. Vanaf dat moment
             kunnen ze alles wat jij kunt.</div>
         </div>
-        <div style="display:flex;gap:.5rem;flex-wrap:wrap">
+        <div class="u-row5wrap">
           <button class="btn primary" id="tg-nodig">Uitnodiging tonen</button>
-          <a class="btn" id="tg-console" href="#" target="_blank" rel="noopener" style="text-decoration:none;display:inline-block">Security Roles openen</a>
+          <a class="btn" id="tg-console" href="#" target="_blank" rel="noopener" class="u-link-plain">Security Roles openen</a>
         </div>
-        <p style="margin:0;font-size:.84rem;color:var(--muted)">
+        <p class="u-muted-84-m0">
           Wat iedereen wijzigt komt in de reden-velden te staan met hun naam erbij, zodat je later kunt zien
           wie wat deed. Wil je een echt logboek, dan moet daar een recordtype voor bij in CloudKit — zeg het maar.
         </p>
@@ -919,7 +1288,7 @@ details.uitleg .inhoud{
   <!-- ---------- Netwerk ---------- -->
   <section class="view" id="v-netwerk" role="tabpanel">
     <div class="card">
-      <div class="card-h"><h2>Wie gebruikt de app samen</h2><span style="flex:1"></span>
+      <div class="card-h"><h2>Wie gebruikt de app samen</h2><span class="u-flex1"></span>
         <span class="sub" id="net-status"></span>
         <button class="btn sm" id="net-laad">Netwerk opbouwen</button>
       </div>
@@ -932,7 +1301,7 @@ details.uitleg .inhoud{
     </div>
     <div class="grid c2">
       <div class="card">
-        <div class="card-h"><h2>Groepjes</h2><span style="flex:1"></span><span class="sub">mensen die via elkaar verbonden zijn</span></div>
+        <div class="card-h"><h2>Groepjes</h2><span class="u-flex1"></span><span class="sub">mensen die via elkaar verbonden zijn</span></div>
         <div class="card-b tight" id="net-groepen"><div class="empty">Nog niet opgebouwd.</div></div>
       </div>
       <div class="card">
@@ -941,7 +1310,7 @@ details.uitleg .inhoud{
       </div>
     </div>
     <div class="card">
-      <div class="card-b" style="font-size:.82rem;color:var(--muted)">
+      <div class="card-b u-muted-82">
         Verbindingen komen uit vier bronnen: een uitnodiging die iemand verstuurde, een route die met iemand
         gedeeld is, samen in een expeditie zitten, en chatberichten over en weer. De inhoud van chats is
         versleuteld — alleen dát er contact was is zichtbaar.
@@ -952,12 +1321,12 @@ details.uitleg .inhoud{
   <!-- ---------- Verborgen ---------- -->
   <section class="view" id="v-verborgen" role="tabpanel">
     <div class="card">
-      <div class="card-h"><h2>Verborgen content</h2><span style="flex:1"></span>
+      <div class="card-h"><h2>Verborgen content</h2><span class="u-flex1"></span>
         <button class="btn sm" id="hid-add">Handmatig verbergen</button>
       </div>
       <div class="card-b tight" id="hid-list"><div class="empty">Laden…</div></div>
     </div>
-    <p style="color:var(--muted);font-size:.8rem;margin:0">
+    <p class="u-muted-80-m0">
       De app haalt deze lijst op bij het opstarten en bij het openen van een forum- of kaartscherm, en tot 500 items.
       Verbergen werkt dus pas bij hun volgende keer laden, niet meteen.
     </p>
@@ -967,14 +1336,14 @@ details.uitleg .inhoud{
   <section class="view" id="v-berichten" role="tabpanel">
     <div class="card">
       <div class="card-h"><h2>Aankondiging plaatsen</h2></div>
-      <div class="card-b" style="display:flex;flex-direction:column;gap:.7rem">
+      <div class="card-b u-col7">
         <label class="f">Titel<input type="text" id="ank-titel" maxlength="80" placeholder="Korte kop"></label>
         <label class="f">Tekst<textarea id="ank-inhoud" maxlength="600" placeholder="Wat je wilt melden"></textarea></label>
-        <label class="f narrow" style="max-width:12rem">Prioriteit
+        <label class="f narrow u-maxw12">Prioriteit
           <select id="ank-prio"><option value="3">Hoog</option><option value="2">Gewoon</option><option value="1" selected>Laag</option></select>
         </label>
         <div><button class="btn primary" id="ank-save">Plaatsen</button></div>
-        <p style="margin:0;font-size:.8rem;color:var(--muted)">Verschijnt als banner in de app. De app laadt de tien nieuwste en sorteert op prioriteit. Gebruikers kunnen een banner wegklikken.</p>
+        <p class="u-muted-80-m0">Verschijnt als banner in de app. De app laadt de tien nieuwste en sorteert op prioriteit. Gebruikers kunnen een banner wegklikken.</p>
       </div>
     </div>
     <div class="card">
@@ -986,8 +1355,8 @@ details.uitleg .inhoud{
   <!-- ---------- Config ---------- -->
   <section class="view" id="v-config" role="tabpanel">
     <div class="card">
-      <div class="card-h"><h2>Schakelaars</h2><span style="flex:1"></span><span class="sub" id="cfg-state"></span></div>
-      <div class="card-b" style="display:flex;flex-direction:column;gap:.85rem">
+      <div class="card-h"><h2>Schakelaars</h2><span class="u-flex1"></span><span class="sub" id="cfg-state"></span></div>
+      <div class="card-b u-col85">
         <label class="switch"><input type="checkbox" id="cfg-banner-actief"> Balk bovenin de app tonen</label>
         <label class="f">Tekst in de balk<input type="text" id="cfg-banner-tekst" maxlength="200"></label>
         <div class="grid c2">
@@ -1001,23 +1370,23 @@ details.uitleg .inhoud{
           <span class="hint">Oudere versies krijgen een verplichte-updatemelding. Voorzichtig: te hoog zetten blokkeert iedereen.</span>
         </label>
         <div>
-          <div style="font-size:.78rem;color:var(--muted);font-weight:500;margin-bottom:.4rem">Functies uitschakelen</div>
-          <div id="cfg-vlaggen" style="display:flex;flex-direction:column;gap:.4rem"></div>
+          <div class="u-muted-78-fw500-mb4">Functies uitschakelen</div>
+          <div id="cfg-vlaggen" class="u-col4"></div>
         </div>
         <div><button class="btn primary" id="cfg-save">Opslaan</button></div>
       </div>
     </div>
 
     <div class="card">
-      <div class="card-h"><h2>Woordfilter</h2><span style="flex:1"></span><span class="sub">alleen in deze browser</span></div>
-      <div class="card-b" style="display:flex;flex-direction:column;gap:.7rem">
-        <p style="margin:0;font-size:.86rem;color:var(--muted)">
+      <div class="card-h"><h2>Woordfilter</h2><span class="u-flex1"></span><span class="sub">alleen in deze browser</span></div>
+      <div class="card-b u-col7">
+        <p class="u-muted-86-m0">
           Berichten waarin een van deze woorden voorkomt krijgen een rode markering, en je kunt in het forum
           filteren op alleen die berichten. Het verbergt niets vanzelf — jij beslist. Eén woord per regel of
           gescheiden door komma's. Dit staat niet in CloudKit, dus het geldt alleen op dit apparaat.
         </p>
-        <textarea id="wf-lijst" style="min-height:9rem" spellcheck="false"></textarea>
-        <div style="display:flex;gap:.5rem;flex-wrap:wrap">
+        <textarea id="wf-lijst" class="u-minh9" spellcheck="false"></textarea>
+        <div class="u-row5wrap">
           <button class="btn primary" id="wf-save">Opslaan</button>
           <button class="btn" id="wf-reset">Terug naar de standaardlijst</button>
         </div>
@@ -1028,7 +1397,7 @@ details.uitleg .inhoud{
   <!-- ---------- Feedback ---------- -->
   <section class="view" id="v-feedback" role="tabpanel">
     <div class="card">
-      <div class="card-h"><h2>Feedback uit de app</h2><span style="flex:1"></span>
+      <div class="card-h"><h2>Feedback uit de app</h2><span class="u-flex1"></span>
         <label class="switch"><input type="checkbox" id="fb-unread"> alleen ongelezen</label>
       </div>
       <div class="card-b tight" id="fb-list"><div class="empty">Laden…</div></div>
@@ -1038,11 +1407,11 @@ details.uitleg .inhoud{
   <!-- ---------- Statistieken ---------- -->
   <section class="view" id="v-stats" role="tabpanel">
     <div class="card">
-      <div class="card-h"><h2>Kerncijfers</h2><span style="flex:1"></span>
+      <div class="card-h"><h2>Kerncijfers</h2><span class="u-flex1"></span>
         <span class="sub" id="st-state"></span>
         <button class="btn sm" id="st-load">Opnieuw tellen</button>
       </div>
-      <div class="card-b" style="font-size:.82rem;color:var(--faint);padding-top:.7rem;padding-bottom:.7rem">
+      <div class="card-b u-faint-82-pad7">
         CloudKit geeft maximaal 400 records per keer, dus dit haalt ze in stukjes op. Bij veel records duurt het even.
       </div>
     </div>
@@ -1051,12 +1420,12 @@ details.uitleg .inhoud{
 
     <div class="grid c2">
       <div class="card">
-        <div class="card-h"><h2>Nieuw per week</h2><span style="flex:1"></span>
+        <div class="card-h"><h2>Nieuw per week</h2><span class="u-flex1"></span>
           <span class="sub">eerste keer status gedeeld</span></div>
         <div class="card-b" id="st-groei"><div class="empty">Nog niet geteld.</div></div>
       </div>
       <div class="card">
-        <div class="card-h"><h2>Laatst actief</h2><span style="flex:1"></span><span class="sub">status bijgewerkt</span></div>
+        <div class="card-h"><h2>Laatst actief</h2><span class="u-flex1"></span><span class="sub">status bijgewerkt</span></div>
         <div class="card-b" id="st-actief"><div class="empty">Nog niet geteld.</div></div>
       </div>
     </div>
@@ -1067,21 +1436,21 @@ details.uitleg .inhoud{
         <div class="card-b" id="st-versies"><div class="empty">Nog niet geteld.</div></div>
       </div>
       <div class="card">
-        <div class="card-h"><h2>Toestellen</h2><span style="flex:1"></span>
+        <div class="card-h"><h2>Toestellen</h2><span class="u-flex1"></span>
           <span class="sub">alleen van wie een account heeft</span></div>
         <div class="card-b" id="st-toestellen"><div class="empty">Nog niet geteld.</div></div>
       </div>
     </div>
 
     <div class="card">
-      <div class="card-h"><h2>Wie heeft Pro</h2><span style="flex:1"></span>
+      <div class="card-h"><h2>Wie heeft Pro</h2><span class="u-flex1"></span>
         <button class="btn sm" id="st-pro-export">Lijst exporteren</button>
       </div>
       <div class="card-b tight" id="st-pro"><div class="empty">Nog niet geteld.</div></div>
     </div>
 
     <div class="card">
-      <div class="card-h"><h2>Meest actieve leden</h2><span style="flex:1"></span><span class="sub">posts + reacties · alleen van wie een account heeft</span></div>
+      <div class="card-h"><h2>Meest actieve leden</h2><span class="u-flex1"></span><span class="sub">posts + reacties · alleen van wie een account heeft</span></div>
       <div class="card-b tight" id="st-top"><div class="empty">Nog niet geteld.</div></div>
     </div>
 
@@ -1092,7 +1461,7 @@ details.uitleg .inhoud{
 
     <div class="grid c2">
       <div class="card">
-        <div class="card-h"><h2>Buiten onderweg</h2><span style="flex:1"></span><span class="sub">routes en posts samen</span></div>
+        <div class="card-h"><h2>Buiten onderweg</h2><span class="u-flex1"></span><span class="sub">routes en posts samen</span></div>
         <div class="card-b" id="st-onderweg"><div class="empty">Nog niet geteld.</div></div>
       </div>
       <div class="card">
@@ -1103,11 +1472,11 @@ details.uitleg .inhoud{
 
     <div class="grid c2">
       <div class="card">
-        <div class="card-h"><h2>Waar</h2><span style="flex:1"></span><span class="sub">regio en woonplaats</span></div>
+        <div class="card-h"><h2>Waar</h2><span class="u-flex1"></span><span class="sub">regio en woonplaats</span></div>
         <div class="card-b" id="st-waar"><div class="empty">Nog niet geteld.</div></div>
       </div>
       <div class="card">
-        <div class="card-h"><h2>Wanneer</h2><span style="flex:1"></span><span class="sub">dag en uur</span></div>
+        <div class="card-h"><h2>Wanneer</h2><span class="u-flex1"></span><span class="sub">dag en uur</span></div>
         <div class="card-b" id="st-wanneer"><div class="empty">Nog niet geteld.</div></div>
       </div>
     </div>
@@ -1118,7 +1487,7 @@ details.uitleg .inhoud{
     </div>
 
     <div class="card">
-      <div class="card-h"><h2>PrepAlert</h2><span style="flex:1"></span>
+      <div class="card-h"><h2>PrepAlert</h2><span class="u-flex1"></span>
         <span class="sub" id="pa-status"></span>
         <button class="btn sm" id="pa-laad">Installaties tellen</button>
       </div>
@@ -1126,7 +1495,7 @@ details.uitleg .inhoud{
     </div>
 
     <div class="card">
-      <div class="card-h"><h2>Eigen geschiedenis</h2><span style="flex:1"></span>
+      <div class="card-h"><h2>Eigen geschiedenis</h2><span class="u-flex1"></span>
         <span class="sub" id="gs-info"></span>
         <button class="btn sm" id="gs-export">Exporteren</button>
       </div>
@@ -1142,7 +1511,7 @@ details.uitleg .inhoud{
   <!-- ---------- Inzichten ---------- -->
   <section class="view" id="v-inzicht" role="tabpanel">
     <div class="card">
-      <div class="card-h"><h2>Bevindingen</h2><span style="flex:1"></span>
+      <div class="card-h"><h2>Bevindingen</h2><span class="u-flex1"></span>
         <span class="sub" id="iz-status"></span>
         <button class="btn sm" id="iz-laad">Opnieuw analyseren</button>
       </div>
@@ -1151,7 +1520,7 @@ details.uitleg .inhoud{
 
     <div class="grid c2">
       <div class="card">
-        <div class="card-h"><h2>Hoe ver mensen komen</h2><span style="flex:1"></span><span class="sub">dagen voorraad</span></div>
+        <div class="card-h"><h2>Hoe ver mensen komen</h2><span class="u-flex1"></span><span class="sub">dagen voorraad</span></div>
         <div class="card-b" id="iz-voorraad"><div class="empty">Nog niet geanalyseerd.</div></div>
       </div>
       <div class="card">
@@ -1166,13 +1535,13 @@ details.uitleg .inhoud{
         <div class="card-b" id="iz-items"><div class="empty">Nog niet geanalyseerd.</div></div>
       </div>
       <div class="card">
-        <div class="card-h"><h2>Noodplannen</h2><span style="flex:1"></span><span class="sub">welke scenario's</span></div>
+        <div class="card-h"><h2>Noodplannen</h2><span class="u-flex1"></span><span class="sub">welke scenario's</span></div>
         <div class="card-b" id="iz-noodplan"><div class="empty">Nog niet geanalyseerd.</div></div>
       </div>
     </div>
 
     <div class="card">
-      <div class="card-h"><h2>Wanneer waren mensen voor het laatst actief</h2><span style="flex:1"></span><span class="sub">per week</span></div>
+      <div class="card-h"><h2>Wanneer waren mensen voor het laatst actief</h2><span class="u-flex1"></span><span class="sub">per week</span></div>
       <div class="card-b" id="iz-retentie"><div class="empty">Nog niet geanalyseerd.</div></div>
     </div>
   </section>
@@ -1183,14 +1552,14 @@ details.uitleg .inhoud{
       <div class="card-b">
         <div class="toolbar">
           <label class="f">Recordtype<select id="rec-type"></select></label>
-          <label class="f narrow" style="flex:0 0 9rem">Aantal
+          <label class="f narrow u-flex0-9rem">Aantal
             <select id="rec-limit"><option>50</option><option selected>100</option><option>200</option><option>400</option></select>
           </label>
           <button class="btn narrow" id="rec-load">Laden</button>
         </div>
-        <div class="toolbar" style="margin-top:.6rem">
-          <label class="f narrow" style="flex:1 1 9rem">Veld<select id="rec-field"></select></label>
-          <label class="f narrow" style="flex:0 0 8rem">Vergelijking
+        <div class="toolbar u-mt6">
+          <label class="f narrow u-flex-9rem">Veld<select id="rec-field"></select></label>
+          <label class="f narrow u-flex0-8rem">Vergelijking
             <select id="rec-cmp">
               <option value="EQUALS">is gelijk aan</option>
               <option value="NOT_EQUALS">is niet</option>
@@ -1202,14 +1571,14 @@ details.uitleg .inhoud{
           </label>
           <label class="f">Waarde<input type="text" id="rec-value" placeholder="leeg = geen filter"></label>
         </div>
-        <div style="margin-top:.6rem;display:flex;gap:.5rem;flex-wrap:wrap">
+        <div class="u-mt6 u-row5wrap">
           <button class="btn sm" id="rec-new">Nieuw record</button>
           <button class="btn sm" id="rec-export">Exporteren als JSON</button>
-          <span id="rec-count" style="color:var(--muted);font-size:.8rem;align-self:center"></span>
+          <span id="rec-count" class="u-muted-80-center"></span>
         </div>
       </div>
       <div class="card-b tight kies" id="rec-list"><div class="empty">Kies een recordtype.</div></div>
-      <div class="card-b" id="rec-more" style="display:none"><button class="btn" id="rec-more-btn" style="width:100%">Meer laden</button></div>
+      <div class="card-b" id="rec-more" class="u-hidden"><button class="btn" id="rec-more-btn" class="u-w100">Meer laden</button></div>
     </div>
   </section>
 
@@ -1217,37 +1586,37 @@ details.uitleg .inhoud{
   <section class="view" id="v-info" role="tabpanel">
     <div class="card">
       <div class="card-h"><h2>Per knop</h2></div>
-      <div class="card-b" style="display:flex;flex-direction:column;gap:.8rem;font-size:.88rem;color:var(--ink-dim)">
-        <div><b style="color:var(--ink)">Verbergen</b> — maakt een <code>AdminVerborgen</code>-record met de recordnaam van de post.
+      <div class="card-b u-col8-inkdim-88">
+        <div><b class="u-ink">Verbergen</b> — maakt een <code>AdminVerborgen</code>-record met de recordnaam van de post.
           De app filtert die eruit in het forum en op de kaart. De lijst wordt geladen bij opstarten en bij het openen van
           een forum- of kaartscherm, tot 500 items. Het werkt dus niet direct op een telefoon die al open staat.</div>
-        <div><b style="color:var(--ink)">Blokkeren</b> — zet <code>isBanned</code> op 1 bij het account.
+        <div><b class="u-ink">Blokkeren</b> — zet <code>isBanned</code> op 1 bij het account.
           Alle feeds filteren geblokkeerde codes eruit, en de app kijkt ook naar de gehashte Apple-account, dus opnieuw
           installeren helpt niet.</div>
-        <div><b style="color:var(--ink)">Verwijderen</b> — gooit het record echt weg uit CloudKit. Niet terug te draaien.
+        <div><b class="u-ink">Verwijderen</b> — gooit het record echt weg uit CloudKit. Niet terug te draaien.
           Verbergen is bijna altijd de betere eerste stap.</div>
-        <div><b style="color:var(--ink)">Aankondiging</b> — banner in de app bij het opstarten. De app haalt de tien
+        <div><b class="u-ink">Aankondiging</b> — banner in de app bij het opstarten. De app haalt de tien
           nieuwste op en sorteert op prioriteit. Er is geen vervaldatum: weghalen doe je zelf.</div>
-        <div><b style="color:var(--ink)">Pro geven</b> — zet alleen <code>isPro</code> in CloudKit. De app bepaalt Pro
+        <div><b class="u-ink">Pro geven</b> — zet alleen <code>isPro</code> in CloudKit. De app bepaalt Pro
           via de App Store-aankoop en schrijft dit veld bij elke start terug. Het is een aantekening voor jou, geen
           manier om Pro uit te delen.</div>
-        <div><b style="color:var(--ink)">Dossier</b> — alles wat één persoon in de database heeft staan, opgehaald op
+        <div><b class="u-ink">Dossier</b> — alles wat één persoon in de database heeft staan, opgehaald op
           hun code van acht tekens: posts, reacties, kaartmeldingen, routes, feedback, meldingen die zij maakten én
           meldingen tegen hen. Chatberichten alleen waar zij ontvanger zijn, want het afzenderveld heeft geen index.</div>
-        <div><b style="color:var(--ink)">Telefoon koppelen</b> — QR met je token erin. Eenmalig scannen; zet de pagina
+        <div><b class="u-ink">Telefoon koppelen</b> — QR met je token erin. Eenmalig scannen; zet de pagina
           daarna op je beginscherm, anders wist Safari je inlog na een week zonder gebruik.</div>
-        <div><b style="color:var(--ink)">Zoeken</b> — CloudKit kan niet midden in een tekst zoeken. Een code van acht
+        <div><b class="u-ink">Zoeken</b> — CloudKit kan niet midden in een tekst zoeken. Een code van acht
           tekens zoekt echt in de database; een gewoon woord filtert alleen wat al geladen is.</div>
-        <div><b style="color:var(--ink)">Pushbericht</b> — <code>AdminPushBericht</code>-records worden door de app
+        <div><b class="u-ink">Pushbericht</b> — <code>AdminPushBericht</code>-records worden door de app
           <b>niet</b> gelezen. Ze doen dus niets tot dat in de app gebouwd is. Ze staan hier alleen om te bekijken.</div>
-        <div><b style="color:var(--ink)">Chatberichten</b> — <code>inhoud</code> is end-to-end versleuteld. Je ziet dat
+        <div><b class="u-ink">Chatberichten</b> — <code>inhoud</code> is end-to-end versleuteld. Je ziet dat
           er een bericht is, niet wat er staat. Dat is met opzet.</div>
-        <div><b style="color:var(--ink)">Wie je hier wél en niet ziet</b> — er is geen ledenlijst. Een
+        <div><b class="u-ink">Wie je hier wél en niet ziet</b> — er is geen ledenlijst. Een
           <code>SurvivalStatus</code> bestaat alleen bij wie mínstens één vriend heeft; een
           <code>GebruikersAccount</code> pas zodra iemand "Mijn account" opent. Wie de app in zijn eentje
           gebruikt en nooit in de instellingen komt, staat dus in geen van beide lijsten. Alle cijfers hier
           gaan over de mensen die zichtbaar zijn, niet over iedereen die de app heeft.</div>
-        <div><b style="color:var(--ink)">Nul is vaak "nog niet bijgewerkt"</b> — nieuwe velden en recordtypen
+        <div><b class="u-ink">Nul is vaak "nog niet bijgewerkt"</b> — nieuwe velden en recordtypen
           vullen zich pas als iemands app de versie draait die ze wegschrijft. Kijk bij Overzicht welk deel al
           op de nieuwste versie zit voordat je een teller van nul als een uitkomst leest.</div>
       </div>
@@ -1272,8 +1641,8 @@ details.uitleg .inhoud{
 
 <div id="balk">
   <span class="n" id="balk-n">0</span>
-  <span style="color:var(--ink-dim);font-size:.85rem">geselecteerd</span>
-  <span style="flex:1"></span>
+  <span class="u-inkdim-85">geselecteerd</span>
+  <span class="u-flex1"></span>
   <button class="btn sm" id="balk-verberg">Verbergen</button>
   <button class="btn sm danger" id="balk-blokkeer">Auteurs blokkeren</button>
   <button class="btn sm danger" id="balk-verwijder">Verwijderen</button>
@@ -1649,6 +2018,23 @@ const $  = (s, r) => (r||document).querySelector(s);
 const $$ = (s, r) => Array.from((r||document).querySelectorAll(s));
 const esc = s => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const el = (tag, cls, html) => { const n = document.createElement(tag); if (cls) n.className = cls; if (html != null) n.innerHTML = html; return n; };
+/* Een naam of code wordt een cirkeltje met initialen — iets om op te scannen
+   tussen tien regels tekst. Dezelfde persoon krijgt altijd dezelfde kleur:
+   een simpele hash over de tekst kiest uit vijf vaste, bij het thema passende
+   tinten, niet uit een willekeurige HSL die tegen goud kan gaan schuren. */
+function initialen(tekst){
+  const s = String(tekst || "").trim();
+  if (!s) return "?";
+  const delen = s.split(/[\s_.-]+/).filter(Boolean);
+  if (delen.length >= 2) return (delen[0][0] + delen[1][0]).toUpperCase();
+  return s.slice(0, 2).toUpperCase();
+}
+function avatarEl(naam, sleutel){
+  const tekst = String(naam || sleutel || "");
+  let hash = 0;
+  for (let i = 0; i < tekst.length; i++) hash = (hash * 31 + tekst.charCodeAt(i)) >>> 0;
+  return el("div", "avatar c" + (hash % 5), esc(initialen(tekst)));
+}
 
 function fmtDate(v){
   if (v == null || v === "") return "—";
@@ -2054,7 +2440,15 @@ const Cache = {
 function leeg(tekst, kop){
   return '<div class="empty">' + (kop ? '<b class="kop">' + esc(kop) + "</b>" : "") + esc(tekst) + "</div>";
 }
-function bezig(node){ node.innerHTML = '<div class="empty"><span class="spin"></span> Laden…</div>'; }
+function bezig(node){
+  /* Drie schaduw-rijen die op de uiteindelijke inhoud lijken (avatar + twee
+     regels tekst) ogen rustiger dan een draaiend rondje: het scherm claimt al
+     de ruimte die de echte inhoud zo dadelijk inneemt, in plaats van later
+     te springen. */
+  const rij = '<div class="skel-row"><span class="skel skel-avatar"></span>' +
+    '<span class="skel-lines"><span class="skel skel-line w60"></span><span class="skel skel-line w35"></span></span></div>';
+  node.innerHTML = '<div class="skel-wrap">' + rij + rij + rij + '</div>';
+}
 
 /** Maakt een knoppenrij: de eerste paar zichtbaar, de rest achter een menuutje.
  *  Zware handelingen komen nooit vooraan te staan. */
@@ -2119,7 +2513,7 @@ function rij(rec, type, extraActs){
     meta.innerHTML += '<span class="mono">' + lat.toFixed(3) + ", " + lon.toFixed(3) + "</span>";
   const likes = v(rec, "likesCount");
   if (typeof likes === "number" && likes > 0) meta.innerHTML += "<span>" + likes + " likes</span>";
-  meta.innerHTML += '<span class="mono" style="opacity:.55">' + esc(knip(rec.recordName, 12)) + "</span>";
+  meta.innerHTML += '<span class="mono u-op55">' + esc(knip(rec.recordName, 12)) + "</span>";
   const gevonden = verdachteWoorden(rec);
   if (gevonden.length) meta.innerHTML += '<span class="pill let">let op: ' + esc(gevonden.slice(0,3).join(", ")) + "</span>";
   body.appendChild(meta);
@@ -2129,12 +2523,12 @@ function rij(rec, type, extraActs){
   /* Een gemelde post gaat vaak juist over de foto. Die moet je dus zien. */
   const foto = fotoURL(rec);
   if (foto) {
-    const w = el("div"); w.style.cssText = "margin-top:.5rem";
+    const w = el("div"); w.classList.add("u-mt5");
     const a = document.createElement("a");
     a.href = foto; a.target = "_blank"; a.rel = "noopener";
     const img = new Image();
     img.src = foto; img.alt = "foto bij dit bericht"; img.loading = "lazy";
-    img.style.cssText = "max-width:min(100%,17rem);max-height:11rem;border-radius:8px;border:1px solid var(--edge);display:block";
+    img.classList.add("u-img-prev-a");
     a.appendChild(img); w.appendChild(a); body.appendChild(w);
   }
 
@@ -2177,13 +2571,13 @@ function toonRecord(rec, type){
       w = '<a href="' + esc(f.value.downloadURL) + '" target="_blank" rel="noopener">foto openen</a>';
     } else if (t === T.BYTES) {
       const len = typeof f.value === "string" ? Math.round(f.value.length * 3 / 4) : 0;
-      w = '<span style="color:var(--muted)">versleuteld / binair, ' + len + " bytes</span>";
+      w = '<span class="u-muted">versleuteld / binair, ' + len + " bytes</span>";
     } else if (t === T.TS) {
       w = esc(fmtDate(f.value));
     } else if (Array.isArray(f.value)) {
-      w = f.value.length ? f.value.map(x => '<span class="pill plain">' + esc(x) + "</span>").join(" ") : '<span style="color:var(--muted)">leeg</span>';
+      w = f.value.length ? f.value.map(x => '<span class="pill plain">' + esc(x) + "</span>").join(" ") : '<span class="u-muted">leeg</span>';
     } else if (f.value === "" || f.value == null) {
-      w = '<span style="color:var(--muted)">leeg</span>';
+      w = '<span class="u-muted">leeg</span>';
     } else {
       w = esc(String(f.value));
     }
@@ -2200,7 +2594,7 @@ function toonRecord(rec, type){
 /** Bewerkformulier: elk veld dat veilig te typen is. */
 function bewerkRecord(rec, type){
   const def = SCHEMA[type] || { f:{} };
-  const form = el("div"); form.style.cssText = "display:flex;flex-direction:column;gap:.7rem";
+  const form = el("div"); form.classList.add("u-col7");
   const inputs = {};
   const velden = Object.keys(def.f).length ? Object.keys(def.f) : Object.keys(rec.fields||{});
 
@@ -2208,7 +2602,7 @@ function bewerkRecord(rec, type){
     const t = (def.f[k] && def.f[k][0]) || T.STR;
     if (t === T.ASSET || t === T.BYTES || t === T.REF) return;
     const huidig = v(rec, k);
-    const lab = el("label", "f"); lab.appendChild(el("span", "", esc(k) + '  <span style="opacity:.5">' + esc(t) + "</span>"));
+    const lab = el("label", "f"); lab.appendChild(el("span", "", esc(k) + '  <span class="u-op5">' + esc(t) + "</span>"));
     let inp;
     if (t === T.LIST) {
       inp = el("input"); inp.type = "text";
@@ -2258,7 +2652,7 @@ function bewerkRecord(rec, type){
 }
 
 function vraagVerberg(recordName, doelType){
-  const body = el("div"); body.style.cssText = "display:flex;flex-direction:column;gap:.7rem";
+  const body = el("div"); body.classList.add("u-col7");
   body.innerHTML = "<p style='margin:0;color:var(--ink-dim);font-size:.9rem'>De post blijft bestaan maar wordt door de app uit alle lijsten gefilterd. Terugdraaien kan altijd bij <b>Verborgen</b>.</p>";
   const lab = el("label","f"); lab.appendChild(el("span","","Reden (alleen voor jezelf)"));
   const inp = el("input"); inp.type = "text"; inp.placeholder = "bijv. scheldpartij"; lab.appendChild(inp);
@@ -2274,7 +2668,7 @@ function vraagVerberg(recordName, doelType){
 }
 
 function vraagBlokkeer(code){
-  const body = el("div"); body.style.cssText = "display:flex;flex-direction:column;gap:.7rem";
+  const body = el("div"); body.classList.add("u-col7");
   body.innerHTML = "<p style='margin:0;color:var(--ink-dim);font-size:.9rem'>Blokkeert <b class='mono'>" + esc(codeWeergave(code)) +
     "</b>. Al hun berichten verdwijnen uit de feeds en opnieuw installeren helpt niet — de blokkade hangt ook aan hun Apple-account.</p>";
   const lab = el("label","f"); lab.appendChild(el("span","","Reden"));
@@ -2389,6 +2783,7 @@ function bouwTabs(){
   tonen.forEach(t => {
     const b = el("button", "tab", esc(t.label) + '<span class="badge hide" id="badge-' + t.id + '">0</span>');
     b.setAttribute("role","tab"); b.setAttribute("aria-selected", String(t.id === huidigeTab));
+    b.dataset.tab = t.id;
     b.onclick = () => gaNaar(t.id);
     n.appendChild(b);
   });
@@ -2439,7 +2834,10 @@ function zetBadge(tabId, n){
    ===================================================================== */
 async function laadDashboard(){
   const stats = $("#stats"); const att = $("#dash-attention");
-  if (!stats.dataset.loaded) stats.innerHTML = '<div class="empty" style="grid-column:1/-1"><span class="spin"></span> Laden…</div>';
+  if (!stats.dataset.loaded) {
+    const tegel = '<div class="stat skel-stat"><span class="skel skel-line w30 u-h24-mb3"></span><span class="skel skel-line w70"></span></div>';
+    stats.innerHTML = tegel.repeat(8);
+  }
 
   /* Negen tegels van gelijk gewicht laten je even hard kijken naar een nul als
      naar het enige getal dat iets van je vraagt. Ze staan daarom in twee
@@ -2521,7 +2919,7 @@ async function laadDashboard(){
     }
     if (gevlagd.length){
       const kop = el("div","row");
-      kop.innerHTML = '<div class="body"><div class="title" style="color:var(--red)">Woordfilter sloeg aan op ' +
+      kop.innerHTML = '<div class="body"><div class="title u-red">Woordfilter sloeg aan op ' +
         gevlagd.length + " bericht" + (gevlagd.length===1?"":"en") + '</div><div class="meta">uit de 50 nieuwste per soort — beoordeel zelf</div></div>';
       att.appendChild(kop);
       gevlagd.slice(0,10).forEach(([rec,t]) => att.appendChild(rij(rec, t)));
@@ -2539,6 +2937,11 @@ async function laadDashboard(){
      dezelfde ene regel. SurvivalStatus is de lijst die wél meebeweegt: hij is
      gesorteerd op bijgewerktOp, dus bovenaan staat wie net nog bezig was. */
   vulLijst("#dash-users", () => query("SurvivalStatus", { limit: 8 }), "SurvivalStatus", survivalRij);
+  /* `aangemeldOp` is het moment waarop iemand voor het eerst "Mijn account"
+     opent, niet het moment van installeren — zie de toelichting hierboven bij
+     laadAdoptie. Voor "wie is er nieuw" is dat het eerlijkste dat er is: het
+     enige tijdstip dat CloudKit per account vastlegt. */
+  vulLijst("#dash-newusers", () => query("GebruikersAccount", { limit: 8 }), "GebruikersAccount", gebruikerRij);
 }
 
 async function vulLijst(sel, fn, type, renderer){
@@ -2650,7 +3053,7 @@ function meldingRij(rec, type){
     "<span>" + esc(fmtGeleden(v(rec, isMis ? "gemeldOp" : "tijdstip"))) + "</span>";
   body.appendChild(meta);
 
-  const doel = el("div","text"); doel.innerHTML = '<span style="color:var(--muted)">gemelde post laden…</span>';
+  const doel = el("div","text"); doel.innerHTML = '<span class="u-muted">gemelde post laden…</span>';
   body.appendChild(doel);
 
   const actsPost = el("div","acts");     /* acties op de gemelde post */
@@ -2661,10 +3064,10 @@ function meldingRij(rec, type){
 
   let doelRec = null, doelType = null;
   (async () => {
-    if (!postID) { doel.innerHTML = '<span style="color:var(--muted)">geen postID in deze melding</span>'; return; }
+    if (!postID) { doel.innerHTML = '<span class="u-muted">geen postID in deze melding</span>'; return; }
     try {
       doelRec = await fetchRecord(postID);
-      if (!doelRec) { doel.innerHTML = '<span style="color:var(--muted)">de gemelde post bestaat niet meer</span>'; return; }
+      if (!doelRec) { doel.innerHTML = '<span class="u-muted">de gemelde post bestaat niet meer</span>'; return; }
       doelType = doelRec.recordType;
       const d = SCHEMA[doelType] || {};
       const t = (d.titel && v(doelRec,d.titel)) || "";
@@ -2673,20 +3076,20 @@ function meldingRij(rec, type){
       const f = fotoURL(doelRec);
       doel.innerHTML = '<b>' + esc(t || (SCHEMA[doelType]||{}).label || doelType) + "</b>" +
         (tx ? "<br>" + esc(knip(tx, 220)) : "") +
-        (au ? '<br><span class="mono" style="color:var(--muted);font-size:.8rem">door ' + esc(codeWeergave(au)) + "</span>" : "") +
+        (au ? '<br><span class="mono u-muted-80">door ' + esc(codeWeergave(au)) + "</span>" : "") +
         (f ? '<br><a href="' + esc(f) + '" target="_blank" rel="noopener">' +
              '<img src="' + esc(f) + '" alt="gemelde foto" loading="lazy" ' +
-             'style="margin-top:.5rem;max-width:min(100%,17rem);max-height:12rem;border-radius:8px;border:1px solid var(--edge);display:block"></a>' : "");
+             'class="u-img-prev-b"></a>' : "");
       mk("Post bekijken","",() => toonRecord(doelRec, doelType));
       if (VERBERGBAAR.includes(doelType)) mk("Verberg post","",() => vraagVerberg(postID, doelType));
       if (au) mk("Dossier auteur","",() => { dossierData = null; opendossier(au); });
       if (au) mk("Blokkeer auteur","danger",() => vraagBlokkeer(au));
       mk("Post verwijderen","danger",() => bevestig("Post definitief verwijderen?",
         "Het bericht wordt echt uit CloudKit gegooid. Niet terug te draaien.",
-        "Verwijderen", async () => { await Acties.verwijder(postID); doel.innerHTML = '<span style="color:var(--muted)">verwijderd</span>'; }, true));
+        "Verwijderen", async () => { await Acties.verwijder(postID); doel.innerHTML = '<span class="u-muted">verwijderd</span>'; }, true));
     } catch(e){
       const weg = /NOT_FOUND|not found/i.test(String(e.code||"") + String(e.message||""));
-      doel.innerHTML = '<span style="color:var(--muted)">' + (weg ? "de gemelde post bestaat niet meer" : "kon post niet laden: " + esc(String(e.message||e))) + "</span>";
+      doel.innerHTML = '<span class="u-muted">' + (weg ? "de gemelde post bestaat niet meer" : "kon post niet laden: " + esc(String(e.message||e))) + "</span>";
       if (weg) mkM("Melding weggooien","",() => bevestig("Melding weggooien?","De post is al weg, dus de melding kan opgeruimd worden.","Weggooien",
         async () => { await Acties.verwijder(rec.recordName); laadMeldingen(); }));
     }
@@ -2848,6 +3251,7 @@ function gebruikerRij(rec){
   if (!banned) keuzes.push({ label:"Blokkeren", cls:"danger", zwaar:true, on: () => vraagBlokkeer(code) });
   body.appendChild(knopRij(keuzes, naam || codeWeergave(code)));
 
+  r.appendChild(avatarEl(naam, code));
   r.appendChild(body);
   return r;
 }
@@ -2908,6 +3312,7 @@ function survivalRij(rec){
   keuzes.push({ label:"Velden", on: () => toonRecord(rec,"SurvivalStatus") });
   if (code) keuzes.push({ label:"Blokkeren", cls:"danger", zwaar:true, on: () => vraagBlokkeer(code) });
   body.appendChild(knopRij(keuzes, v(rec,"naam") || codeWeergave(code)));
+  r.appendChild(avatarEl(v(rec,"naam"), code));
   r.appendChild(body);
   return r;
 }
@@ -2979,7 +3384,7 @@ async function laadVerborgen(){
   } catch(e){ n.innerHTML = leeg(String(e.message||e), "Fout bij laden"); }
 }
 $("#hid-add").onclick = () => {
-  const body = el("div"); body.style.cssText="display:flex;flex-direction:column;gap:.7rem";
+  const body = el("div"); body.classList.add("u-col7");
   const l1 = el("label","f"); l1.appendChild(el("span","","recordName van de post"));
   const i1 = el("input"); i1.type="text"; i1.placeholder="bijv. 4F2A…"; l1.appendChild(i1);
   const l2 = el("label","f"); l2.appendChild(el("span","","Soort"));
@@ -3135,8 +3540,10 @@ function tekenDossier(){
     (banned ? '<span class="pill red">geblokkeerd</span>' : "") +
     (pro ? '<span class="pill pro">Pro</span>' : "") +
     (surv && v(surv,"heeftPrepAlert") === 1 ? '<span class="pill blue">+ PrepAlert</span>' : "");
+  const dosAvatar = avatarEl(naam, code); dosAvatar.classList.add("lg");
+  kh.insertBefore(dosAvatar, kh.firstChild);
   kop.appendChild(kh);
-  const kb = el("div","card-b"); kb.style.cssText = "display:flex;flex-direction:column;gap:.7rem";
+  const kb = el("div","card-b"); kb.classList.add("u-col7");
   const pills = el("div","meta");
   pills.innerHTML =
     '<span class="mono">' + esc(codeWeergave(code)) + "</span>" +
@@ -3190,7 +3597,7 @@ function tekenDossier(){
       const c = el("div","card");
       c.appendChild(el("div","card-h","<h2>Andere codes van deze persoon</h2>"));
       const b = el("div","card-b");
-      b.style.cssText = "display:flex;flex-direction:column;gap:.6rem";
+      b.classList.add("u-col6");
 
       if (opvolger) {
         const r = el("div","text");
@@ -3210,7 +3617,7 @@ function tekenDossier(){
         eerdere.forEach(rec => {
           const oudeCode = v(rec,"uitnodigingsCode") || rec.recordName.replace(/^PP-/,"");
           const rij = el("div","");
-          rij.style.cssText = "display:flex;align-items:center;gap:.6rem";
+          rij.classList.add("u-row6c");
           rij.innerHTML = '<span class="mono">' + esc(codeWeergave(oudeCode)) + "</span>";
           const k = el("button","btn sm","Dossier");
           k.onclick = () => { dossierData = null; opendossier(oudeCode); };
@@ -3260,7 +3667,7 @@ function tekenDossier(){
     iets = true;
     const c = el("div","card");
     const h = el("div","card-h");
-    h.innerHTML = "<h2>" + esc(sec.kop) + '</h2><span style="flex:1"></span><span class="sub">' + sec.recs.length + "</span>";
+    h.innerHTML = "<h2>" + esc(sec.kop) + '</h2><span class="u-flex1"></span><span class="sub">' + sec.recs.length + "</span>";
     c.appendChild(h);
     const b = el("div","card-b tight kies");
     sec.recs.forEach(rec => b.appendChild(rij(rec, sec.type)));
@@ -3271,7 +3678,7 @@ function tekenDossier(){
   const leegSecties = secties.filter(s => !s.recs.length && !s.overslaan).map(s => s.kop);
   const fouten = secties.filter(s => s.fout);
   const voet = el("div","card");
-  const vb = el("div","card-b"); vb.style.cssText = "font-size:.8rem;color:var(--muted)";
+  const vb = el("div","card-b"); vb.classList.add("u-muted-80");
   vb.innerHTML = (iets ? "" : "<b style='color:var(--ink-dim)'>Deze persoon heeft verder niets in de database staan.</b><br>") +
     (leegSecties.length ? "Leeg: " + esc(leegSecties.join(", ")) + ".<br>" : "") +
     "Chatberichten zijn alleen te vinden waar deze persoon <b>ontvanger</b> is — het afzenderveld heeft geen index in CloudKit. " +
@@ -3562,7 +3969,7 @@ function uitklap(kop, regels){
 function balken(paren, opties){
   opties = opties || {};
   const max = Math.max(1, ...paren.map(p => p[1]));
-  const wrap = el("div"); wrap.style.cssText = "display:flex;flex-direction:column;gap:.45rem";
+  const wrap = el("div"); wrap.classList.add("u-col45");
   if (!paren.length) { wrap.innerHTML = leeg("Geen gegevens."); return wrap; }
   paren.forEach(([label, n, kleur]) => {
     const r = el("div","balk-rij");
@@ -3578,7 +3985,7 @@ function balken(paren, opties){
   });
   if (opties.voet) {
     const f = el("div","", esc(opties.voet));
-    f.style.cssText = "color:var(--faint);font-size:.76rem;margin-top:.55rem;line-height:1.5";
+    f.classList.add("u-faint-note");
     wrap.appendChild(f);
   }
   return wrap;
@@ -3726,7 +4133,7 @@ $("#st-load").onclick = async (e) => {
 
       const kop = el("div", "", opNieuwste + " van " + totaal + " mensen draait <b>v" + esc(nieuwste)
         + "</b> — " + pct + "%. " + (achter ? achter + " nog niet." : "Iedereen is bij."));
-      kop.style.cssText = "font-size:.85rem;color:var(--ink-dim);margin-bottom:.7rem";
+      kop.classList.add("u-inkdim-85-mb7");
       $("#st-versies").appendChild(kop);
       $("#st-versies").appendChild(balken(
         versieTelling.map(([l, n]) => [l === "onbekend" ? "onbekend" : "v" + l, n,
@@ -3738,7 +4145,7 @@ $("#st-load").onclick = async (e) => {
       surv.concat(prepfam).forEach(r => { const w = v(r,"land") || "onbekend"; landen[w] = (landen[w]||0)+1; });
       const rijen = Object.entries(landen).sort((a,b)=>b[1]-a[1]).slice(0,10).map(([l,n]) => [l, n, "var(--blue)"]);
       const kop = el("div","", "Nog geen appversies in de database. Zolang die er niet zijn, hier de landenverdeling uit de survival-statussen.");
-      kop.style.cssText = "font-size:.8rem;color:var(--muted);margin-bottom:.6rem";
+      kop.classList.add("u-muted-80-mb6");
       $("#st-versies").appendChild(kop);
       $("#st-versies").appendChild(balken(rijen));
     }
@@ -3814,10 +4221,10 @@ $("#st-load").onclick = async (e) => {
     const regioRij = Object.entries(regios).sort((a,b)=>b[1]-a[1]).slice(0,10).map(([l,n]) => [l,n,"var(--green)"]);
     const plaatsRij = Object.entries(plaatsen).sort((a,b)=>b[1]-a[1]).slice(0,10).map(([l,n]) => [l,n,"var(--amber)"]);
     if (regioRij.length){
-      const k1 = el("div","","Waar geplaatst wordt"); k1.style.cssText="font-size:.78rem;color:var(--muted);margin-bottom:.4rem";
+      const k1 = el("div","","Waar geplaatst wordt"); k1.classList.add("u-muted-78-mb4");
       wn.appendChild(k1); wn.appendChild(balken(regioRij));
     }
-    const k2 = el("div","","Waar mensen wonen"); k2.style.cssText="font-size:.78rem;color:var(--muted);margin:.9rem 0 .4rem";
+    const k2 = el("div","","Waar mensen wonen"); k2.classList.add("u-muted-78-m");
     wn.appendChild(k2);
     wn.appendChild(plaatsRij.length ? balken(plaatsRij) : el("div","empty","Nog geen woonplaatsen bekend."));
 
@@ -3839,7 +4246,7 @@ $("#st-load").onclick = async (e) => {
     else {
       const volgorde = [1,2,3,4,5,6,0];
       wan.appendChild(balken(volgorde.map(i => [dagNamen[i], dagen[i], "var(--blue)"])));
-      const k3 = el("div","","Op welk uur"); k3.style.cssText="font-size:.78rem;color:var(--muted);margin:.9rem 0 .4rem";
+      const k3 = el("div","","Op welk uur"); k3.classList.add("u-muted-78-m");
       wan.appendChild(k3);
       const uurRij = [];
       for (let u = 0; u < 24; u += 3){
@@ -3866,7 +4273,7 @@ $("#st-load").onclick = async (e) => {
       const verdeling = [5,4,3,2,1].map(ster => [ "★".repeat(ster), fb.filter(r => v(r,"beoordeling") === ster).length,
         ster >= 4 ? "var(--green)" : ster === 3 ? "var(--amber)" : "var(--red)" ]);
       const kop = el("div","", "Gemiddeld <b style='font-family:JetBrains Mono,monospace'>" + gem.toFixed(1) + "</b> uit 5 over " + fb.length + " beoordelingen");
-      kop.style.cssText = "margin-bottom:.7rem;color:var(--ink-dim);font-size:.9rem";
+      kop.classList.add("u-inkdim-90-mb7");
       fn.appendChild(kop); fn.appendChild(balken(verdeling));
     }
 
@@ -4021,14 +4428,14 @@ $("#tg-test").onclick = async (e) => {
     gemaakt = await saveRecord({ recordType:"AdminVerborgen", fields:{
       doelRecordName:{ value: "__rechtencontrole__" }, doelType:{ value:"controle" },
       reden:{ value: stempel("rechtencontrole, wordt meteen weer weggegooid") }, datum:{ value: Date.now() } }});
-    uit.innerHTML = '<span style="color:var(--green)">Je hebt schrijfrechten. Alles werkt.</span>';
+    uit.innerHTML = '<span class="u-green">Je hebt schrijfrechten. Alles werkt.</span>';
   } catch(err){
-    uit.innerHTML = '<span style="color:var(--red)">Geen schrijfrechten: ' + esc(String(err.message||err)) +
-      '</span><br><span style="color:var(--muted)">Lezen mag wel. Vraag of je in de rol <code>beheerder</code> gezet wordt — je ID staat hierboven.</span>';
+    uit.innerHTML = '<span class="u-red">Geen schrijfrechten: ' + esc(String(err.message||err)) +
+      '</span><br><span class="u-muted">Lezen mag wel. Vraag of je in de rol <code>beheerder</code> gezet wordt — je ID staat hierboven.</span>';
   }
   if (gemaakt && gemaakt.recordName){
     try { await deleteRecord(gemaakt.recordName); }
-    catch(err2){ uit.innerHTML += '<br><span style="color:var(--red)">Let op: het testrecord kon niet opgeruimd worden. Gooi het weg bij Verborgen.</span>'; }
+    catch(err2){ uit.innerHTML += '<br><span class="u-red">Let op: het testrecord kon niet opgeruimd worden. Gooi het weg bij Verborgen.</span>'; }
   }
   b.disabled = false;
 };
@@ -4207,7 +4614,7 @@ const Kaart = {
       this._gemeld = true;
       const st = $("#kaart-status");
       st.innerHTML = (st.textContent ? esc(st.textContent) + " · " : "") +
-        '<span style="color:var(--red)">achtergrond laadt niet</span>';
+        '<span class="u-red">achtergrond laadt niet</span>';
     }
   },
 };
@@ -4308,7 +4715,7 @@ async function laadKaartTab(){
   if (!leg.dataset.klaar){
     /* De chips bovenaan dragen dezelfde kleuren én zijn aanklikbaar; een tweede
        legenda eronder herhaalt dat alleen maar. Hier blijft de bronvermelding. */
-    leg.innerHTML = '<span style="margin-left:auto">kaartgegevens © OpenStreetMap</span>';
+    leg.innerHTML = '<span class="u-mla">kaartgegevens © OpenStreetMap</span>';
     leg.dataset.klaar = "1";
   }
   if (!Kaart.punten.length) haalKaartPunten();
@@ -4614,7 +5021,7 @@ function laadNetwerkTab(){
   if (!$("#net-legenda").dataset.klaar){
     $("#net-legenda").innerHTML = Object.keys(BAND_KLEUR).map(k =>
       '<span><i style="border-color:' + BAND_KLEUR[k] + '"></i>' + esc(BAND_LABEL[k]) + "</span>").join("") +
-      '<span style="margin-left:auto">grotere stip = meer verbindingen</span>';
+      '<span class="u-mla">grotere stip = meer verbindingen</span>';
     $("#net-legenda").dataset.klaar = "1";
     const doek = $("#netdoek");
     doek.addEventListener("click", e => {
@@ -4984,6 +5391,7 @@ const Geschiedenis = {
   },
 };
 
+let lijnGrafiekTeller = 0;
 function lijnGrafiek(punten, kleur, label){
   const W = 640, H = 150, rand = 24;
   if (punten.length < 2) return el("div","empty","Er is nog maar één dag vastgelegd. Kom morgen terug.");
@@ -4994,15 +5402,34 @@ function lijnGrafiek(punten, kleur, label){
   const y = w => H - rand - (w - min) / spanne * (H - rand*2);
   const d = punten.map((p,i) => (i ? "L" : "M") + x(i).toFixed(1) + " " + y(p.y).toFixed(1)).join(" ");
   const vlak = d + " L" + x(punten.length-1).toFixed(1) + " " + (H-rand) + " L" + x(0).toFixed(1) + " " + (H-rand) + " Z";
+  /* Eigen id per grafiek: zonder dat delen twee kleurverlopen op de pagina
+     hetzelfde <linearGradient>-id, en tekent de browser toevallig de kleuren
+     van de eerste grafiek in alle volgende. */
+  const gid = "lg-" + (++lijnGrafiekTeller);
+  const laatste = punten.length - 1;
+  /* Drie rustlijnen op vaste hoogte geven een lat om de vorm van de lijn tegen
+     af te lezen — zonder ze oogt elke grafiek als een losse veeg, met een
+     assenkruis erbij zou het weer een spreadsheet worden. */
+  const rustlijnen = [0.25, 0.5, 0.75].map(f =>
+    '<line x1="' + rand + '" y1="' + (H-rand - f*(H-rand*2)) + '" x2="' + (W-rand) + '" y2="' + (H-rand - f*(H-rand*2)) +
+    '" stroke="var(--edge-soft)" stroke-width="1"></line>').join("");
   const wrap = el("div");
   wrap.innerHTML =
-    '<div style="font-size:.8rem;color:var(--muted);margin-bottom:.3rem">' + esc(label) +
+    '<div class="u-muted-80-mb3">' + esc(label) +
     ' — van ' + min + ' naar ' + waarden[waarden.length-1] + '</div>' +
-    '<svg viewBox="0 0 ' + W + ' ' + H + '" style="width:100%;height:auto;overflow:visible">' +
-    '<path d="' + vlak + '" fill="' + kleur + '" opacity=".14"></path>' +
+    '<svg viewBox="0 0 ' + W + ' ' + H + '" class="u-w100-auto-visible">' +
+    '<defs><linearGradient id="' + gid + '" x1="0" y1="0" x2="0" y2="1">' +
+    '<stop offset="0%" stop-color="' + kleur + '" stop-opacity=".32"></stop>' +
+    '<stop offset="100%" stop-color="' + kleur + '" stop-opacity="0"></stop>' +
+    '</linearGradient></defs>' +
+    rustlijnen +
+    '<path d="' + vlak + '" fill="url(#' + gid + ')"></path>' +
     '<path d="' + d + '" fill="none" stroke="' + kleur + '" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"></path>' +
-    punten.map((p,i) => '<circle cx="' + x(i).toFixed(1) + '" cy="' + y(p.y).toFixed(1) + '" r="3" fill="' + kleur + '"><title>' +
-      esc(p.dag + ": " + p.y) + '</title></circle>').join("") +
+    punten.map((p,i) => (i === laatste
+      ? '<circle cx="' + x(i).toFixed(1) + '" cy="' + y(p.y).toFixed(1) + '" r="7" fill="' + kleur + '" opacity=".18"><title>' + esc(p.dag + ": " + p.y) + '</title></circle>' +
+        '<circle cx="' + x(i).toFixed(1) + '" cy="' + y(p.y).toFixed(1) + '" r="4" fill="' + kleur + '" stroke="var(--surface)" stroke-width="1.5"><title>' + esc(p.dag + ": " + p.y) + '</title></circle>'
+      : '<circle cx="' + x(i).toFixed(1) + '" cy="' + y(p.y).toFixed(1) + '" r="2.5" fill="' + kleur + '" opacity=".7"><title>' + esc(p.dag + ": " + p.y) + '</title></circle>')
+    ).join("") +
     '<text x="' + rand + '" y="' + (H-4) + '" fill="#7F8899" font-size="11">' + esc(punten[0].dag) + '</text>' +
     '<text x="' + (W-rand) + '" y="' + (H-4) + '" fill="#7F8899" font-size="11" text-anchor="end">' + esc(punten[punten.length-1].dag) + '</text>' +
     '</svg>';
@@ -5175,7 +5602,7 @@ $("#ct-laad").onclick = async (e) => {
       groepen.length + " keer staat exact dezelfde tekst meer dan eens in het forum. Dat is meestal spam of " +
       "iemand die per ongeluk dubbel plaatste.", "let op",
       [{ label:"Bekijken", on: () => {
-          const body = el("div"); body.style.cssText = "display:flex;flex-direction:column;gap:.6rem";
+          const body = el("div"); body.classList.add("u-col6");
           groepen.slice(0,20).forEach(groep => {
             const kaart = el("div","card");
             const b2 = el("div","card-b tight kies");
@@ -5271,12 +5698,12 @@ async function telPrepAlert(){
         const van = nu - (w+1)*7*dag, tot = nu - w*7*dag;
         weken.push([w === 0 ? "deze week" : w + " wk", datums.filter(d => d > van && d <= tot).length, "var(--blue)"]);
       }
-      const kop = el("div","","Installaties per week"); kop.style.cssText="font-size:.78rem;color:var(--muted);margin:.9rem 0 .4rem";
+      const kop = el("div","","Installaties per week"); kop.classList.add("u-muted-78-m");
       doos.appendChild(kop); doos.appendChild(balken(weken));
     }
     const voet = el("div","", "In de publieke container van PrepAlert zit alleen een installatiedatum en een anoniem ID — " +
       "geen land, geen versie, geen Pro. Wie beide apps gebruikt zie je bij Mensen — maar alleen bij mensen die de app al naar 2.3 hebben bijgewerkt.");
-    voet.style.cssText = "font-size:.8rem;color:var(--muted);margin-top:.9rem";
+    voet.classList.add("u-muted-80-mt9");
     doos.appendChild(voet);
 
     st.textContent = alles.length + " installaties";
@@ -5324,7 +5751,7 @@ async function laadLogboek(){
         "<span>" + esc(fmtGeleden(v(rec,"tijdstip"))) + "</span>" +
         (v(rec,"doelType") ? '<span class="pill plain">' + esc((SCHEMA[v(rec,"doelType")]||{}).label || v(rec,"doelType")) + "</span>" : "") +
         (v(rec,"doelCode") ? '<span class="mono">' + esc(codeWeergave(v(rec,"doelCode"))) + "</span>" : "") +
-        (v(rec,"doelRecordName") ? '<span class="mono" style="opacity:.55">' + esc(knip(v(rec,"doelRecordName"),14)) + "</span>" : "")));
+        (v(rec,"doelRecordName") ? '<span class="mono u-op55">' + esc(knip(v(rec,"doelRecordName"),14)) + "</span>" : "")));
       if (v(rec,"reden")) body.appendChild(el("div","text", esc(v(rec,"reden"))));
       const acts = el("div","acts");
       if (v(rec,"doelCode")){
@@ -5342,7 +5769,7 @@ async function laadLogboek(){
       body.appendChild(acts); r2.appendChild(body); n.appendChild(r2);
     });
     $("#lg-uitleg").innerHTML = Logboek.laatsteFout
-      ? '<span style="color:var(--red)">Let op: de laatste handeling kon niet in het logboek gezet worden (' +
+      ? '<span class="u-red">Let op: de laatste handeling kon niet in het logboek gezet worden (' +
         esc(Logboek.laatsteFout) + '). Wat je hieronder ziet is dus niet compleet.</span>'
       : "Elke handeling wordt hier vastgelegd met naam, tijdstip en reden. " +
         (recs.length ? recs.length + " regels geladen." :
@@ -5425,8 +5852,8 @@ toonBeginschermBanner();
 $("#origin-hint").textContent = (location.protocol === "file:") ? "(geen — dit is een los bestand)" : location.origin;
 if (location.protocol === "file:") {
   const w = el("div","card");
-  w.style.cssText = "border-color:var(--red)";
-  w.innerHTML = '<div class="card-b" style="font-size:.88rem;color:var(--ink-dim)"><b style="color:var(--red)">Dit bestand is los geopend.</b> CloudKit laat alleen inloggen toe vanaf een echt webadres, omdat het token aan een adres gekoppeld is. Zet deze pagina online (bijvoorbeeld op GitHub Pages) en open hem via https.</div>';
+  w.classList.add("u-bc-red");
+  w.innerHTML = '<div class="card-b u-inkdim-88"><b class="u-red">Dit bestand is los geopend.</b> CloudKit laat alleen inloggen toe vanaf een echt webadres, omdat het token aan een adres gekoppeld is. Zet deze pagina online (bijvoorbeeld op GitHub Pages) en open hem via https.</div>';
   $("#gate").insertBefore(w, $("#gate").children[1]);
 }
 $("#env-select").value = State.env;
@@ -5455,7 +5882,7 @@ function toonKoppelQR(alsUitnodiging){
   if (!State.token) { toast("Er is nog geen token om te delen.", "err"); return; }
   const url = location.origin + location.pathname + "?t=" + encodeURIComponent(State.token) +
               (State.env !== "production" ? "&e=development" : "") + "&b=" + BUILD;
-  const body = el("div"); body.style.cssText = "display:flex;flex-direction:column;gap:.85rem;align-items:center";
+  const body = el("div"); body.classList.add("u-col85-center");
   body.innerHTML = "<p style='margin:0;color:var(--ink-dim);font-size:.9rem;text-align:center'>" +
     (alsUitnodiging
       ? "Laat de ander dit scannen. De pagina opent bij hen, ze loggen in met hun eigen Apple ID en sturen jou daarna hun CloudKit-ID."
@@ -5474,10 +5901,10 @@ function toonKoppelQR(alsUitnodiging){
       if (q.modules[y][x]) g.fillRect((x+rand)*schaal, (y+rand)*schaal, schaal, schaal);
     body.appendChild(cv);
   } catch(e){
-    body.appendChild(el("div","", '<span style="color:var(--red)">QR maken lukte niet: ' + esc(String(e.message||e)) + "</span>"));
+    body.appendChild(el("div","", '<span class="u-red">QR maken lukte niet: ' + esc(String(e.message||e)) + "</span>"));
   }
   const uitleg = el("div");
-  uitleg.style.cssText = "font-size:.83rem;color:var(--muted);line-height:1.5";
+  uitleg.classList.add("u-muted-83-lh");
   uitleg.innerHTML =
     (alsUitnodiging ? "<b style='color:var(--ink-dim)'>Het token opent alleen de pagina.</b> Wijzigen mag pas als jij die persoon in de rol <code>beheerder</code> zet. Zonder dat kunnen ze meekijken, meer niet.<br><br>" : "") +
     "<b style='color:var(--ink-dim)'>Daarna hoef je dit nooit meer te doen.</b> Je token en je Apple-inlog blijven in de " +
@@ -5534,16 +5961,16 @@ let ckGeladen = false;
 window.addEventListener("cloudkitloaded", () => { ckGeladen = true; startCloudKit(); });
 setTimeout(() => {
   if (!ckGeladen && typeof window.CloudKit === "undefined") {
-    $("#signin-slot").innerHTML = '<span style="color:var(--red);font-size:.86rem">De CloudKit-bibliotheek van Apple kon niet geladen worden. Controleer je internetverbinding, of open deze pagina niet als los bestand maar via een echt webadres.</span>';
+    $("#signin-slot").innerHTML = '<span class="u-red-86">De CloudKit-bibliotheek van Apple kon niet geladen worden. Controleer je internetverbinding, of open deze pagina niet als los bestand maar via een echt webadres.</span>';
   }
 }, 6000);
 
 function startCloudKit(){
   if (!State.token) {
-    $("#signin-slot").innerHTML = '<span style="color:var(--muted);font-size:.86rem">Eerst een token invoeren.</span>';
+    $("#signin-slot").innerHTML = '<span class="u-muted-86">Eerst een token invoeren.</span>';
     return;
   }
-  $("#signin-slot").innerHTML = '<div id="apple-sign-in-button"></div><div id="apple-sign-out-button" style="display:none"></div><span id="auth-msg" style="color:var(--muted);font-size:.86rem"><span class="spin"></span> verbinden…</span>';
+  $("#signin-slot").innerHTML = '<div id="apple-sign-in-button"></div><div id="apple-sign-out-button" class="u-hidden"></div><span id="auth-msg" class="u-muted-86"><span class="spin"></span> verbinden…</span>';
 
   try {
     const containers = [{
@@ -5566,7 +5993,7 @@ function startCloudKit(){
     });
     CloudKit.configure({ containers });
   } catch(e){
-    $("#auth-msg").innerHTML = '<span style="color:var(--red)">Configureren mislukt: ' + esc(String(e.message||e)) + "</span>";
+    $("#auth-msg").innerHTML = '<span class="u-red">Configureren mislukt: ' + esc(String(e.message||e)) + "</span>";
     return;
   }
 
@@ -5589,7 +6016,7 @@ function startCloudKit(){
     let hulp = "";
     if (/token|AUTHENTICATION|not found|invalid/i.test(s))
       hulp = " — controleer of het token klopt en of <b>" + esc(location.origin) + "</b> als toegestane origin bij dat token staat.";
-    if (m) m.innerHTML = '<span style="color:var(--red)">Inloggen mislukt: ' + esc(s) + hulp + "</span>";
+    if (m) m.innerHTML = '<span class="u-red">Inloggen mislukt: ' + esc(s) + hulp + "</span>";
   });
 
   State.container.whenUserSignsIn().then(startApp).catch(()=>{});
