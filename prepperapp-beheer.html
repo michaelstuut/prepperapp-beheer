@@ -113,6 +113,14 @@ main{max-width:72rem;margin:0 auto;padding:1.1rem .9rem 5rem}
    met naam, badges en knoppen erin -- die lopen dan lelijk uit elkaar. De simpele
    statistiek-tegels (.c4) blijven wel prima leesbaar in twee kolommen. */
 @media(max-width:30rem){ .grid.c3{grid-template-columns:1fr} }
+/* Een lange kaart-titel samen met een sub-tekst op dezelfde regel knijpt de titel
+   op een telefoon tot een smalle kolom die lelijk over drie regels breekt. Geef de
+   titel op smalle schermen de hele regel voor zich; de sub-tekst en knoppen zakken
+   dan netjes naar de regel eronder in plaats van ernaast te vechten om de ruimte. */
+@media(max-width:30rem){
+  .card-h{flex-wrap:wrap}
+  .card-h h2{flex:1 1 100%}
+}
 
 .stat{background:var(--surface);border:1px solid var(--edge);border-radius:var(--r);padding:.75rem .85rem;display:flex;flex-direction:column;gap:.15rem;text-align:left;cursor:pointer;width:100%}
 
