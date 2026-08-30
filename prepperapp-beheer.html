@@ -109,6 +109,10 @@ main{max-width:72rem;margin:0 auto;padding:1.1rem .9rem 5rem}
 .grid{display:grid;gap:.75rem}
 @media(min-width:40rem){ .grid.c2{grid-template-columns:1fr 1fr} .grid.c3{grid-template-columns:repeat(3,1fr)} .grid.c4{grid-template-columns:repeat(4,1fr)} }
 @media(max-width:39.99rem){ .grid.c3,.grid.c4{grid-template-columns:1fr 1fr} }
+/* Op een echte telefoon (geen tablet) zijn twee kolommen nog te krap voor kaarten
+   met naam, badges en knoppen erin -- die lopen dan lelijk uit elkaar. De simpele
+   statistiek-tegels (.c4) blijven wel prima leesbaar in twee kolommen. */
+@media(max-width:30rem){ .grid.c3{grid-template-columns:1fr} }
 
 .stat{background:var(--surface);border:1px solid var(--edge);border-radius:var(--r);padding:.75rem .85rem;display:flex;flex-direction:column;gap:.15rem;text-align:left;cursor:pointer;width:100%}
 
