@@ -1636,9 +1636,10 @@ label.f>span:first-child{color:var(--ink-dim);font-weight:600;letter-spacing:.00
         <div><b class="u-ink">Verbergen</b> — maakt een <code>AdminVerborgen</code>-record met de recordnaam van de post.
           De app filtert die eruit in het forum en op de kaart. De lijst wordt geladen bij opstarten en bij het openen van
           een forum- of kaartscherm, tot 500 items. Het werkt dus niet direct op een telefoon die al open staat.</div>
-        <div><b class="u-ink">Blokkeren</b> — zet <code>isBanned</code> op 1 bij het account.
-          Alle feeds filteren geblokkeerde codes eruit, en de app kijkt ook naar de gehashte Apple-account, dus opnieuw
-          installeren helpt niet.</div>
+        <div><b class="u-ink">Blokkeren</b> — zet <code>isBanned</code> op 1 in een los <code>GebruikerModeratie</code>-record
+          bij de code (sinds Golf B, losstaand van <code>GebruikersAccount</code> — dat kan de gebruiker zelf schrijven,
+          dit niet). Alle feeds filteren geblokkeerde codes eruit, en de app kijkt ook naar de gehashte Apple-account,
+          dus opnieuw installeren helpt niet.</div>
         <div><b class="u-ink">Verwijderen</b> — gooit het record echt weg uit CloudKit. Niet terug te draaien.
           Verbergen is bijna altijd de betere eerste stap.</div>
         <div><b class="u-ink">Aankondiging</b> — banner in de app bij het opstarten. De app haalt de tien
@@ -1750,9 +1751,14 @@ const SCHEMA = {
 
   /* --- accounts --- */
   GebruikersAccount: { label:"Gebruikers", groep:"Mensen", sort:"aangemeldOp", datum:"aangemeldOp", auteur:"gebruikerCode",
+    /* isBanned/banReden staan hier nog in het schema (Production-velden zijn
+       permanent), maar worden sinds Golf B door niemand meer geschreven of
+       gelezen — dat loopt nu via GebruikerModeratie hieronder. */
     f:{ gebruikerCode:[T.STR,"q"], displayNaam:[T.STR], profielBeschrijving:[T.STR], isBanned:[T.INT,"q"], banReden:[T.STR],
         isPro:[T.INT,"q"], aangemeldOp:[T.TS,"qs"], apparaatModel:[T.STR], appVersie:[T.STR],
         forumPostTelling:[T.INT], reactieTelling:[T.INT], chatPubKey:[T.STR], appleAccountHash:[T.STR] } },
+  GebruikerModeratie: { label:"Blokkades", groep:"Mensen", auteur:"gebruikerCode",
+    f:{ gebruikerCode:[T.STR,"q"], isBanned:[T.INT,"q"], banReden:[T.STR] } },
   SurvivalStatus: { label:"Survival-status", groep:"Mensen", sort:"bijgewerktOp", datum:"bijgewerktOp", titel:"naam",
     f:{ naam:[T.STR,"q"], stad:[T.STR,"q"], land:[T.STR,"q"], uitnodigingsCode:[T.STR,"q"], aantalItems:[T.INT,"qs"],
         overlevingsDagen:[T.DBL,"qs"], voedselDagen:[T.DBL,"qs"], waterDagen:[T.DBL,"qs"],
@@ -2283,6 +2289,36 @@ const Logboek = {
 };
 
 /* =====================================================================
+   GebruikerModeratie — sinds Golf B staan isBanned/banReden hier los van
+   GebruikersAccount, zodat een gewone gebruiker (die zijn eigen account mag
+   schrijven) zijn eigen blokkade niet zelf kan opheffen. Bestaande code die
+   nog v(rec,"isBanned") op een GebruikersAccount-record leest, blijft
+   werken omdat verrijkMetModeratie() die velden er na het ophalen bij zet.
+   ===================================================================== */
+async function moderatieMap(){
+  const c = Cache.haal("GebruikerModeratie_map", 30000);
+  if (c) return c;
+  const recs = await haalAlles("GebruikerModeratie", { max: 5000 });
+  const m = new Map();
+  recs.forEach(rec => m.set(String(v(rec,"gebruikerCode")||"").toUpperCase(), rec));
+  Cache.zet("GebruikerModeratie_map", m);
+  return m;
+}
+async function verrijkMetModeratie(recs){
+  const m = await moderatieMap();
+  recs.forEach(rec => {
+    const code = String(v(rec,"gebruikerCode")||"").toUpperCase();
+    const mod = m.get(code);
+    const banned = mod ? v(mod,"isBanned") === 1 : false;
+    const reden = mod ? (v(mod,"banReden") || "") : "";
+    rec.fields = rec.fields || {};
+    rec.fields.isBanned = { value: banned ? 1 : 0 };
+    rec.fields.banReden = { value: reden };
+  });
+  return recs;
+}
+
+/* =====================================================================
    Moderatie-acties. Elke actie hier komt overeen met wat de app leest.
    ===================================================================== */
 const Acties = {
@@ -2309,39 +2345,37 @@ const Acties = {
   },
 
   async blokkeer(gebruikerCode, reden){
-    const r = await query("GebruikersAccount", {
+    /* Sinds Golf B staat isBanned/banReden in GebruikerModeratie, los van
+       GebruikersAccount — dat record hoeft niet meer te bestaan of vooraf
+       aangemaakt te worden om iemand te kunnen blokkeren. */
+    const r = await query("GebruikerModeratie", {
       filters: [{ fieldName:"gebruikerCode", comparator:"EQUALS", fieldValue:{ value: gebruikerCode } }], limit: 1, sort: null });
     const rec = (r.records||[])[0];
     if (rec) {
       await patch(rec.recordName, { isBanned: 1, banReden: stempel(reden) });
-      toast("Geblokkeerd.", "ok");
-      Logboek.schrijf({ handeling:"geblokkeerd", doelType:"GebruikersAccount", doelRecordName: rec.recordName, doelCode: gebruikerCode, reden });
     } else {
-      /* Nog geen account: die bestaat pas vanaf versie 2.0. We maken hem alvast
-         aan met de blokkade erin. Zodra de app opstart vindt hij dit record op
-         gebruikerCode, werkt het bij en houdt isBanned op 1. */
-      await saveRecord({ recordType:"GebruikersAccount", fields:{
+      await saveRecord({ recordType:"GebruikerModeratie", fields:{
         gebruikerCode:{ value: gebruikerCode },
-        displayNaam:{ value: "" },
-        profielBeschrijving:{ value: "" },
         isBanned:{ value: 1 },
         banReden:{ value: stempel(reden) },
-        isPro:{ value: 0 },
-        aangemeldOp:{ value: Date.now() },
-        forumPostTelling:{ value: 0 },
-        reactieTelling:{ value: 0 },
       }});
-      toast("Geblokkeerd — account vooraf aangemaakt, blokkade geldt zodra ze updaten.", "ok");
-      Logboek.schrijf({ handeling:"geblokkeerd (account aangemaakt)", doelType:"GebruikersAccount", doelCode: gebruikerCode, reden });
     }
-    Cache.wis("GebruikersAccount");
+    toast("Geblokkeerd.", "ok");
+    Logboek.schrijf({ handeling:"geblokkeerd", doelType:"GebruikerModeratie", doelCode: gebruikerCode, reden });
+    Cache.wis("GebruikerModeratie");
+    Cache.wis("GebruikerModeratie_map");
   },
 
-  async deblokkeer(recordName){
-    await patch(recordName, { isBanned: 0, banReden: "" });
+  async deblokkeer(gebruikerCode){
+    const r = await query("GebruikerModeratie", {
+      filters: [{ fieldName:"gebruikerCode", comparator:"EQUALS", fieldValue:{ value: gebruikerCode } }], limit: 1, sort: null });
+    const rec = (r.records||[])[0];
+    if (!rec) { toast("Geen blokkade gevonden voor deze code.", "err"); return; }
+    await patch(rec.recordName, { isBanned: 0, banReden: "" });
     toast("Blokkade opgeheven.", "ok");
-    Logboek.schrijf({ handeling:"blokkade opgeheven", doelType:"GebruikersAccount", doelRecordName: recordName });
-    Cache.wis("GebruikersAccount");
+    Logboek.schrijf({ handeling:"blokkade opgeheven", doelType:"GebruikerModeratie", doelRecordName: rec.recordName, doelCode: gebruikerCode });
+    Cache.wis("GebruikerModeratie");
+    Cache.wis("GebruikerModeratie_map");
   },
 
   async setPro(recordName, aan){
@@ -2892,7 +2926,7 @@ async function laadDashboard(){
     { key:"open", type:"MisbruikMelding", filters:[{fieldName:"behandeld",comparator:"EQUALS",fieldValue:{value:0}}], label:"Open meldingen", cls:"alert", tab:"meldingen", vak:"aandacht" },
     { key:"oud",  type:"ForumMelding", label:"Forummeldingen", cls:"alert", tab:"meldingen", vak:"aandacht" },
     { key:"fb",   type:"AppFeedback", filters:[{fieldName:"gelezen",comparator:"EQUALS",fieldValue:{value:0}}], label:"Ongelezen feedback", cls:"warm", tab:"feedback", vak:"aandacht" },
-    { key:"ban",  type:"GebruikersAccount", filters:[{fieldName:"isBanned",comparator:"EQUALS",fieldValue:{value:1}}], label:"Geblokkeerd", cls:"", tab:"gebruikers", vak:"aandacht" },
+    { key:"ban",  type:"GebruikerModeratie", filters:[{fieldName:"isBanned",comparator:"EQUALS",fieldValue:{value:1}}], label:"Geblokkeerd", cls:"", tab:"gebruikers", vak:"aandacht" },
     { key:"surv", type:"SurvivalStatus", label:"Delen hun status", cls:"good", tab:"gebruikers", vak:"omvang" },
     { key:"usr",  type:"GebruikersAccount", label:"Accounts aangemaakt", cls:"", tab:"gebruikers", vak:"omvang" },
     { key:"pro",  type:"GebruikersAccount", filters:[{fieldName:"isPro",comparator:"EQUALS",fieldValue:{value:1}}], label:"Pro", cls:"warm", tab:"gebruikers", vak:"omvang" },
@@ -3290,7 +3324,7 @@ function gebruikerRij(rec){
   ];
   if (banned) keuzes.push({ label:"Deblokkeren", cls:"ok", on: () => bevestig("Blokkade opheffen?",
       "Deze gebruiker mag daarna weer plaatsen en is weer zichtbaar in de feeds.","Opheffen",
-      async () => { await Acties.deblokkeer(rec.recordName); laadGebruikers(); }) });
+      async () => { await Acties.deblokkeer(code); laadGebruikers(); }) });
   keuzes.push({ label: pro ? "Pro intrekken" : "Pro geven", on: () => bevestig(pro ? "Pro intrekken?" : "Pro geven?",
       "Let op: dit zet alleen een vlaggetje in CloudKit. Pro wordt in de app bepaald door de aankoop in de App Store, en de app schrijft dat vlaggetje bij elke start terug. Het is dus een aantekening, geen sleutel.",
       pro ? "Intrekken" : "Geven", async () => { await Acties.setPro(rec.recordName, !pro); laadGebruikers(); }) });
@@ -3307,12 +3341,16 @@ async function laadGebruikers(){
   const f = $("#usr-filter").value;
   const q = $("#usr-q").value.trim();
   const filters = [];
-  if (f === "banned") filters.push({fieldName:"isBanned",comparator:"EQUALS",fieldValue:{value:1}});
   if (f === "pro")    filters.push({fieldName:"isPro",comparator:"EQUALS",fieldValue:{value:1}});
   if (/^[A-Za-z0-9]{8}$/.test(q.replace(/-/g,""))) filters.push({fieldName:"gebruikerCode",comparator:"EQUALS",fieldValue:{value:q.replace(/-/g,"").toUpperCase()}});
   try {
+    /* "banned" filtert niet meer op CloudKit-niveau: isBanned/banReden staan
+       sinds Golf B in GebruikerModeratie, niet meer op GebruikersAccount. We
+       halen dus altijd op zonder dat filter en verrijken/filteren daarna. */
     const r = await query("GebruikersAccount", { limit: 400, filters });
     let recs = r.records || [];
+    await verrijkMetModeratie(recs);
+    if (f === "banned") recs = recs.filter(rec => v(rec,"isBanned") === 1);
     if (q && !/^[A-Za-z0-9]{8}$/.test(q.replace(/-/g,""))) {
       const naald = q.toLowerCase();
       recs = recs.filter(rec => String(v(rec,"displayNaam")||"").toLowerCase().includes(naald) || String(v(rec,"gebruikerCode")||"").toLowerCase().includes(naald));
@@ -3371,8 +3409,12 @@ async function laadSurvival(){
     if (!survAccounts.size){
       try {
         const a = await query("GebruikersAccount", { limit: 400 });
-        (a.records||[]).forEach(x => survAccounts.set(String(v(x,"gebruikerCode")||"").toUpperCase(),
-          { pro: v(x,"isPro") === 1, geblokkeerd: v(x,"isBanned") === 1 }));
+        const modMap = await moderatieMap();
+        (a.records||[]).forEach(x => {
+          const code = String(v(x,"gebruikerCode")||"").toUpperCase();
+          const mod = modMap.get(code);
+          survAccounts.set(code, { pro: v(x,"isPro") === 1, geblokkeerd: mod ? v(mod,"isBanned") === 1 : false });
+        });
       } catch(e){}
     }
     const r = await query("SurvivalStatus", { limit: 400 });
@@ -3500,13 +3542,17 @@ async function bouwDossier(code){
   const wrap = $("#dos-inhoud");
   wrap.innerHTML = '<div class="card"><div class="empty"><span class="spin"></span> Alles ophalen van ' + esc(codeWeergave(code)) + "…</div></div>";
 
-  /* account en survival eerst, die bepalen de kop */
-  const [accR, meldingen, voorgangers] = await Promise.all([
+  /* account, moderatie en survival eerst, die bepalen de kop. isBanned/
+     banReden staan sinds Golf B in GebruikerModeratie, los van of er al een
+     GebruikersAccount bestaat. */
+  const [accR, modR, meldingen, voorgangers] = await Promise.all([
     query("GebruikersAccount", { filters:[{fieldName:"gebruikerCode",comparator:"EQUALS",fieldValue:{value:code}}], limit:1, sort:null }).catch(()=>({records:[]})),
+    query("GebruikerModeratie", { filters:[{fieldName:"gebruikerCode",comparator:"EQUALS",fieldValue:{value:code}}], limit:1, sort:null }).catch(()=>({records:[]})),
     haalMeldingenOver(code),
     haalVoorgangers(code),
   ]);
   const account = (accR.records||[])[0] || null;
+  const moderatie = (modR.records||[])[0] || null;
 
   const secties = await Promise.all(DOSSIER_BRONNEN.map(async ([type, veld, kop, cmp]) => {
     const def = SCHEMA[type];
@@ -3517,7 +3563,7 @@ async function bouwDossier(code){
     } catch(e){ return { kop, type, recs: [], fout: String(e.message||e) }; }
   }));
 
-  dossierData = { code, account, meldingen, secties, voorgangers };
+  dossierData = { code, account, moderatie, meldingen, secties, voorgangers };
   tekenDossier();
 }
 
@@ -3569,12 +3615,12 @@ async function haalMeldingenOver(code){
 }
 
 function tekenDossier(){
-  const { code, account, meldingen, secties, voorgangers } = dossierData;
+  const { code, account, moderatie, meldingen, secties, voorgangers } = dossierData;
   const wrap = $("#dos-inhoud"); wrap.innerHTML = "";
 
   /* --- kop --- */
   const kop = el("div","card");
-  const banned = account && v(account,"isBanned") === 1;
+  const banned = moderatie && v(moderatie,"isBanned") === 1;
   const pro = account && v(account,"isPro") === 1;
   const surv = (secties.find(s => s.type === "SurvivalStatus") || {recs:[]}).recs[0];
   const naam = (account && v(account,"displayNaam")) || (surv && v(surv,"naam")) || "";
@@ -3599,13 +3645,13 @@ function tekenDossier(){
     "<span>" + totaal + " records</span>" +
     (meldingen.length ? '<span class="pill red">' + meldingen.length + " melding" + (meldingen.length===1?"":"en") + " tegen deze persoon</span>" : "");
   kb.appendChild(pills);
-  if (banned && v(account,"banReden")) kb.appendChild(el("div","text","Reden blokkade: " + esc(v(account,"banReden"))));
+  if (banned && v(moderatie,"banReden")) kb.appendChild(el("div","text","Reden blokkade: " + esc(v(moderatie,"banReden"))));
   if (account && v(account,"profielBeschrijving")) kb.appendChild(el("div","text", esc(v(account,"profielBeschrijving"))));
 
   const acties = el("div","acts");
   const mk = (label, cls, fn) => { const b = el("button","btn sm "+(cls||""), esc(label)); b.onclick = fn; acties.appendChild(b); return b; };
   if (banned) mk("Deblokkeren","ok",() => bevestig("Blokkade opheffen?","Deze persoon mag daarna weer plaatsen en is weer zichtbaar.","Opheffen",
-      async () => { await Acties.deblokkeer(account.recordName); dossierData = null; opendossier(code); }));
+      async () => { await Acties.deblokkeer(code); dossierData = null; opendossier(code); }));
   else mk("Blokkeren","danger",() => vraagBlokkeer(code));
   if (account) mk(pro ? "Pro intrekken" : "Pro geven","",() => bevestig(pro ? "Pro intrekken?" : "Pro geven?",
       "Let op: dit zet alleen een vlaggetje in CloudKit. De app bepaalt Pro via de App Store-aankoop en schrijft dit veld bij elke start terug.",
@@ -4135,6 +4181,7 @@ $("#st-load").onclick = async (e) => {
   try {
     st.textContent = "gebruikers…";
     const users = await haalAlles("GebruikersAccount", { onVoortgang: n => st.textContent = "gebruikers… " + n });
+    await verrijkMetModeratie(users);
     statsGebruikers = users;
 
     st.textContent = "survival-status…";
