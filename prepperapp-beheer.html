@@ -2892,7 +2892,7 @@ function gaNaar(id){
   const t = TABS.find(x => x.id === id);
   if (t) { zetPaginakop(t); t.laad(); }
 }
-function herlaadHuidigeTab(){ const t = TABS.find(x => x.id === huidigeTab); if (t) { Cache.wis(); t.laad(); } }
+function herlaadHuidigeTab(){ const t = TABS.find(x => x.id === huidigeTab); if (t) { Cache.wis(); survAccounts.clear(); t.laad(); } }
 
 /* De terugknop van de browser en een geplakte #link moeten ook binnen de pagina
    werken. Zonder dit deed "terug" niets zichtbaars: het adres veranderde wel,
@@ -3394,7 +3394,10 @@ function survivalRij(rec){
   const keuzes = [];
   if (code) keuzes.push({ label:"Dossier", on: () => { dossierData = null; opendossier(code); } });
   keuzes.push({ label:"Velden", on: () => toonRecord(rec,"SurvivalStatus") });
-  if (code) keuzes.push({ label:"Blokkeren", cls:"danger", zwaar:true, on: () => vraagBlokkeer(code) });
+  if (code && acc.geblokkeerd) keuzes.push({ label:"Deblokkeren", cls:"ok", on: () => bevestig("Blokkade opheffen?",
+      "Deze persoon mag daarna weer plaatsen en is weer zichtbaar.","Opheffen",
+      async () => { await Acties.deblokkeer(code); survAccounts.clear(); laadSurvival(); }) });
+  if (code && !acc.geblokkeerd) keuzes.push({ label:"Blokkeren", cls:"danger", zwaar:true, on: () => vraagBlokkeer(code) });
   body.appendChild(knopRij(keuzes, v(rec,"naam") || codeWeergave(code)));
   r.appendChild(avatarEl(v(rec,"naam"), code));
   r.appendChild(body);
@@ -3414,6 +3417,12 @@ async function laadSurvival(){
           const code = String(v(x,"gebruikerCode")||"").toUpperCase();
           const mod = modMap.get(code);
           survAccounts.set(code, { pro: v(x,"isPro") === 1, geblokkeerd: mod ? v(mod,"isBanned") === 1 : false });
+        });
+        /* Codes met alleen een GebruikerModeratie-record (geen GebruikersAccount,
+           bijv. pre-2.2) staan anders nergens in survAccounts — dan blijft
+           acc.geblokkeerd altijd undefined en werkt de knop in survivalRij() niet. */
+        modMap.forEach((mod, code) => {
+          if (!survAccounts.has(code)) survAccounts.set(code, { pro:false, geblokkeerd: v(mod,"isBanned") === 1 });
         });
       } catch(e){}
     }
