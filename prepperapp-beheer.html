@@ -1404,6 +1404,40 @@ label.f>span:first-child{color:var(--ink-dim);font-weight:600;letter-spacing:.00
         </div>
       </div>
     </div>
+
+    <div class="card">
+      <div class="card-h"><h2>Promocodes</h2><span class="u-flex1"></span><span class="sub">Pro gratis vrijspelen</span></div>
+      <div class="card-b u-col7">
+        <p class="u-muted-86-m0">
+          Voor reviewers en giveaways op social media: een code die iemand in de app bij
+          "Heb je een promocode?" invult om Pro eenmalig gratis vrij te spelen. Een code is
+          24 uur geldig vanaf het aanmaken en werkt maar één keer — dit loopt via een aparte
+          worker (<code>cloudflare-promo-worker</code>), niet via CloudKit.
+        </p>
+        <label class="f">Beheersleutel (X-Admin-Key)
+          <input type="password" id="promo-adminkey" autocomplete="off" autocapitalize="none" spellcheck="false"
+                 placeholder="plak hier PREPPERAPP_ADMIN_KEY">
+          <span class="hint">Wordt alleen in deze browser bewaard, net als het CloudKit-token hierboven.
+            Staat nooit in de broncode van deze pagina.</span>
+        </label>
+        <div class="u-row5wrap">
+          <button class="btn" id="promo-key-toon">Tonen</button>
+          <button class="btn primary" id="promo-key-save">Bewaren</button>
+        </div>
+        <label class="f">Notitie (optioneel)
+          <input type="text" id="promo-notitie" maxlength="200" placeholder="bv. naam van de TikTok-reviewer">
+        </label>
+        <div><button class="btn primary" id="promo-gen">Nieuwe promocode genereren</button></div>
+        <div id="promo-nieuw" class="hide"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-h"><h2>Recente codes</h2><span class="u-flex1"></span>
+        <button class="btn sm" id="promo-refresh">Verversen</button>
+      </div>
+      <div class="card-b tight" id="promo-list"><div class="empty">Nog niet geladen.</div></div>
+    </div>
   </section>
 
   <!-- ---------- Feedback ---------- -->
@@ -1680,7 +1714,7 @@ label.f>span:first-child{color:var(--ink-dim);font-weight:600;letter-spacing:.00
 
 const CONTAINER = "iCloud.com.stuut.PrepperApp";
 const BUILD = 40;
-const LS = { token: "pa.token", token2: "pa.token2", env: "pa.env" };
+const LS = { token: "pa.token", token2: "pa.token2", env: "pa.env", promoKey: "pa.promoKey" };
 const CONTAINER_ALERT = "iCloud.com.stuut.PrepAlert";
 
 /* ---------------------------------------------------------------------
@@ -2724,7 +2758,7 @@ const TABS = [
     uitleg:"Wat je uit de app hebt weggefilterd. De posts bestaan nog; je kunt ze stuk voor stuk terugzetten." },
   { id:"berichten", label:"Aankondigingen", groep:"De app besturen", laad: laadAankondigingen,
     uitleg:"De banner die mensen bij het opstarten van de app te zien krijgen." },
-  { id:"config",    label:"Instellingen", groep:"De app besturen", laad: laadConfig,
+  { id:"config",    label:"Instellingen", groep:"De app besturen", laad: () => { laadConfig(); laadPromoLijst(); },
     titel:"App-instellingen op afstand", uitleg:"Knoppen die je zonder nieuwe versie kunt omzetten in de app die al op iemands telefoon staat." },
   { id:"feedback",  label:"Feedback",  groep:"Inhoud", laad: laadFeedback,
     uitleg:"Wat mensen zelf hebben opgeschreven vanuit de app. Vrije tekst zegt vaak meer dan alle grafieken." },
@@ -3811,6 +3845,85 @@ $("#cfg-save").onclick = async (e) => {
   } catch(err){ toast(String(err.message||err),"err"); }
   b.disabled = false; b.textContent = "Opslaan";
 };
+
+/* =====================================================================
+   Promocodes (cloudflare-promo-worker — los van CloudKit)
+   ===================================================================== */
+const PROMO_WORKER_URL = "https://prepperapp-promo.michaelstuut.workers.dev";
+
+function promoAdminKey(){ return localStorage.getItem(LS.promoKey) || ""; }
+
+$("#promo-adminkey").value = promoAdminKey();
+$("#promo-key-toon").onclick = () => {
+  const veld = $("#promo-adminkey");
+  const uit = veld.type === "password";
+  veld.type = uit ? "text" : "password";
+  $("#promo-key-toon").textContent = uit ? "Verbergen" : "Tonen";
+};
+$("#promo-key-save").onclick = () => {
+  const waarde = $("#promo-adminkey").value.trim();
+  localStorage.setItem(LS.promoKey, waarde);
+  toast(waarde ? "Beheersleutel bewaard." : "Beheersleutel gewist.", "ok");
+};
+
+async function promoFetch(pad, opties){
+  const key = promoAdminKey();
+  if (!key) { toast("Vul eerst de beheersleutel (X-Admin-Key) in.", "err"); throw new Error("geen sleutel"); }
+  const resp = await fetch(PROMO_WORKER_URL + pad, Object.assign({
+    headers: Object.assign({ "X-Admin-Key": key, "Content-Type": "application/json" }, (opties && opties.headers) || {}),
+  }, opties || {}));
+  if (resp.status === 401) throw new Error("Beheersleutel klopt niet (401) — controleer de waarde bij Promocodes hierboven.");
+  if (!resp.ok) throw new Error("Worker gaf een fout terug (" + resp.status + ")");
+  return resp.json();
+}
+
+$("#promo-gen").onclick = async (e) => {
+  const b = e.target; b.disabled = true; b.innerHTML = '<span class="spin"></span> aanmaken';
+  try {
+    const notitie = $("#promo-notitie").value.trim();
+    const data = await promoFetch("/generate", { method: "POST", body: JSON.stringify({ notitie: notitie || undefined }) });
+    const box = $("#promo-nieuw");
+    box.className = "u-amber-note";
+    box.innerHTML = '<div style="font-size:1.4rem;font-weight:700;letter-spacing:.05em;font-family:monospace">' +
+      esc(data.code) + '</div><div class="u-muted-80-mt9">Geldig tot ' + esc(new Date(data.verlooptOp).toLocaleString("nl-NL")) +
+      ' — eenmalig te gebruiken.</div>' +
+      '<div class="u-row5wrap" style="margin-top:.6rem"><button class="btn sm" id="promo-copy">Kopiëren</button></div>';
+    $("#promo-copy").onclick = async () => {
+      try { await navigator.clipboard.writeText(data.code); toast("Gekopieerd.", "ok"); }
+      catch(err){ toast("Kopiëren lukte niet — selecteer 'm handmatig.", "err"); }
+    };
+    $("#promo-notitie").value = "";
+    Logboek.schrijf({ handeling:"promocode aangemaakt", doelType:"PromoCode", reden: notitie || data.code });
+    toast("Code aangemaakt.", "ok");
+    laadPromoLijst();
+  } catch(err){ toast(String(err.message||err), "err"); }
+  b.disabled = false; b.textContent = "Nieuwe promocode genereren";
+};
+
+$("#promo-refresh").onclick = () => laadPromoLijst();
+
+async function laadPromoLijst(){
+  const n = $("#promo-list");
+  if (!promoAdminKey()) { n.innerHTML = leeg("Vul eerst de beheersleutel in.", "Nog niet ingesteld"); return; }
+  bezig(n);
+  try {
+    const data = await promoFetch("/codes", { method: "GET" });
+    const codes = data.codes || [];
+    n.innerHTML = "";
+    if (!codes.length) { n.innerHTML = leeg("Nog geen codes aangemaakt.", "Leeg"); return; }
+    const nu = Date.now();
+    codes.forEach(c => {
+      const row = el("div","row"); const body = el("div","body");
+      body.appendChild(el("div","title", '<span style="font-family:monospace">' + esc(c.code) + "</span>"));
+      const verlopen = new Date(c.verloopt_op).getTime() < nu;
+      const status = c.ingewisseld ? '<span class="pill plain">gebruikt</span>' :
+        verlopen ? '<span class="pill amber">verlopen</span>' : '<span class="pill green">nog geldig</span>';
+      body.appendChild(el("div","meta", status + "<span>" + esc(fmtGeleden(new Date(c.aangemaakt_op).getTime())) + "</span>"));
+      if (c.notitie) body.appendChild(el("div","text", esc(c.notitie)));
+      row.appendChild(body); n.appendChild(row);
+    });
+  } catch(e){ n.innerHTML = leeg(String(e.message||e), "Fout bij laden"); }
+}
 
 /* =====================================================================
    Feedback
