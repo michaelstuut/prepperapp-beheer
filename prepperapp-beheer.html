@@ -3675,7 +3675,10 @@ function tekenDossier(){
       }, true));
   if (account) mk("Account bekijken","",() => toonRecord(account,"GebruikersAccount"));
   mk("Dossier exporteren","",() => {
-    const dump = { code, account, meldingenTegen: meldingen, secties: secties.map(s => ({ kop:s.kop, type:s.type, records:s.recs })) };
+    /* moderatie (isBanned/banReden) staat sinds Golf B los van account, in
+       GebruikerModeratie — zonder dit veld viel de blokkadestatus stilletjes
+       uit de export. */
+    const dump = { code, account, moderatie, meldingenTegen: meldingen, secties: secties.map(s => ({ kop:s.kop, type:s.type, records:s.recs })) };
     const blob = new Blob([JSON.stringify(dump,null,2)],{type:"application/json"});
     const a = document.createElement("a"); a.href = URL.createObjectURL(blob);
     a.download = "dossier-" + code + "-" + new Date().toISOString().slice(0,10) + ".json";
