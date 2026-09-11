@@ -1541,6 +1541,14 @@ label.f>span:first-child{color:var(--ink-dim);font-weight:600;letter-spacing:.00
     </div>
 
     <div class="card">
+      <div class="card-h"><h2>KPI's (stap B10)</h2><span class="u-flex1"></span>
+        <span class="sub" id="kpi-status"></span>
+        <button class="btn sm" id="kpi-laad">Tellen (laatste 30 dagen)</button>
+      </div>
+      <div class="card-b tight" id="kpi-inhoud"><div class="empty">Nog niet geteld.</div></div>
+    </div>
+
+    <div class="card">
       <div class="card-h"><h2>Eigen geschiedenis</h2><span class="u-flex1"></span>
         <span class="sub" id="gs-info"></span>
         <button class="btn sm" id="gs-export">Exporteren</button>
@@ -1768,6 +1776,13 @@ const SCHEMA = {
   AppGebeurtenis: { label:"App-gebeurtenissen", groep:"Mensen", sort:"tijdstip", datum:"tijdstip",
     f:{ gebeurtenis:[T.STR,"q"], sessieID:[T.STR,"q"], tijdstip:[T.TS,"qs"],
         land:[T.STR,"q"], appVersie:[T.STR,"q"], taal:[T.STR,"q"], platform:[T.STR,"q"] } },
+  DagelijkseMeting: { label:"Dagelijkse meting (KPI's, stap B10)", groep:"Mensen", sort:"datum",
+    /* Eén record per toestel per dag, geen ID — zie KPI.swift/MeetService.swift
+       in de app. `datum` is een STRING "yyyy-MM-dd" (UTC), geen TIMESTAMP,
+       dus geen [T.TS,...] hier. */
+    f:{ datum:[T.STR,"q"], land:[T.STR,"q"], appVersie:[T.STR,"q"], platform:[T.STR,"q"],
+        paraatheidDag1:[T.INT,"q"], gezinslidGeaccepteerd:[T.INT,"q"], actiefDag7:[T.INT,"q"],
+        actiefDag30:[T.INT,"q"], proActief:[T.INT,"q"], functiesBereikbaarAantal:[T.INT,"qs"] } },
   PrepFamilyGebruiker: { label:"PrepFamily-gebruikers", groep:"Mensen", sort:"tijdstip", datum:"tijdstip",
     f:{ stad:[T.STR,"q"], land:[T.STR,"q"], tijdstip:[T.TS,"qs"] } },
   ReferralRecord: { label:"Uitnodigingen", groep:"Mensen", sort:"datum", datum:"datum",
@@ -5899,6 +5914,71 @@ async function telPrepAlert(){
   }
 }
 $("#pa-laad").onclick = () => telPrepAlert();
+
+/* =====================================================================
+   KPI's (stap B10) — DagelijkseMeting
+   ---------------------------------------------------------------------
+   Eén record per toestel per dag, geen gebruikers-ID (zie
+   PrepperApp/Meting/MeetService.swift). Elk record is een los "ja/nee" of
+   een telling; de percentages hieronder worden PAS hier, over alle
+   dagrecords van de gekozen periode samen, uitgerekend — dat is expres
+   zo verdeeld (zie het commentaar bovenaan KPI.swift in de app).
+   ===================================================================== */
+async function telKPI(){
+  const st = $("#kpi-status"), doos = $("#kpi-inhoud");
+  st.innerHTML = '<span class="spin"></span> tellen';
+  try {
+    const nu = Date.now(), dag = 864e5;
+    const sinds = new Date(nu - 30*dag).toISOString().slice(0,10); // "yyyy-MM-dd", UTC
+    const recs = await haalAlles("DagelijkseMeting", {
+      filters: [{ fieldName:"datum", comparator:"GREATER_THAN_OR_EQUALS", fieldValue:{ value: sinds } }],
+      max: 5000,
+    });
+
+    doos.innerHTML = "";
+    if (!recs.length){
+      doos.innerHTML = leeg(
+        "Nog geen DagelijkseMeting-records in de laatste 30 dagen. De app stuurt hoogstens één record per toestel per dag " +
+        "(pas als het schema in Production staat en iemand de app naar de achtergrond stuurt), dus dit kan even duren.",
+        "Nog geen data");
+      st.textContent = "0 dagrecords";
+      return;
+    }
+
+    const pct = (veld) => Math.round(recs.filter(r => v(r,veld) === 1).length / recs.length * 100);
+    const functies = recs.map(r => v(r,"functiesBereikbaarAantal")).filter(x => typeof x === "number");
+    const gemFuncties = functies.length ? (functies.reduce((a,b)=>a+b,0) / functies.length) : 0;
+
+    const dl = el("dl","kv");
+    const zet = (k,w) => { dl.appendChild(el("dt","",esc(k))); dl.appendChild(el("dd","",w)); };
+    zet("dagrecords (laatste 30 dagen)", "<b>" + recs.length + "</b>");
+    zet("functies bereikbaar (gem. per dag)", String(Math.round(gemFuncties*10)/10));
+    doos.appendChild(dl);
+
+    doos.appendChild(balken([
+      ["Paraatheid > 0 op dag 1", pct("paraatheidDag1"), "var(--green)"],
+      ["Gezinslid geaccepteerd", pct("gezinslidGeaccepteerd"), "var(--amber)"],
+      ["Nog actief op dag 7", pct("actiefDag7"), "var(--blue)"],
+      ["Nog actief op dag 30", pct("actiefDag30"), "var(--blue)"],
+      ["Pro-conversie", pct("proActief"), "var(--pro)"],
+    ], { voet: "Percentage van de dagrecords in de gekozen periode — elk record is één toestel op één dag, dus een toestel " +
+      "dat al lang meedoet telt vaker mee dan een gloednieuw toestel. Geen gebruikers-ID in deze data: hier wordt niets " +
+      "over één specifiek persoon herleid, alleen het totaal." }));
+
+    st.textContent = recs.length + " dagrecords";
+    Geschiedenis.bewaar({
+      kpiParaatheidDag1: pct("paraatheidDag1"),
+      kpiGezinslidGeaccepteerd: pct("gezinslidGeaccepteerd"),
+      kpiActiefDag7: pct("actiefDag7"),
+      kpiActiefDag30: pct("actiefDag30"),
+      kpiProConversie: pct("proActief"),
+    });
+  } catch(e){
+    st.textContent = "";
+    doos.innerHTML = leeg(String(e.message||e), "Lukte niet");
+  }
+}
+$("#kpi-laad").onclick = () => telKPI();
 
 /* =====================================================================
    Logboek bekijken
