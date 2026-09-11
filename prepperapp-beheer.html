@@ -1347,7 +1347,25 @@ label.f>span:first-child{color:var(--ink-dim);font-weight:600;letter-spacing:.00
   <!-- ---------- Inhoud (redactie, stap C2) ---------- -->
   <section class="view" id="v-inhoud" role="tabpanel">
     <div class="card">
+      <div class="card-h"><h2>Migratie vanaf bundel</h2><span class="u-flex1"></span><span class="sub" id="mig-omgeving-label"></span></div>
+      <div class="card-b u-col7">
+        <p class="u-muted-80-m0">
+          Leest alle <span class="mono">.md</span>-bestanden met front-matter (zoals <span class="mono">Inhoud/Bundel/</span> in de
+          app-repo) uit een lokale map, vergelijkt ze met wat er al in de huidige omgeving staat, en schrijft alleen wat
+          nieuw is of een hogere versie heeft — precies de regel die <span class="mono">ContentProvider.swift</span> ook
+          gebruikt om cache tegen CloudKit af te wegen.
+        </p>
+        <div>
+          <input type="file" id="mig-bestanden" webkitdirectory multiple accept=".md" class="u-hidden">
+          <button class="btn" id="mig-kies">Kies map met .md-bestanden…</button>
+          <span class="sub" id="mig-kies-status"></span>
+        </div>
+        <div id="mig-resultaat"></div>
+      </div>
+    </div>
+    <div class="card">
       <div class="card-b">
+        <div id="inh-verloop-signaal" class="u-hidden"></div>
         <div class="toolbar">
           <label class="f narrow u-flex0-11rem">Regio
             <select id="inh-regio">
@@ -3586,10 +3604,191 @@ const INHOUD_TYPES = ["artikel","protocol","checklist","ehboflow","leerstap"];
 const INHOUD_REGIOS = [["alles","alles (regio-loos)"],["nl","Nederland"],["be","België"],["de","Duitsland"],["uk","Verenigd Koninkrijk"]];
 let inhoudRecords = null; // volledige, ongefilterde lijst — client-side filteren, zie SCHEMA.AppContent commentaar
 
+/* --- Migratie vanaf bundel (stap C2, deelstap 3) ---
+   Poort van InhoudItem.parse(frontMatterMarkdown:) in InhoudModel.swift:
+   dezelfde verplichte velden, dezelfde defaults, dezelfde ISO-datumvorm
+   voor geldigTot (volledige datum, geen tijd). Bewust hier opnieuw
+   geschreven in plaats van gedeeld met de app — dit is een webtool zonder
+   Swift-runtime. */
+function parseFrontMatter(tekst, bestandsnaam){
+  const regels = String(tekst).split("\n");
+  if (regels[0] !== "---") return { ok:false, bestandsnaam, fout:"geen front-matter (eerste regel is geen \"---\")" };
+  let eind = -1;
+  for (let i = 1; i < regels.length; i++) { if (regels[i] === "---") { eind = i; break; } }
+  if (eind === -1) return { ok:false, bestandsnaam, fout:"front-matter niet afgesloten met een tweede \"---\"" };
+  const velden = {};
+  for (let i = 1; i < eind; i++) {
+    const regel = regels[i];
+    const idx = regel.indexOf(":");
+    if (idx === -1) continue;
+    const sleutel = regel.slice(0, idx).trim();
+    const waarde = regel.slice(idx+1).trim();
+    if (waarde) velden[sleutel] = waarde;
+  }
+  const body = regels.slice(eind+1).join("\n").trim();
+  try {
+    const verplicht = (k) => { if (!velden[k]) throw new Error("ontbrekend veld: " + k); return velden[k]; };
+    const type = verplicht("type");
+    if (!INHOUD_TYPES.includes(type)) throw new Error("ongeldig type: " + type);
+    const regio = velden["regio"] || "alles";
+    if (!INHOUD_REGIOS.some(([w]) => w === regio)) throw new Error("ongeldige regio: " + regio);
+    const versie = parseInt(velden["versie"] || "1", 10) || 1;
+    let geldigTot = null;
+    if (velden["geldigTot"]) {
+      const d = new Date(velden["geldigTot"] + "T00:00:00Z");
+      if (!isNaN(d.getTime())) geldigTot = d.getTime();
+    }
+    const item = {
+      id: verplicht("id"), type, regio, taal: verplicht("taal"), versie,
+      titel: verplicht("titel"), markdown: body,
+      bron: velden["bron"] || "", reviewer: velden["reviewer"] || "", geldigTot,
+    };
+    return { ok:true, bestandsnaam, item };
+  } catch(e){ return { ok:false, bestandsnaam, fout: e.message }; }
+}
+
+let migratieGeselecteerd = null; // laatste geparste, nog niet uitgevoerde migratie
+
+$("#mig-kies").onclick = () => $("#mig-bestanden").click();
+$("#mig-bestanden").onchange = async (e) => {
+  const files = Array.from(e.target.files || []).filter(f => f.name.endsWith(".md"));
+  $("#mig-kies-status").textContent = files.length ? files.length + " .md-bestanden gevonden, lezen…" : "geen .md-bestanden in die map.";
+  if (!files.length) return;
+
+  const geparsed = [];
+  const gezienSleutels = new Map(); // "id|taal" -> eerste bestandsnaam
+  for (const file of files) {
+    const naam = file.webkitRelativePath || file.name;
+    let tekst;
+    try { tekst = await file.text(); } catch(err){ geparsed.push({ ok:false, bestandsnaam:naam, fout:"kon bestand niet lezen: " + (err.message||err) }); continue; }
+    const r = parseFrontMatter(tekst, naam);
+    if (r.ok) {
+      const sleutel = r.item.id + "|" + r.item.taal;
+      if (gezienSleutels.has(sleutel)) {
+        geparsed.push({ ok:false, bestandsnaam:naam, fout:"dubbele id+taal binnen deze import — zie ook " + gezienSleutels.get(sleutel) });
+        continue;
+      }
+      gezienSleutels.set(sleutel, naam);
+    }
+    geparsed.push(r);
+  }
+
+  $("#mig-kies-status").textContent = geparsed.length + " bestanden gelezen, vergelijken met " + State.env + "…";
+  let bestaand;
+  try { bestaand = await haalAlles("AppContent", { max: 5000 }); }
+  catch(e){ $("#mig-resultaat").innerHTML = leeg(String(e.message||e), "Kon huidige inhoud niet ophalen"); return; }
+  const bestaandeMap = new Map();
+  bestaand.forEach(rec => bestaandeMap.set(v(rec,"id") + "|" + v(rec,"taal"), rec));
+
+  const fouten = geparsed.filter(r => !r.ok);
+  const goed = geparsed.filter(r => r.ok);
+  const nieuw = [], bijgewerkt = [], overgeslagen = [];
+  goed.forEach(r => {
+    const key = r.item.id + "|" + r.item.taal;
+    const b = bestaandeMap.get(key);
+    if (!b) nieuw.push(r);
+    else if ((v(b,"versie")||1) < r.item.versie) bijgewerkt.push(Object.assign({}, r, { bestaandRecord: b }));
+    else overgeslagen.push(r);
+  });
+  nieuw.forEach(r => r.bestaandRecord = null);
+
+  migratieGeselecteerd = { nieuw, bijgewerkt, overgeslagen, fouten, bestaandeMap };
+  $("#mig-kies-status").textContent = files.length + " bestanden gelezen.";
+  toonMigratiePreview();
+};
+
+function toonMigratiePreview(){
+  const m = migratieGeselecteerd;
+  const n = $("#mig-resultaat");
+  if (!m) { n.innerHTML = ""; return; }
+  let html = '<div class="meta u-mt6">' +
+    '<span class="pill green">' + m.nieuw.length + ' nieuw</span>' +
+    '<span class="pill amber">' + m.bijgewerkt.length + ' bijgewerkt</span>' +
+    '<span class="pill plain">' + m.overgeslagen.length + ' al actueel — overgeslagen</span>' +
+    (m.fouten.length ? '<span class="pill red">' + m.fouten.length + ' fout</span>' : '') +
+    '</div>';
+  if (m.fouten.length) {
+    html += '<details class="uitleg u-mt6"><summary>' + m.fouten.length + ' bestand(en) met een fout — niet meegenomen</summary>';
+    html += m.fouten.map(f => '<div class="text">' + esc(f.bestandsnaam) + ': ' + esc(f.fout) + '</div>').join("");
+    html += '</details>';
+  }
+  const teMigreren = m.nieuw.length + m.bijgewerkt.length;
+  html += '<div class="u-mt6" id="mig-voortgang"></div>';
+  n.innerHTML = html;
+  if (teMigreren) {
+    const b = el("button","btn primary u-mt6", "Migreer " + teMigreren + " item(en) naar " + State.env);
+    b.onclick = () => bevestig(
+      "Migreren naar " + State.env + "?",
+      teMigreren + " item(en) worden geschreven (" + m.nieuw.length + " nieuw, " + m.bijgewerkt.length + " bijgewerkt). " +
+      (State.env === "production" ? "Dit is de <b>echte</b> omgeving — controleer dit liever eerst op Development." : "Dit is de Development-omgeving, veilig om te herhalen.") +
+      " Niet zomaar terug te draaien.",
+      "Migreren", async () => { await voerMigratieUit(m.nieuw.concat(m.bijgewerkt)); },
+      State.env === "production"
+    );
+    n.appendChild(b);
+  } else if (!m.fouten.length) {
+    n.appendChild(el("div","empty","Niets te migreren — " + State.env + " is al actueel."));
+  }
+}
+
+async function voerMigratieUit(items){
+  const totaal = items.length;
+  let gelukt = 0; const mislukt = [];
+  for (let i = 0; i < items.length; i++){
+    const it = items[i];
+    $("#mig-voortgang").textContent = "bezig: " + (i+1) + " / " + totaal + " (" + it.item.id + " / " + it.item.taal + ")";
+    try {
+      const fields = {
+        id:{value:it.item.id}, type:{value:it.item.type}, regio:{value:it.item.regio}, taal:{value:it.item.taal},
+        versie:{value:it.item.versie}, titel:{value:it.item.titel}, markdown:{value:it.item.markdown},
+        bron:{value:it.item.bron}, reviewer:{value:it.item.reviewer},
+      };
+      if (it.item.geldigTot) fields.geldigTot = { value: it.item.geldigTot };
+      if (it.bestaandRecord) {
+        await saveRecord({ recordName: it.bestaandRecord.recordName, recordType:"AppContent", recordChangeTag: it.bestaandRecord.recordChangeTag, fields });
+      } else {
+        await saveRecord({ recordType:"AppContent", fields });
+      }
+      gelukt++;
+    } catch(e){ mislukt.push(it.bestandsnaam + ": " + (e.message||e)); }
+  }
+  $("#mig-voortgang").textContent = "Klaar: " + gelukt + " / " + totaal + " geschreven" + (mislukt.length ? ", " + mislukt.length + " mislukt." : ".");
+  Logboek.schrijf({ handeling:"inhoud gemigreerd", doelType:"AppContent",
+    reden: gelukt + " geschreven, " + mislukt.length + " mislukt, naar " + State.env,
+    details: mislukt.join("\n").slice(0,2000) });
+  toast(mislukt.length ? gelukt + " geschreven, " + mislukt.length + " mislukt — zie voortgangsregel." : gelukt + " geschreven naar " + State.env + ".", mislukt.length ? "err" : "ok");
+  migratieGeselecteerd = null;
+  if (huidigeTab === "inhoud") laadInhoudTab();
+}
+
 function inhoudVerloogtBinnen90(rec){
   const t = v(rec,"geldigTot");
   if (typeof t !== "number") return false;
   return t <= Date.now() + 90*24*60*60*1000;
+}
+
+/** Stap C2 (4/4): geen weekmail/cron — deze webtool heeft geen server om
+ *  die op te draaien. In plaats daarvan een signaal dat je niet kunt missen
+ *  zodra je de Redactie-tab opent, in lijn met hoe deze tool al gebruikt
+ *  wordt (bezoek, niet achtergrondproces). */
+function inhoudVerloogtBinnen30(rec){
+  const t = v(rec,"geldigTot");
+  if (typeof t !== "number") return false;
+  return t <= Date.now() + 30*24*60*60*1000;
+}
+function renderInhoudVerloopSignaal(){
+  const n = $("#inh-verloop-signaal");
+  if (!n) return;
+  const binnen30 = (inhoudRecords||[]).filter(inhoudVerloogtBinnen30)
+    .sort((a,b) => (v(a,"geldigTot")||0) - (v(b,"geldigTot")||0));
+  if (!binnen30.length) { n.classList.add("u-hidden"); n.innerHTML = ""; return; }
+  n.classList.remove("u-hidden");
+  const regels = binnen30.slice(0,6).map(r =>
+    esc(v(r,"titel")||v(r,"id")) + " (" + esc(v(r,"taal")||"?") + ", " + esc(fmtDate(v(r,"geldigTot"))) + ")"
+  ).join(" · ") + (binnen30.length > 6 ? " · +" + (binnen30.length - 6) + " meer" : "");
+  n.innerHTML = '<div class="row" style="border:1px solid var(--red);border-radius:var(--r);background:var(--red-soft);margin-bottom:.6rem">' +
+    '<div class="body"><div class="title">⚠️ ' + binnen30.length + ' item(en) verlopen binnen 30 dagen</div>' +
+    '<div class="meta">' + regels + '</div></div></div>';
 }
 
 async function laadInhoudTab(){
@@ -3598,6 +3797,7 @@ async function laadInhoudTab(){
   try {
     inhoudRecords = await haalAlles("AppContent", { max: 5000 });
     $("#inh-state").textContent = inhoudRecords.length + " item" + (inhoudRecords.length===1?"":"s") + " in CloudKit";
+    renderInhoudVerloopSignaal();
     renderInhoudLijst();
   } catch(e){
     $("#inh-state").textContent = "fout bij laden";
@@ -6386,6 +6586,7 @@ if (location.protocol === "file:") {
 }
 $("#env-select").value = State.env;
 $("#env-select").onchange = () => { localStorage.setItem(LS.env, $("#env-select").value); location.reload(); };
+if ($("#mig-omgeving-label")) $("#mig-omgeving-label").textContent = "omgeving: " + State.env;
 $("#token-input").value = State.token;
 
 $("#token-plak").onclick = async () => {
