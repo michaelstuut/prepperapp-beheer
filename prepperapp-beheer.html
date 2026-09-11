@@ -1344,6 +1344,58 @@ label.f>span:first-child{color:var(--ink-dim);font-weight:600;letter-spacing:.00
     </p>
   </section>
 
+  <!-- ---------- Inhoud (redactie, stap C2) ---------- -->
+  <section class="view" id="v-inhoud" role="tabpanel">
+    <div class="card">
+      <div class="card-b">
+        <div class="toolbar">
+          <label class="f narrow u-flex0-11rem">Regio
+            <select id="inh-regio">
+              <option value="">alle regio's</option>
+              <option value="alles">alles (regio-loos)</option>
+              <option value="nl">Nederland</option>
+              <option value="be">België</option>
+              <option value="de">Duitsland</option>
+              <option value="uk">Verenigd Koninkrijk</option>
+            </select>
+          </label>
+          <label class="f narrow u-flex0-11rem">Taal
+            <input type="text" id="inh-taal" placeholder="bijv. nl" list="inh-taal-lijst">
+            <datalist id="inh-taal-lijst"><option value="nl"><option value="en"></datalist>
+          </label>
+          <label class="f narrow u-flex0-11rem">Soort
+            <select id="inh-type">
+              <option value="">alle soorten</option>
+              <option value="artikel">artikel</option>
+              <option value="protocol">protocol</option>
+              <option value="checklist">checklist</option>
+              <option value="ehboflow">ehboflow</option>
+              <option value="leerstap">leerstap</option>
+            </select>
+          </label>
+          <label class="f">Zoeken in titel of id
+            <input type="search" id="inh-q" placeholder="woord uit de titel, of id">
+          </label>
+          <button class="btn narrow" id="inh-nieuw">Nieuw artikel</button>
+        </div>
+        <div class="toolbar u-mt6">
+          <label class="switch"><input type="checkbox" id="inh-verloopt90"> verloopt binnen 90 dagen</label>
+          <label class="switch"><input type="checkbox" id="inh-zonderreviewer"> zonder reviewer (nog niet nagekeken)</label>
+          <span class="u-flex1"></span>
+          <span class="sub" id="inh-state"></span>
+          <button class="iconbtn" id="inh-ververs" title="Opnieuw laden uit CloudKit">Verversen</button>
+        </div>
+      </div>
+      <div class="card-b tight" id="inh-list"><div class="empty">Laden…</div></div>
+    </div>
+    <p class="u-muted-80-m0">
+      "id" en "taal" samen vormen de sleutel waarmee de app een item opzoekt (<span class="mono">ContentProvider.swift</span>) —
+      die twee wijzig je bij een bestaand artikel dus niet. Deze pagina praat met de omgeving die bovenin staat
+      ingesteld (Development/Production): voor "publiceren naar Development, dan Production" schakel je hierboven om
+      en sla je twee keer op.
+    </p>
+  </section>
+
   <!-- ---------- Aankondigingen ---------- -->
   <section class="view" id="v-berichten" role="tabpanel">
     <div class="card">
@@ -1756,6 +1808,16 @@ const SCHEMA = {
     f:{ postID:[T.STR,"q"], melderCode:[T.STR,"q"], tijdstip:[T.TS,"qs"] } },
   AdminVerborgen: { label:"Verborgen content", groep:"Moderatie", sort:"datum", datum:"datum",
     f:{ doelRecordName:[T.STR,"q"], doelType:[T.STR,"q"], reden:[T.STR], datum:[T.TS,"qs"] } },
+
+  /* --- app-inhoud (stap C2) ---
+     Alleen "taal" (predicate in ContentProvider.swift) en "versie" (sort in
+     ContentProvider.swift) zijn bevestigd Queryable/Sortable in CloudKit —
+     zie CLAUDE.md. Andere velden dus NIET als "q" filteren via CloudKit zelf
+     (levert "not marked queryable" op); filteren gebeurt hier client-side op
+     de volledige, met haalAlles() opgehaalde lijst. */
+  AppContent: { label:"App-inhoud", groep:"Inhoud", sort:"versie", titel:"titel", tekst:"markdown", datum:"geldigTot",
+    f:{ id:[T.STR], type:[T.STR], taal:[T.STR,"q"], regio:[T.STR], versie:[T.INT,"qs"], titel:[T.STR],
+        markdown:[T.STR], bron:[T.STR], reviewer:[T.STR], geldigTot:[T.TS] } },
 
   /* --- accounts --- */
   GebruikersAccount: { label:"Gebruikers", groep:"Mensen", sort:"aangemeldOp", datum:"aangemeldOp", auteur:"gebruikerCode",
@@ -2805,6 +2867,8 @@ const TABS = [
     uitleg:"Wie met wie verbonden is via uitnodigingen, gedeelde routes, expedities en chats." },
   { id:"verborgen", label:"Verborgen", groep:"Inhoud", laad: laadVerborgen,
     uitleg:"Wat je uit de app hebt weggefilterd. De posts bestaan nog; je kunt ze stuk voor stuk terugzetten." },
+  { id:"inhoud",    label:"Redactie",  groep:"Inhoud", laad: laadInhoudTab,
+    titel:"App-inhoud (stap C2)", uitleg:"Artikelen, protocollen, checklists, EHBO-flows en leerpadstappen die de app via AppContent uit CloudKit haalt: per regio en taal bewerken, versie ophogen, reviewer toewijzen en verloopdatum bewaken." },
   { id:"berichten", label:"Aankondigingen", groep:"De app besturen", laad: laadAankondigingen,
     uitleg:"De banner die mensen bij het opstarten van de app te zien krijgen." },
   { id:"config",    label:"Instellingen", groep:"De app besturen", laad: () => { laadConfig(); laadPromoLijst(); },
@@ -3514,6 +3578,206 @@ $("#hid-add").onclick = () => {
       } },
   ]);
 };
+
+/* =====================================================================
+   Inhoud (redactie, stap C2) — AppContent
+   ===================================================================== */
+const INHOUD_TYPES = ["artikel","protocol","checklist","ehboflow","leerstap"];
+const INHOUD_REGIOS = [["alles","alles (regio-loos)"],["nl","Nederland"],["be","België"],["de","Duitsland"],["uk","Verenigd Koninkrijk"]];
+let inhoudRecords = null; // volledige, ongefilterde lijst — client-side filteren, zie SCHEMA.AppContent commentaar
+
+function inhoudVerloogtBinnen90(rec){
+  const t = v(rec,"geldigTot");
+  if (typeof t !== "number") return false;
+  return t <= Date.now() + 90*24*60*60*1000;
+}
+
+async function laadInhoudTab(){
+  $("#inh-state").textContent = "laden…";
+  const n = $("#inh-list"); bezig(n);
+  try {
+    inhoudRecords = await haalAlles("AppContent", { max: 5000 });
+    $("#inh-state").textContent = inhoudRecords.length + " item" + (inhoudRecords.length===1?"":"s") + " in CloudKit";
+    renderInhoudLijst();
+  } catch(e){
+    $("#inh-state").textContent = "fout bij laden";
+    n.innerHTML = leeg(String(e.message||e), "Fout bij laden");
+  }
+}
+$("#inh-ververs").onclick = laadInhoudTab;
+["inh-regio","inh-taal","inh-type","inh-q","inh-verloopt90","inh-zonderreviewer"].forEach(id => {
+  $("#"+id).addEventListener("input", renderInhoudLijst);
+  $("#"+id).addEventListener("change", renderInhoudLijst);
+});
+
+function renderInhoudLijst(){
+  const n = $("#inh-list");
+  if (!inhoudRecords) { bezig(n); return; }
+  const regio = $("#inh-regio").value;
+  const taal = $("#inh-taal").value.trim().toLowerCase();
+  const type = $("#inh-type").value;
+  const q = $("#inh-q").value.trim().toLowerCase();
+  const alleen90 = $("#inh-verloopt90").checked;
+  const alleenZonderReviewer = $("#inh-zonderreviewer").checked;
+
+  let lijst = inhoudRecords.slice();
+  if (regio) lijst = lijst.filter(r => v(r,"regio") === regio);
+  if (taal) lijst = lijst.filter(r => String(v(r,"taal")||"").toLowerCase() === taal);
+  if (type) lijst = lijst.filter(r => v(r,"type") === type);
+  if (q) lijst = lijst.filter(r => String(v(r,"titel")||"").toLowerCase().includes(q) || String(v(r,"id")||"").toLowerCase().includes(q));
+  if (alleen90) lijst = lijst.filter(inhoudVerloogtBinnen90);
+  if (alleenZonderReviewer) lijst = lijst.filter(r => !v(r,"reviewer"));
+  lijst.sort((a,b) => String(v(a,"id")||"").localeCompare(String(v(b,"id")||"")));
+
+  n.innerHTML = "";
+  if (!lijst.length) { n.innerHTML = leeg(inhoudRecords.length ? "Niets gevonden met deze filters." : "Nog geen inhoud in CloudKit — migratie (stap C2, deelstap 3) moet nog draaien.", "Leeg"); return; }
+  lijst.forEach(rec => n.appendChild(inhoudRij(rec)));
+}
+
+function inhoudRij(rec){
+  const row = el("div","row"); const body = el("div","body");
+  body.appendChild(el("div","title", esc(v(rec,"titel") || "(zonder titel)")));
+  const meta = el("div","meta");
+  meta.innerHTML =
+    '<span class="mono">' + esc(v(rec,"id")||"") + "</span>" +
+    '<span class="pill plain">' + esc(v(rec,"taal")||"?") + "</span>" +
+    '<span class="pill plain">' + esc(v(rec,"regio")||"alles") + "</span>" +
+    '<span class="pill plain">' + esc(v(rec,"type")||"?") + "</span>" +
+    '<span class="pill plain">v' + esc(v(rec,"versie")||1) + "</span>" +
+    (v(rec,"reviewer") ? '<span class="pill green">' + esc(v(rec,"reviewer")) + "</span>" : '<span class="pill amber">nog niet nagekeken</span>') +
+    (inhoudVerloogtBinnen90(rec) ? '<span class="pill red">verloopt ' + esc(fmtGeleden(v(rec,"geldigTot"))) + "</span>" : "");
+  body.appendChild(meta);
+  if (v(rec,"markdown")) body.appendChild(el("div","text", esc(knip(v(rec,"markdown"), 200))));
+  const acts = el("div","acts");
+  const bBewerk = el("button","btn sm","Bewerken"); bBewerk.onclick = () => bewerkInhoud(rec);
+  const bVerwijder = el("button","btn sm danger","Verwijderen");
+  bVerwijder.onclick = () => bevestig("Artikel verwijderen?",
+    "Dit gooit \"" + esc(v(rec,"titel")||v(rec,"id")) + "\" weg uit " + esc(State.env) + ". De app blijft de laatst opgehaalde versie uit zijn eigen cache tonen totdat hij weer ververst.",
+    "Verwijderen", async () => {
+      await deleteRecord(rec.recordName);
+      Logboek.schrijf({ handeling:"inhoud verwijderd", doelType:"AppContent", doelRecordName: rec.recordName, reden: v(rec,"id")+" / "+v(rec,"taal") });
+      toast("Verwijderd.","ok"); laadInhoudTab();
+    }, true);
+  acts.appendChild(bBewerk); acts.appendChild(bVerwijder);
+  body.appendChild(acts); row.appendChild(body);
+  return row;
+}
+
+$("#inh-nieuw").onclick = () => bewerkInhoud(null);
+
+/** Redactie-editor: metadata + Markdown-tekstveld met voorbeeld. Werkt zowel
+ *  voor een bestaand record (rec != null, optimistic-concurrency save via
+ *  recordChangeTag) als een nieuw record (rec === null). */
+function bewerkInhoud(rec){
+  const isNieuw = !rec;
+  const form = el("div"); form.classList.add("u-col7");
+
+  const maakVeld = (label, inputEl, hint) => {
+    const lab = el("label","f"); lab.appendChild(el("span","",esc(label)));
+    lab.appendChild(inputEl);
+    if (hint) lab.appendChild(el("span","hint",hint));
+    form.appendChild(lab);
+    return inputEl;
+  };
+
+  const iId = document.createElement("input"); iId.type="text"; iId.placeholder="bijv. ehbo.bloeding";
+  iId.value = isNieuw ? "" : (v(rec,"id")||""); iId.disabled = !isNieuw;
+  maakVeld("id", iId, isNieuw ? "kleine letters, punten als scheiding — dit + taal is de sleutel waar de app op zoekt" : "niet te wijzigen bij een bestaand artikel");
+
+  const iTaal = document.createElement("input"); iTaal.type="text"; iTaal.setAttribute("list","inh-taal-lijst"); iTaal.placeholder="nl";
+  iTaal.value = isNieuw ? "nl" : (v(rec,"taal")||""); iTaal.disabled = !isNieuw;
+  maakVeld("taal", iTaal, isNieuw ? "" : "niet te wijzigen bij een bestaand artikel");
+
+  const sType = document.createElement("select");
+  INHOUD_TYPES.forEach(t => { const o = el("option","",t); o.value = t; sType.appendChild(o); });
+  sType.value = v(rec,"type") || "artikel";
+  maakVeld("type", sType);
+
+  const sRegio = document.createElement("select");
+  INHOUD_REGIOS.forEach(([w,l]) => { const o = el("option","",esc(l)); o.value = w; sRegio.appendChild(o); });
+  sRegio.value = v(rec,"regio") || "alles";
+  maakVeld("regio", sRegio);
+
+  const iTitel = document.createElement("input"); iTitel.type="text"; iTitel.value = v(rec,"titel")||"";
+  maakVeld("titel", iTitel);
+
+  const versieWrap = el("div"); versieWrap.style.display="flex"; versieWrap.style.gap=".4rem";
+  const iVersie = document.createElement("input"); iVersie.type="number"; iVersie.min="1"; iVersie.step="1";
+  iVersie.value = v(rec,"versie") || 1; iVersie.style.flex="0 0 6rem";
+  const bVersiePlus = el("button","btn sm","+1"); bVersiePlus.type = "button";
+  bVersiePlus.onclick = () => { iVersie.value = (parseInt(iVersie.value,10)||1) + 1; };
+  versieWrap.appendChild(iVersie); versieWrap.appendChild(bVersiePlus);
+  maakVeld("versie", versieWrap, "hoog op bij elke inhoudelijke wijziging — de app houdt de hoogste versie per taal aan");
+
+  const iBron = document.createElement("input"); iBron.type="text"; iBron.value = v(rec,"bron")||"";
+  maakVeld("bron", iBron, "bijv. \"Rode Kruis EHBO-richtlijn 2024\" — leeg mag");
+
+  const iReviewer = document.createElement("input"); iReviewer.type="text"; iReviewer.value = v(rec,"reviewer")||"";
+  maakVeld("reviewer", iReviewer, "leeg = nog niet nagekeken (zo toont de app het ook)");
+
+  const iGeldigTot = document.createElement("input"); iGeldigTot.type="datetime-local";
+  const gt = v(rec,"geldigTot");
+  if (typeof gt === "number") iGeldigTot.value = new Date(gt - new Date().getTimezoneOffset()*60000).toISOString().slice(0,16);
+  maakVeld("geldig tot", iGeldigTot, "leeg = geen vervaldatum");
+
+  const iMarkdown = document.createElement("textarea"); iMarkdown.rows = 14; iMarkdown.style.fontFamily = "var(--mono, monospace)";
+  iMarkdown.value = v(rec,"markdown")||"";
+  maakVeld("markdown", iMarkdown, "alleen de body — front-matter (id/type/regio/taal/versie/…) staat hierboven als aparte velden");
+
+  const voorbeeld = el("div","text"); voorbeeld.style.display = "none";
+  form.appendChild(voorbeeld);
+  const bVoorbeeld = el("button","btn sm","Voorbeeld tonen"); bVoorbeeld.type = "button";
+  bVoorbeeld.onclick = () => {
+    const aan = voorbeeld.style.display === "none";
+    voorbeeld.style.display = aan ? "" : "none";
+    bVoorbeeld.textContent = aan ? "Voorbeeld verbergen" : "Voorbeeld tonen";
+    if (aan) voorbeeld.innerHTML = inhoudVoorbeeldHtml(iMarkdown.value);
+  };
+  form.appendChild(bVoorbeeld);
+
+  Sheet.open((isNieuw ? "Nieuw artikel" : "Bewerken") + " · " + (v(rec,"titel") || v(rec,"id") || "AppContent"), form, [
+    { label:"Annuleren", on: () => Sheet.close() },
+    { label: isNieuw ? "Aanmaken" : "Opslaan", cls:"primary", on: async (btn) => {
+        const id = iId.value.trim(), taal = iTaal.value.trim(), titel = iTitel.value.trim();
+        if (!id || !taal || !titel) { toast("id, taal en titel zijn verplicht.","err"); return; }
+        btn.disabled = true; btn.innerHTML = '<span class="spin"></span> opslaan';
+        try {
+          const fields = {
+            id: { value: id }, taal: { value: taal }, type: { value: sType.value }, regio: { value: sRegio.value },
+            titel: { value: titel }, markdown: { value: iMarkdown.value },
+            versie: { value: parseInt(iVersie.value,10) || 1 },
+            bron: { value: iBron.value.trim() }, reviewer: { value: iReviewer.value.trim() },
+          };
+          if (iGeldigTot.value) fields.geldigTot = { value: new Date(iGeldigTot.value).getTime() };
+          if (!isNieuw) {
+            const vers = await fetchRecord(rec.recordName);
+            await saveRecord({ recordName: rec.recordName, recordType:"AppContent", recordChangeTag: vers.recordChangeTag, fields });
+          } else {
+            await saveRecord({ recordType:"AppContent", fields });
+          }
+          Logboek.schrijf({ handeling: isNieuw ? "inhoud aangemaakt" : "inhoud gewijzigd", doelType:"AppContent", reden: id+" / "+taal+" (v"+fields.versie.value+", "+State.env+")" });
+          toast(isNieuw ? "Aangemaakt in " + State.env + "." : "Opgeslagen in " + State.env + ".", "ok");
+          Sheet.close(); laadInhoudTab();
+        } catch(e){ toast(String(e.message||e),"err"); btn.disabled = false; btn.textContent = isNieuw ? "Aanmaken" : "Opslaan"; }
+      } },
+  ]);
+}
+
+/** Zeer eenvoudige weergave van dezelfde regelsoorten als InhoudModel.swift
+ *  se renderer (kop "# ", blokkop "## ", bullet "- ", rest alinea) — alleen
+ *  om snel te zien of de Markdown ongeveer klopt, geen volledige renderer. */
+function inhoudVoorbeeldHtml(md){
+  const regels = String(md||"").split("\n");
+  let html = "";
+  regels.forEach(r => {
+    if (r.startsWith("# ")) html += "<div style='font-weight:700;font-size:1.1rem;margin:.4rem 0'>" + esc(r.slice(2)) + "</div>";
+    else if (r.startsWith("## ")) html += "<div style='font-weight:600;margin:.3rem 0'>" + esc(r.slice(3)) + "</div>";
+    else if (r.startsWith("- ")) html += "<div>• " + esc(r.slice(2)) + "</div>";
+    else if (r.trim() === "") html += "<div style='height:.5rem'></div>";
+    else html += "<div>" + esc(r) + "</div>";
+  });
+  return html || "<span class='u-muted'>leeg</span>";
+}
 
 /* =====================================================================
    Dossier — alles van één persoon op één scherm
