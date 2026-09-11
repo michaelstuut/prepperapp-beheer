@@ -1,0 +1,301 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<script>
+/* Vang een eventueel vers ckWebAuthToken direct uit de adresbalk, vóórdat
+   CloudKit.js (hieronder, async) de kans krijgt om de URL op te schonen.
+   Dit moet het allereerste zijn dat draait op deze pagina. */
+window.__versToken = (function () {
+  try {
+    var p = new URLSearchParams(location.search);
+    return p.get("ckWebAuthToken") || null;
+  } catch (e) { return null; }
+})();
+</script>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="dark">
+<title>PrepperApp — Alert-worker inloggen</title>
+<link rel="apple-touch-icon" href="icoon.png">
+<link rel="icon" href="icoon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=Public+Sans:ital,wght@0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@400;500;700&display=swap">
+<style>
+:root{
+  --ground:#0B0E13; --surface:#131822; --raised:#1A212D; --edge:#28303F; --edge-soft:#1F2734;
+  --ink:#E7EAF0; --ink-dim:#B4BCCB; --muted:#7F8899;
+  --amber:#F0B429; --amber-dim:#B8891C; --amber-soft:#2E2510;
+  --red:#E4574C; --green:#4FB37A;
+  --r:12px; --shadow:0 1px 0 rgba(255,255,255,.04) inset, 0 8px 28px rgba(0,0,0,.4);
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  background:
+    radial-gradient(52rem 30rem at 8% -10%, rgba(240,180,41,.05), transparent 60%),
+    radial-gradient(46rem 26rem at 100% 0%, rgba(91,157,217,.04), transparent 55%),
+    var(--ground);
+  background-attachment:fixed;
+  color:var(--ink);
+  font-family:"Public Sans",system-ui,-apple-system,sans-serif;
+  font-size:15px; line-height:1.5; -webkit-font-smoothing:antialiased;
+  padding-bottom:env(safe-area-inset-bottom);
+}
+h1,h2{font-family:"Bricolage Grotesque","Public Sans",system-ui,sans-serif;font-weight:700;margin:0;letter-spacing:-.01em;text-wrap:balance}
+code{font-family:"JetBrains Mono",ui-monospace,SFMono-Regular,monospace}
+button,input,select{font:inherit;color:inherit}
+a{color:var(--amber)}
+#gate{max-width:32rem;margin:0 auto;padding:2.5rem .9rem;display:flex;flex-direction:column;gap:1.1rem}
+#gate h1{font-size:1.5rem}
+#gate p{color:var(--ink-dim);margin:0;font-size:.92rem}
+.card{background:var(--surface);border:1px solid var(--edge);border-radius:var(--r);box-shadow:var(--shadow)}
+.card-h{display:flex;align-items:center;gap:.6rem;padding:.75rem .9rem;border-bottom:1px solid var(--edge-soft)}
+.card-b{padding:.95rem;display:flex;flex-direction:column;gap:.7rem}
+label.f{display:flex;flex-direction:column;gap:.28rem;font-size:.78rem;color:var(--muted);font-weight:500}
+label.f>span.hint{font-weight:400;font-size:.74rem;color:#6B7486}
+input,select{background:var(--raised);border:1px solid var(--edge);border-radius:8px;padding:.5rem .6rem;font-size:.92rem}
+.btn{background:var(--raised);border:1px solid var(--edge);border-radius:7px;padding:.36rem .7rem;font-size:.82rem;font-weight:500;cursor:pointer;white-space:nowrap}
+.btn.primary{background:var(--amber);border-color:var(--amber);color:#1A1204;font-weight:600}
+.btn:disabled{opacity:.5;cursor:default}
+.row{display:flex;gap:.5rem;flex-wrap:wrap}
+#signin-slot{min-height:2.6rem;display:flex;align-items:center;gap:.6rem;flex-wrap:wrap}
+.spin{display:inline-block;width:.85em;height:.85em;border:2px solid var(--edge);border-top-color:var(--amber);border-radius:50%;animation:sp .7s linear infinite;vertical-align:-.1em}
+@keyframes sp{to{transform:rotate(360deg)}}
+@media(prefers-reduced-motion:reduce){.spin{animation-duration:2s}}
+.u-muted{color:var(--muted);font-size:.86rem}
+.u-amber{color:var(--amber)}
+.u-red{color:var(--red);font-size:.86rem}
+.u-green{color:var(--green)}
+.hide{display:none !important}
+</style>
+</head>
+<body>
+
+<section id="gate">
+  <div>
+    <h1>PrepperApp — Alert-worker inloggen</h1>
+    <p>
+      Geeft de alert-aggregator-worker (stap C4) tijdelijk toestemming om namens jou
+      Incident-records aan te maken in de publieke CloudKit-database van
+      <code>iCloud.com.stuut.PrepperApp</code>. Nodig na het eerste instellen, en daarna
+      ongeveer elke twee weken opnieuw — deze pagina is bewust apart van de gewone
+      beheerpagina, want dit is een andere inlogstap met een ander token.
+    </p>
+  </div>
+
+  <div class="card">
+    <div class="card-h"><h2>1 · CloudKit API-token</h2></div>
+    <div class="card-b">
+      <p class="u-muted" style="margin:0">
+        Het token met de naam <b>"Alert-aggregator worker (C4) - inlogpagina"</b> uit
+        CloudKit Console → je container → <b>Tokens</b> → <b>API Tokens</b>. Zet bij dat
+        token dit adres als toegestane origin: <code id="origin-hint" class="u-amber"></code>
+      </p>
+      <label class="f">Token
+        <input type="password" id="token-input" autocomplete="off" autocapitalize="none" spellcheck="false"
+               placeholder="plak hier het CloudKit API-token">
+        <span class="hint">Wordt alleen in deze browser bewaard, niet in de broncode — deze pagina staat in een
+          openbare GitHub-repository.</span>
+      </label>
+      <div class="row">
+        <button class="btn" id="token-toon">Tonen</button>
+        <button class="btn" id="token-plak">Plakken</button>
+        <button class="btn primary" id="token-save">Bewaren en laden</button>
+        <button class="btn" id="token-clear">Wissen</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-h"><h2>2 · Gedeelde sleutel van de worker</h2></div>
+    <div class="card-b">
+      <p class="u-muted" style="margin:0">
+        De <code>PREPPERAPP_SHARED_KEY</code> die ook als Cloudflare-secret bij de worker
+        staat (<code>wrangler secret put PREPPERAPP_SHARED_KEY</code>).
+      </p>
+      <label class="f">Sleutel
+        <input type="password" id="workerkey-input" autocomplete="off" autocapitalize="none" spellcheck="false"
+               placeholder="plak hier de gedeelde sleutel">
+      </label>
+      <div class="row">
+        <button class="btn" id="workerkey-toon">Tonen</button>
+        <button class="btn" id="workerkey-plak">Plakken</button>
+        <button class="btn primary" id="workerkey-save">Bewaren</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-h"><h2>Omgeving</h2></div>
+    <div class="card-b">
+      <label class="f">CloudKit-omgeving
+        <select id="env-select">
+          <option value="development">Development — moet gelijk zijn aan de worker</option>
+          <option value="production">Production</option>
+        </select>
+        <span class="hint">Moet overeenkomen met <code>CLOUDKIT_ENVIRONMENT</code> in wrangler.toml. Wisselen laadt
+          de pagina opnieuw.</span>
+      </label>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-h"><h2>3 · Inloggen</h2></div>
+    <div class="card-b">
+      <p class="u-muted" style="margin:0">
+        Log in met dezelfde Apple ID als je ontwikkelaarsaccount. Alleen die account heeft
+        de rol <code>beheerder</code> en mag Incident-records aanmaken.
+      </p>
+      <div id="signin-slot"><span class="u-muted">Eerst een CloudKit API-token invoeren hierboven.</span></div>
+    </div>
+  </div>
+
+  <div class="card hide" id="stap4">
+    <div class="card-h"><h2>4 · Versturen naar de worker</h2></div>
+    <div class="card-b" id="verstuur-status"></div>
+  </div>
+</section>
+
+<script src="https://cdn.apple-cloudkit.com/ck/2/cloudkit.js" async></script>
+<script>
+const LS = { token: "pa.alertToken", workerKey: "pa.alertWorkerKey", env: "pa.alertEnv" };
+const WORKER_URL = "https://prepperapp-alerts.michaelstuut.workers.dev/token";
+const CONTAINER = "iCloud.com.stuut.PrepperApp";
+const versToken = window.__versToken;
+
+const $ = (s) => document.querySelector(s);
+function esc(s){ return String(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
+
+const State = {
+  token: localStorage.getItem(LS.token) || "",
+  workerKey: localStorage.getItem(LS.workerKey) || "",
+  env: localStorage.getItem(LS.env) || "development",
+};
+
+$("#origin-hint").textContent = location.origin;
+$("#token-input").value = State.token;
+$("#workerkey-input").value = State.workerKey;
+$("#env-select").value = State.env;
+
+$("#token-toon").onclick = () => { const v = $("#token-input"); v.type = v.type === "password" ? "text" : "password"; };
+$("#token-plak").onclick = async () => { try { $("#token-input").value = (await navigator.clipboard.readText()).trim(); } catch(e){} };
+$("#token-save").onclick = () => {
+  const t = $("#token-input").value.trim();
+  if (!t) return;
+  localStorage.setItem(LS.token, t);
+  location.href = location.pathname;
+};
+$("#token-clear").onclick = () => { localStorage.removeItem(LS.token); location.href = location.pathname; };
+
+$("#workerkey-toon").onclick = () => { const v = $("#workerkey-input"); v.type = v.type === "password" ? "text" : "password"; };
+$("#workerkey-plak").onclick = async () => { try { $("#workerkey-input").value = (await navigator.clipboard.readText()).trim(); } catch(e){} };
+$("#workerkey-save").onclick = () => {
+  State.workerKey = $("#workerkey-input").value.trim();
+  localStorage.setItem(LS.workerKey, State.workerKey);
+};
+
+$("#env-select").onchange = () => { localStorage.setItem(LS.env, $("#env-select").value); location.href = location.pathname; };
+
+let ckGeladen = false;
+window.addEventListener("cloudkitloaded", () => { ckGeladen = true; startCloudKit(); });
+setTimeout(() => {
+  if (!ckGeladen && typeof window.CloudKit === "undefined") {
+    $("#signin-slot").innerHTML = '<span class="u-red">De CloudKit-bibliotheek van Apple kon niet geladen worden. Controleer je internetverbinding, of open deze pagina niet als los bestand maar via een echt webadres.</span>';
+  }
+}, 6000);
+
+function startCloudKit(){
+  if (!State.token) {
+    $("#signin-slot").innerHTML = '<span class="u-muted">Eerst een CloudKit API-token invoeren hierboven.</span>';
+    return;
+  }
+  $("#signin-slot").innerHTML = '<div id="apple-sign-in-button"></div><span id="auth-msg" class="u-muted"><span class="spin"></span> verbinden…</span>';
+
+  let container;
+  try {
+    CloudKit.configure({
+      containers: [{
+        containerIdentifier: CONTAINER,
+        apiTokenAuth: {
+          apiToken: State.token,
+          persist: false,
+          signInButton: { id: "apple-sign-in-button", theme: "black" },
+        },
+        environment: State.env,
+      }],
+    });
+    container = CloudKit.getDefaultContainer();
+  } catch(e){
+    $("#auth-msg").innerHTML = '<span class="u-red">Configureren mislukt: ' + esc(String(e.message || e)) + "</span>";
+    return;
+  }
+
+  container.setUpAuth().then(gebruiker => {
+    if (gebruiker) toonIngelogd(gebruiker);
+    else {
+      const m = $("#auth-msg");
+      if (m) m.innerHTML = "Klik op de knop hierboven om in te loggen met je Apple ID.";
+    }
+  }).catch(e => {
+    const m = $("#auth-msg");
+    const s = String(e && (e.reason || e.message) || e);
+    let hulp = "";
+    if (/token|AUTHENTICATION|not found|invalid/i.test(s))
+      hulp = " — controleer of het token klopt en of <b>" + esc(location.origin) + "</b> als toegestane origin bij dat token staat.";
+    if (m) m.innerHTML = '<span class="u-red">Inloggen mislukt: ' + esc(s) + hulp + "</span>";
+  });
+
+  container.whenUserSignsIn().then(toonIngelogd).catch(()=>{});
+}
+
+function toonIngelogd(gebruiker){
+  $("#stap4").classList.remove("hide");
+  const naam = (gebruiker && (gebruiker.firstName || gebruiker.lastName))
+    ? [gebruiker.firstName, gebruiker.lastName].filter(Boolean).join(" ")
+    : "je account";
+
+  if (!versToken) {
+    $("#verstuur-status").innerHTML =
+      '<span class="u-red">Ingelogd als ' + esc(naam) + ', maar dit was geen vers inlogmoment — er zit geen ' +
+      'nieuw token in dit bezoek (bijvoorbeeld omdat de pagina ververst is). Laad de pagina helemaal opnieuw en ' +
+      'log opnieuw in om een nieuw token naar de worker te sturen.</span>';
+    return;
+  }
+
+  $("#verstuur-status").innerHTML =
+    '<span class="u-muted">Ingelogd als ' + esc(naam) + '. Klaar om te versturen.</span>' +
+    '<div class="row" style="margin-top:.5rem"><button class="btn primary" id="verstuur-knop">Stuur token naar de worker</button></div>';
+  $("#verstuur-knop").onclick = verstuur;
+}
+
+async function verstuur(){
+  if (!State.workerKey) {
+    $("#verstuur-status").innerHTML = '<span class="u-red">Vul eerst de gedeelde worker-sleutel in bij stap 2.</span>';
+    return;
+  }
+  const knop = $("#verstuur-knop");
+  if (knop) { knop.disabled = true; knop.textContent = "Bezig…"; }
+  try {
+    const resp = await fetch(WORKER_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-PrepperApp-Key": State.workerKey },
+      body: JSON.stringify({ ckWebAuthToken: versToken }),
+    });
+    if (resp.ok) {
+      $("#verstuur-status").innerHTML = '<span class="u-green">Gelukt — de worker heeft nu een geldig token.</span>';
+    } else {
+      const tekst = await resp.text().catch(() => "");
+      $("#verstuur-status").innerHTML = '<span class="u-red">Worker antwoordde met status ' + resp.status +
+        (tekst ? ": " + esc(tekst) : "") + '.</span>';
+    }
+  } catch(e){
+    $("#verstuur-status").innerHTML = '<span class="u-red">Versturen mislukt: ' + esc(String(e.message || e)) + '</span>';
+  }
+  if (knop) { knop.disabled = false; knop.textContent = "Stuur token naar de worker"; }
+}
+
+if (typeof window.CloudKit !== "undefined") { ckGeladen = true; startCloudKit(); }
+</script>
+</body>
+</html>
