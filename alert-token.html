@@ -17,6 +17,36 @@ window.__versToken = (function () {
   } catch (e) { return null; }
 })();
 window.__debugUrlAtLoad = location.href;
+
+/* Bij "Sign in Callback" = URL Redirect stuurt Apple niet het hoofdvenster terug
+   naar deze pagina, maar het POP-UP-venster waarin is ingelogd — dat pop-up-venster
+   laadt dus zelf deze pagina opnieuw, met het token in de URL. Zonder onderstaande
+   code zou dat pop-up-venster gewoon het normale (nog niet ingelogde) inlogscherm
+   tonen, en het hoofdvenster zou nooit iets van het token merken — exact het
+   symptoom "kom ik terug in hetzelfde inlogscherm". Detecteer die situatie en geef
+   het token direct door aan het hoofdvenster (zelfde origin, dus rechtstreeks
+   toegankelijk via window.opener), en sluit dit pop-up-venster daarna. */
+window.__isPopupForwarding = false;
+(function () {
+  try {
+    if (window.__versToken && window.opener && window.opener !== window) {
+      window.__isPopupForwarding = true;
+      try {
+        if (typeof window.opener.__ontvangPopupToken === "function") {
+          window.opener.__ontvangPopupToken(window.__versToken);
+        }
+      } catch (e) { /* andere origin of hoofdvenster al weg — negeren */ }
+      window.close();
+    }
+  } catch (e) {}
+})();
+
+/* Buffer voor het geval een pop-up-venster __ontvangPopupToken aanroept vóórdat
+   het hoofdscript onderaan de pagina is uitgevoerd (zou zeldzaam moeten zijn,
+   want inloggen duurt sowieso langer dan het laden van deze pagina, maar voor
+   de zekerheid). Het hoofdscript verwerkt deze buffer en vervangt deze functie. */
+window.__popupTokenQueue = [];
+window.__ontvangPopupToken = function (token) { window.__popupTokenQueue.push(token); };
 </script>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
@@ -79,6 +109,12 @@ input,select{background:var(--raised);border:1px solid var(--edge);border-radius
 <body>
 
 <section id="gate">
+  <div id="popup-melding" class="hide">
+    <h1>Token doorgestuurd</h1>
+    <p>Dit venster kan gesloten worden — het token is naar het hoofdvenster gestuurd. Sluit dit tabblad/venster als
+      het niet automatisch dichtging.</p>
+  </div>
+  <div id="normale-inhoud">
   <div>
     <h1>PrepperApp — Alert-worker inloggen</h1>
     <p>
@@ -162,6 +198,7 @@ input,select{background:var(--raised);border:1px solid var(--edge);border-radius
     <div class="card-h"><h2>4 · Versturen naar de worker</h2></div>
     <div class="card-b" id="verstuur-status"></div>
   </div>
+  </div>
 </section>
 
 <script src="https://cdn.apple-cloudkit.com/ck/2/cloudkit.js" async></script>
@@ -169,10 +206,32 @@ input,select{background:var(--raised);border:1px solid var(--edge);border-radius
 const LS = { token: "pa.alertToken", workerKey: "pa.alertWorkerKey", env: "pa.alertEnv" };
 const WORKER_URL = "https://prepperapp-alerts.michaelstuut.workers.dev/token";
 const CONTAINER = "iCloud.com.stuut.PrepperApp";
-const versToken = window.__versToken;
+let versToken = window.__versToken;
 
 const $ = (s) => document.querySelector(s);
 function esc(s){ return String(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
+
+if (window.__isPopupForwarding) {
+  // Dit venster ZELF is het pop-up-venster waarin werd ingelogd (zie de detectie
+  // in <head>): het token is al doorgegeven aan het hoofdvenster. Toon alleen de
+  // "kan gesloten worden"-melding en doe verder niets (geen CloudKit-opzet nodig).
+  $("#normale-inhoud").classList.add("hide");
+  $("#popup-melding").classList.remove("hide");
+} else {
+  // Normaal pad (ook voor het hoofdvenster zelf). Ontvanger voor een token dat
+  // eventueel door een pop-up-venster wordt doorgegeven (zie <head>): de stub
+  // daar buffert calls die te vroeg komen, die verwerken we hier alsnog.
+  window.__ontvangPopupToken = function (token) {
+    if (!token) return;
+    versToken = token;
+    window.__versToken = token;
+    const d = $("#debug-url");
+    if (d) d.textContent = "Debug: token ontvangen van het pop-up-inlogvenster.";
+    toonIngelogd(null);
+  };
+  (window.__popupTokenQueue || []).forEach(window.__ontvangPopupToken);
+  window.__popupTokenQueue = [];
+}
 
 const State = {
   token: localStorage.getItem(LS.token) || "",
