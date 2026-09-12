@@ -7,10 +7,16 @@
    Dit moet het allereerste zijn dat draait op deze pagina. */
 window.__versToken = (function () {
   try {
-    var p = new URLSearchParams(location.search);
-    return p.get("ckWebAuthToken") || null;
+    var fromQuery = new URLSearchParams(location.search).get("ckWebAuthToken");
+    if (fromQuery) return fromQuery;
+    // Sommige Apple ID-redirects geven het token mee als URL-fragment (#...)
+    // in plaats van als querystring — check die vorm ook.
+    var hash = (location.hash || "").replace(/^#/, "");
+    var fromHash = new URLSearchParams(hash).get("ckWebAuthToken");
+    return fromHash || null;
   } catch (e) { return null; }
 })();
+window.__debugUrlAtLoad = location.href;
 </script>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
@@ -148,6 +154,7 @@ input,select{background:var(--raised);border:1px solid var(--edge);border-radius
         de rol <code>beheerder</code> en mag Incident-records aanmaken.
       </p>
       <div id="signin-slot"><span class="u-muted">Eerst een CloudKit API-token invoeren hierboven.</span></div>
+      <p id="debug-url" class="hint" style="margin-top:.4rem;word-break:break-all"></p>
     </div>
   </div>
 
@@ -174,6 +181,8 @@ const State = {
 };
 
 $("#origin-hint").textContent = location.origin;
+$("#debug-url").textContent = "Debug: URL bij laden = " + window.__debugUrlAtLoad +
+  " — token gevonden: " + (versToken ? "ja" : "nee");
 $("#token-input").value = State.token;
 $("#workerkey-input").value = State.workerKey;
 $("#env-select").value = State.env;
